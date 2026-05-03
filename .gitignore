@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.db
+*.db-shm
+*.db-wal
+certs/
+.env
+.env.*
+.vercel/
+node_modules/
+
+.vercel

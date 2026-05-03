@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/ai.js": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    { "source": "/", "destination": "/dinamica.html" }
+  ]
+}
