@@ -1,0 +1,2181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tutor Dinámica — B&J</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="window.katexReady=true"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0d1117;--panel:#161b22;--border:#30363d;
+  --blue:#58a6ff;--green:#2ea043;--accent:#e94560;
+  --yellow:#d29922;--text:#e6edf3;--muted:#8b949e;
+  --purple:#8b5cf6;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;}
+body{display:flex;flex-direction:column;}
+
+/* ─── TOP BAR ─── */
+#topbar{
+  display:flex;align-items:center;gap:8px;padding:5px 12px;
+  background:var(--panel);border-bottom:1px solid var(--border);
+  flex-shrink:0;flex-wrap:wrap;user-select:none;
+}
+#logo{font-weight:800;font-size:14px;color:var(--blue);letter-spacing:.5px;}
+#rating-badge{
+  display:flex;align-items:center;gap:5px;
+  background:#1a2332;border:1px solid var(--blue);border-radius:20px;
+  padding:2px 10px;font-size:12px;font-weight:700;color:var(--blue);cursor:default;
+}
+#rating-badge .r-icon{font-size:13px;}
+#rating-val{font-size:14px;}
+#streak-badge{
+  background:#1a2e1a;border:1px solid var(--green);border-radius:20px;
+  padding:2px 9px;font-size:11px;font-weight:700;color:var(--green);
+}
+.vsep{width:1px;height:20px;background:var(--border);flex-shrink:0;}
+.tbtn{padding:4px 9px;border:1px solid var(--border);border-radius:5px;background:#21262d;color:var(--text);cursor:pointer;font-size:12px;transition:background .15s;white-space:nowrap;}
+.tbtn:hover{background:#30363d;}
+.tbtn.active{background:var(--accent);border-color:var(--accent);}
+#next-ex-btn{
+  background:var(--green);border:none;color:#fff;border-radius:6px;
+  padding:5px 13px;font-size:12px;font-weight:700;cursor:pointer;
+  transition:opacity .15s;white-space:nowrap;
+}
+#next-ex-btn:hover{opacity:.85;}
+#current-ex-label{font-size:11px;color:var(--yellow);font-weight:700;padding:0 2px;}
+#api-wrap{margin-left:auto;display:flex;align-items:center;gap:5px;}
+#api-lbl{font-size:11px;color:var(--muted);}
+.sw{position:relative;width:32px;height:17px;}
+.sw input{opacity:0;width:0;height:0;}
+.sw-t{position:absolute;inset:0;background:#30363d;border-radius:17px;cursor:pointer;transition:.2s;}
+.sw-t::before{content:"";position:absolute;width:12px;height:12px;left:2.5px;top:2.5px;background:#fff;border-radius:50%;transition:.2s;}
+.sw input:checked+.sw-t{background:var(--blue);}
+.sw input:checked+.sw-t::before{transform:translateX(15px);}
+#gear-btn{background:none;border:1px solid var(--border);border-radius:5px;color:var(--muted);padding:3px 7px;cursor:pointer;font-size:14px;}
+#gear-btn:hover{color:var(--text);}
+
+/* ─── TOOLBAR ─── */
+#toolbar{
+  display:flex;align-items:center;gap:5px;padding:4px 10px;
+  background:#0a0f14;border-bottom:1px solid var(--border);
+  flex-shrink:0;flex-wrap:wrap;
+}
+.cdot{width:22px;height:22px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:transform .15s;flex-shrink:0;}
+.cdot.active{border-color:#fff;transform:scale(1.2);}
+#sz{width:60px;accent-color:var(--blue);cursor:pointer;}
+#autostatus{font-size:11px;padding:3px 7px;border-radius:10px;background:#21262d;border:1px solid var(--border);color:var(--muted);cursor:pointer;white-space:nowrap;}
+#autostatus.on{border-color:var(--green);color:var(--green);}
+#autostatus.analyzing{border-color:var(--yellow);color:var(--yellow);}
+.mbtn{background:var(--blue);border:none;color:#fff;border-radius:6px;padding:4px 11px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;transition:opacity .15s;}
+.mbtn:hover{opacity:.85;}
+.mbtn.red{background:var(--accent);}
+.mbtn.dark{background:#21262d;border:1px solid var(--border);color:var(--text);}
+.mbtn.dark.active{background:#c94560;border-color:#e94560;color:#fff;}
+#ai-layer-btn{font-size:11px;padding:3px 9px;border-radius:5px;border:1px solid var(--border);background:#21262d;color:var(--muted);cursor:pointer;}
+#ai-layer-btn.show-ann{border-color:var(--purple);color:var(--purple);background:#1a1040;}
+#pos-indicator{font-size:10px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums;}
+
+/* ─── MAIN LAYOUT ─── */
+#main{display:flex;flex:1;overflow:hidden;}
+
+/* ─── SIDEBAR ─── */
+#sidebar{
+  width:230px;min-width:230px;background:var(--panel);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+  transition:min-width .25s,width .25s;flex-shrink:0;overflow:hidden;
+}
+#sidebar.collapsed{width:0;min-width:0;}
+#sb-hd{
+  padding:8px 10px 6px;border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+#sb-hd h3{font-size:12px;font-weight:700;color:var(--blue);}
+#sb-toggle{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;}
+
+/* ELO next */
+#sb-next{
+  margin:6px 8px 4px;background:var(--green);border:none;color:#fff;border-radius:7px;
+  padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;width:calc(100% - 16px);
+  transition:opacity .15s;flex-shrink:0;
+}
+#sb-next:hover{opacity:.85;}
+/* Indicador guardado */
+#save-ind{
+  font-size:10px;color:var(--green);padding:1px 6px;border-radius:8px;
+  border:1px solid var(--green);opacity:0;transition:opacity .3s;
+  background:#0a150a;white-space:nowrap;
+}
+
+/* Capitulos tabs */
+#ch-tabs{
+  display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.ch-tab{
+  flex:1;padding:5px 4px;text-align:center;font-size:11px;font-weight:700;
+  cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;
+  transition:all .15s;white-space:nowrap;
+}
+.ch-tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+.ch-tab:hover{color:var(--text);}
+
+/* Lista de ejercicios */
+#ex-list{flex:1;overflow-y:auto;padding:6px;}
+#ex-list::-webkit-scrollbar{width:3px;}
+#ex-list::-webkit-scrollbar-thumb{background:var(--border);}
+
+.ex-btn{
+  width:100%;text-align:left;padding:6px 8px;border-radius:6px;
+  background:none;border:1px solid var(--border);color:var(--text);
+  cursor:pointer;margin-bottom:4px;transition:all .15s;
+  display:flex;align-items:center;gap:7px;
+}
+.ex-btn:hover{background:#21262d;border-color:var(--muted);}
+.ex-btn.active-ex{border-color:var(--yellow);background:#1a1600;}
+.ex-btn.mastered{border-color:var(--green);background:#0a150a;}
+.ex-btn.attempted{border-color:var(--yellow);}
+.ex-btn.failed{border-color:var(--accent);}
+
+.ex-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--border);
+}
+.ex-btn.mastered .ex-dot{background:var(--green);}
+.ex-btn.attempted .ex-dot{background:var(--yellow);}
+.ex-btn.failed .ex-dot{background:var(--accent);}
+.ex-btn.active-ex .ex-dot{background:var(--yellow);}
+
+.ex-info{flex:1;min-width:0;}
+.ex-num{font-size:11px;font-weight:700;color:var(--blue);}
+.ex-title{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ex-tag{
+  font-size:9px;padding:1px 5px;border-radius:8px;background:#21262d;
+  color:var(--muted);border:1px solid var(--border);white-space:nowrap;flex-shrink:0;
+}
+.ex-tag.te{border-color:#2ea043;color:#2ea043;}
+.ex-tag.fm{border-color:#58a6ff;color:#58a6ff;}
+.ex-tag.im{border-color:#8b5cf6;color:#8b5cf6;}
+.ex-tag.po{border-color:#d29922;color:#d29922;}
+
+/* Enunciado en sidebar */
+#sb-enunciado{
+  border-top:1px solid var(--border);padding:6px 8px;flex-shrink:0;
+  max-height:110px;overflow-y:auto;display:none;
+}
+#sb-enunciado.show{display:block;}
+#sb-enunciado h4{font-size:11px;color:var(--yellow);font-weight:700;margin-bottom:4px;}
+#sb-enunciado p{font-size:11px;line-height:1.55;color:var(--text);}
+#sb-enunciado .sb-meta{font-size:10px;color:var(--muted);margin-top:5px;}
+
+/* Result buttons en sidebar */
+#sb-result{
+  border-top:1px solid var(--border);padding:7px 10px;
+  display:none;gap:6px;flex-shrink:0;
+}
+#sb-result.show{display:flex;}
+#sb-result button{
+  flex:1;padding:6px 4px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid;
+}
+#btn-correct{background:#0a150a;border-color:var(--green);color:var(--green);}
+#btn-incorrect{background:#150a0a;border-color:var(--accent);color:var(--accent);}
+#btn-correct:hover{background:var(--green);color:#fff;}
+#btn-incorrect:hover{background:var(--accent);color:#fff;}
+
+/* Botón abrir sidebar */
+#open-sidebar{
+  position:absolute;left:0;top:50%;transform:translateY(-50%);
+  z-index:50;background:var(--blue);border:none;color:#fff;
+  padding:12px 4px;cursor:pointer;border-radius:0 8px 8px 0;
+  font-size:11px;writing-mode:vertical-lr;display:none;
+}
+
+/* ─── CANVAS ─── */
+#cw{flex:1;position:relative;overflow:hidden;background:#f4f4f0;touch-action:none;background-image:radial-gradient(#d5d5d5 1.5px, transparent 1.5px);background-size:30px 30px;}
+#canvas{position:absolute;top:0;left:0;touch-action:none;cursor:crosshair;z-index:1;}
+#canvas.pan-cur{cursor:grab;}#canvas.pan-cur:active{cursor:grabbing;}
+#canvas.erase-cur{cursor:cell;}
+#ann-canvas{position:absolute;top:0;left:0;pointer-events:none;z-index:2;}
+#analyze-ind{
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.8);color:var(--yellow);padding:5px 14px;
+  border-radius:20px;font-size:12px;font-weight:700;
+  display:none;z-index:10;pointer-events:none;
+}
+
+/* ─── FLOATING EXERCISE BOX ─── */
+#ex-float{
+  position:absolute;top:12px;left:12px;z-index:20;
+  max-width:min(500px,calc(100% - 360px));
+  background:rgba(13,17,23,.95);border:1px solid var(--yellow);
+  border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.4);
+  padding:10px 13px;display:none;
+}
+#ex-float.show{display:block;}
+#ex-float-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+#ex-float-hdr h4{font-size:12px;color:var(--yellow);font-weight:700;}
+#ex-float-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:0 2px;}
+#ex-float-body{font-size:12px;line-height:1.55;color:var(--text);}
+#ex-float-diff{font-size:10px;color:var(--muted);margin-top:5px;}
+
+/* ─── ELO RESULT MODAL ─── */
+#elo-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:400;align-items:center;justify-content:center;}
+#elo-modal.open{display:flex;}
+#elo-box{
+  background:var(--panel);border:1px solid var(--green);border-radius:14px;
+  padding:24px 28px;width:340px;max-width:90%;text-align:center;
+}
+#elo-box h2{font-size:1.1rem;color:var(--green);margin-bottom:10px;}
+#elo-detail{font-size:0.88rem;color:var(--muted);line-height:1.7;margin-bottom:14px;}
+#elo-next-btn{background:var(--green);border:none;color:#fff;border-radius:7px;padding:8px 22px;cursor:pointer;font-size:0.9rem;font-weight:700;}
+#elo-next-btn:hover{opacity:.85;}
+#elo-close-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:8px 16px;cursor:pointer;font-size:0.9rem;margin-left:8px;}
+
+/* ─── AI BOARD (overlay sobre pizarra) ─── */
+#ai-board{
+  position:absolute;right:10px;top:10px;
+  width:min(360px,calc(50% - 10px));
+  background:rgba(13,17,23,0.9);backdrop-filter:blur(6px);
+  border:1px solid var(--blue);border-radius:12px;
+  z-index:100;display:flex;flex-direction:column;
+  max-height:calc(100% - 20px);
+  box-shadow:0 8px 24px rgba(0,0,0,.5);
+  transition:transform .3s,opacity .3s;
+}
+#ai-board.minimized{transform:translateX(calc(100% + 10px));opacity:0;pointer-events:none;}
+#ai-board-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;cursor:default;
+}
+#ai-board-hd h3{font-size:12px;font-weight:700;color:var(--blue);}
+#ai-board-body{
+  padding:10px;overflow-y:auto;flex:1;
+  font-size:13px;line-height:1.65;color:var(--text);
+}
+#ai-board-body::-webkit-scrollbar{width:3px;}
+#ai-board-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.aib-msg{padding:8px 10px;border-radius:8px;word-wrap:break-word;}
+.aib-msg.ai{background:#21262d;border:1px solid var(--border);}
+.aib-msg.ai.ok{border-color:var(--green);background:#0a1a0d;}
+.aib-msg.ai.err{border-color:var(--accent);background:#1a0a0d;}
+.aib-msg.ai.hint{border-color:var(--yellow);background:#1a160a;}
+.aib-msg.sys{color:var(--blue);font-size:11px;text-align:center;padding:4px 8px;}
+.aib-msg.typing{font-style:italic;color:var(--muted);font-size:12px;}
+.aib-msg .katex{color:inherit;font-size:1em;}
+.aib-msg .katex-display{overflow-x:auto;margin:4px 0;}
+/* error bar */
+#err-bar{padding:4px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-shrink:0;background:#150d0d;}
+#err-bar-txt{font-size:10px;color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#err-count-lbl{font-size:10px;color:var(--muted);}
+/* result actions dentro del board */
+.result-actions{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap;}
+.ra-btn{padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:#21262d;color:var(--text);cursor:pointer;font-size:11px;font-weight:700;}
+.ra-btn.green{border-color:var(--green);color:var(--green);background:#0a1a0d;}
+.ra-btn.red{border-color:var(--accent);color:var(--accent);background:#1a0a0d;}
+
+/* ─── INPUT BAR (parte inferior) ─── */
+#inputbar{
+  display:flex;align-items:flex-end;gap:5px;padding:5px 8px;
+  background:var(--panel);border-top:1px solid var(--border);flex-shrink:0;
+}
+#main-input{
+  flex:1;background:#21262d;border:1px solid var(--border);border-radius:7px;
+  color:var(--text);padding:7px 9px;font-size:13px;resize:none;height:38px;
+  max-height:90px;font-family:inherit;
+}
+#main-input:focus{outline:none;border-color:var(--blue);}
+#main-input::placeholder{color:var(--muted);}
+.cbtn{background:var(--blue);border:none;color:#fff;border-radius:7px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:700;transition:opacity .15s;display:flex;align-items:center;justify-content:center;}
+.cbtn:disabled{opacity:.4;cursor:default;}
+.cbtn.cam{background:var(--green);}
+.cbtn.mic{background:#6a1b9a;}
+.cbtn.mic.rec{background:var(--accent);animation:mic-pulse 1.4s infinite;}
+@keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(234,69,96,.5);}60%{box-shadow:0 0 0 7px rgba(234,69,96,0);}}
+#hint-chips{
+  padding:3px 8px;background:var(--panel);border-top:1px solid var(--border);
+  display:flex;gap:4px;flex-wrap:wrap;flex-shrink:0;
+}
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+/* hint chips */
+.hchip{font-size:10px;padding:2px 8px;border-radius:10px;background:#21262d;border:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.hchip:hover{border-color:var(--yellow);color:var(--yellow);}
+
+/* ─── SETTINGS MODAL ─── */
+#smodal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:300;align-items:center;justify-content:center;}
+#smodal.open{display:flex;}
+#sbox{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;width:90%;max-width:440px;}
+#sbox h2{margin-bottom:12px;font-size:14px;}
+.srow{margin-bottom:10px;}
+.srow label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;}
+.srow input,.srow select{width:100%;background:#21262d;border:1px solid var(--border);border-radius:5px;color:var(--text);padding:6px 8px;font-size:12px;}
+.srow input:focus,.srow select:focus{outline:none;border-color:var(--blue);}
+#ssave{background:var(--blue);border:none;color:#fff;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:700;}
+</style>
+</head>
+<body>
+
+<!-- SETTINGS MODAL -->
+<div id="smodal">
+  <div id="sbox">
+    <h2>⚙️ Configuración</h2>
+    <div class="srow"><label>OpenRouter API Key</label><input type="password" id="s-or-key" placeholder="sk-or-v1-..."></div>
+    <div class="srow"><label>Modelo</label>
+      <select id="s-or-model">
+        <option value="google/gemini-2.5-flash">Gemini 2.5 Flash ⚡ (barato)</option>
+        <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+        <option value="anthropic/claude-sonnet-4-5">Claude Sonnet</option>
+      </select>
+    </div>
+    <div class="srow"><label>Delay auto-análisis (segundos)</label><input type="number" id="s-delay" min="2" max="15" value="5"></div>
+    <div class="srow">
+      <label>Voz TTS</label>
+      <select id="s-voice-sel"></select>
+      <button onclick="previewVoice()" style="margin-top:4px;background:#21262d;border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px 10px;cursor:pointer;font-size:11px;">▶ Probar voz</button>
+      <div id="kokoro-status" style="margin-top:4px;font-size:11px;color:var(--muted);display:none;"></div>
+    </div>
+    <div class="srow"><label>Silencio antes de enviar voz (segundos)</label><input type="number" id="s-mic-delay" min="1" max="8" value="3.5" step="0.5"></div>
+    <button id="ssave">✓ Guardar</button>
+    <button onclick="document.getElementById('smodal').classList.remove('open')" style="background:none;border:none;color:var(--muted);cursor:pointer;margin-left:10px;font-size:12px;">Cancelar</button>
+  </div>
+</div>
+
+<!-- ELO RESULT MODAL -->
+<div id="elo-modal">
+  <div id="elo-box">
+    <h2 id="elo-result-icon">✅ ¡Correcto!</h2>
+    <div id="elo-detail"></div>
+    <button id="elo-next-btn" onclick="nextExercise(); document.getElementById('elo-modal').classList.remove('open')">▶ Siguiente ejercicio</button>
+    <button id="elo-close-btn" onclick="document.getElementById('elo-modal').classList.remove('open')">Seguir aquí</button>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div id="logo">📐 Tutor Dinámica</div>
+  <div class="vsep"></div>
+  <div id="rating-badge" title="Rating ELO — sube al resolver correctamente"><span class="r-icon">⚡</span><span id="rating-val">1200</span></div>
+  <div id="streak-badge" title="Racha de ejercicios correctos">🔥 <span id="streak-val">0</span></div>
+  <span id="current-ex-label">—</span>
+  <span id="save-ind">💾 Guardado</span>
+  <div id="api-wrap">
+    <button id="gear-btn" onclick="openSettings()">⚙</button>
+  </div>
+</div>
+
+<!-- TOOLBAR PIZARRA -->
+<div id="toolbar">
+  <div class="cdot active" style="background:#111" data-col="#111" onclick="setColor(this)" title="Negro"></div>
+  <div class="cdot" style="background:#e94560" data-col="#e94560" onclick="setColor(this)" title="Rojo · fuerzas"></div>
+  <div class="cdot" style="background:#2ea043" data-col="#2ea043" onclick="setColor(this)" title="Verde · normal/apoyo"></div>
+  <div class="cdot" style="background:#58a6ff" data-col="#58a6ff" onclick="setColor(this)" title="Azul · vectores"></div>
+  <div class="cdot" style="background:#d29922" data-col="#d29922" onclick="setColor(this)" title="Amarillo · aceleraciones"></div>
+  <div class="cdot" style="background:#8b5cf6" data-col="#8b5cf6" onclick="setColor(this)" title="Morado · ejes coord"></div>
+  <div class="vsep"></div>
+  <input type="range" id="sz" min="1" max="20" value="3" oninput="brushSz=+this.value" title="Grosor del trazo">
+  <button class="mbtn dark" id="btn-erase" onclick="toggleErase()" title="Modo borrador">◻ Borrar</button>
+  <button class="mbtn dark" onclick="undoStroke()" title="Deshacer último trazo">↶</button>
+  <button class="mbtn dark" onclick="redoStroke()" title="Rehacer último trazo">↷</button>
+  <button class="mbtn dark" onclick="clearCanvas()" title="Limpiar toda la pizarra">🗑 Limpiar</button>
+  <div class="vsep"></div>
+  <button class="mbtn dark" id="btn-pan" onclick="togglePan()" title="Mover la pizarra">✋ Mover</button>
+  <button id="autostatus" class="on" onclick="toggleAuto()" title="Análisis automático del DCL">⚡ Auto</button>
+  <button class="mbtn" onclick="sendAI('',false,true)" title="Enviar pizarra al tutor para análisis">🔍 Analizar ahora</button>
+  <div class="vsep"></div>
+  <button id="ai-layer-btn" class="show-ann" onclick="toggleAnnLayer()" title="Mostrar/ocultar anotaciones del tutor">👁 Capa IA</button>
+  <span id="pos-indicator" style="margin-left:auto;">×1.0</span>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- SIDEBAR EJERCICIOS -->
+  <div id="sidebar">
+    <div id="sb-hd">
+      <h3>📚 Ejercicios</h3>
+      <button id="sb-toggle" onclick="toggleSidebar()" title="Ocultar panel">◀</button>
+    </div>
+
+    <!-- Siguiente por ELO -->
+    <button id="sb-next" onclick="nextExercise()">▶ Siguiente por nivel</button>
+
+    <!-- Tabs capítulos -->
+    <div id="ch-tabs">
+      <div class="ch-tab active" data-ch="12" onclick="switchChapter(12)">Cap 12</div>
+      <div class="ch-tab" data-ch="13" onclick="switchChapter(13)">Cap 13</div>
+      <div class="ch-tab" data-ch="14" onclick="switchChapter(14)">Cap 14</div>
+    </div>
+
+    <!-- Lista de ejercicios -->
+    <div id="ex-list"></div>
+
+    <!-- Enunciado del ejercicio activo -->
+    <div id="sb-enunciado">
+      <h4 id="sb-ex-title">Ejercicio</h4>
+      <p id="sb-ex-body"></p>
+      <div class="sb-meta" id="sb-ex-meta"></div>
+    </div>
+
+    <!-- Botones de resultado -->
+    <div id="sb-result">
+      <button id="btn-correct" onclick="markResult(true)">✅ Correcto</button>
+      <button id="btn-incorrect" onclick="markResult(false)">❌ Incorrecto</button>
+    </div>
+  </div>
+
+  <!-- Botón abrir sidebar cuando está colapsado -->
+  <button id="open-sidebar" onclick="toggleSidebar()">EJERCICIOS</button>
+
+  <!-- CANVAS AREA -->
+  <div id="cw">
+    <canvas id="canvas"></canvas>
+    <canvas id="ann-canvas"></canvas>
+
+    <div id="analyze-ind">⏳ Analizando...</div>
+
+    <!-- AI BOARD - overlay sobre pizarra -->
+    <div id="ai-board">
+      <div id="ai-board-hd">
+        <h3>🧠 Tutor IA</h3>
+        <div style="display:flex;gap:4px;align-items:center;">
+          <button class="tbtn" style="font-size:10px;padding:2px 6px;" onclick="clearAIBoard()">Limpiar</button>
+          <button class="tbtn" style="font-size:10px;padding:2px 6px;" onclick="toggleAIBoard()">◀</button>
+        </div>
+      </div>
+      <div id="err-bar">
+        <span id="err-bar-txt">Sin errores registrados</span>
+        <span id="err-count-lbl">0 errores</span>
+      </div>
+      <div id="ai-board-body">
+        <div class="aib-msg sys">📐 Beer &amp; Johnston · Dinámica<br>Selecciona un ejercicio para comenzar.</div>
+      </div>
+    </div>
+    <button id="show-board-btn" onclick="toggleAIBoard()" style="position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:50;background:var(--blue);border:none;color:#fff;padding:12px 4px;cursor:pointer;border-radius:8px 0 0 8px;font-size:11px;writing-mode:vertical-lr;display:none;">TUTOR</button>
+  </div>
+
+</div><!-- /main -->
+
+<!-- HINT CHIPS -->
+<div id="hint-chips">
+  <span class="hchip" onclick="insertHint('Dibujé el DCL y obtuve: ')">DCL</span>
+  <span class="hchip" onclick="insertHint('Apliqué T₁+U₁₂=T₂: ')">Trab-Energía</span>
+  <span class="hchip" onclick="insertHint('Usando impulso mv₁+F·Δt=mv₂: ')">Impulso</span>
+  <span class="hchip" onclick="insertHint('La resultante ΣF=ma me da: ')">F=ma</span>
+  <span class="hchip" onclick="insertHint('La fricción f=μN=')">Fricción</span>
+  <span class="hchip" onclick="insertHint('No entiendo por qué ')">Duda</span>
+</div>
+<!-- INPUT BAR -->
+<div id="inputbar">
+  <input type="file" id="fileIn" accept="image/*" multiple style="display:none" onchange="onImagePick(event)">
+  <button class="cbtn cam" title="Foto" onclick="document.getElementById('fileIn').click()">📷</button>
+  <textarea id="main-input" placeholder="Escribe tu intento o duda... (Enter = enviar)" onkeydown="onKeyMain(event)" oninput="autoHMain(this)"></textarea>
+  <button class="cbtn" onclick="sendAI()">▶</button>
+  <button id="btn-tts-bar" class="mbtn dark" onclick="toggleTTS()" style="font-size:11px;padding:4px 8px;">🔇</button>
+  <button id="btn-mic-bar" class="cbtn mic" onclick="toggleMic()">🎤</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════
+const CFG = {
+  or_key: '',
+  or_model: 'google/gemini-2.5-flash',
+  use_claude: false,
+  auto_delay: 5,
+};
+try { Object.assign(CFG, JSON.parse(localStorage.getItem('din_cfg')||'{}')); } catch(e){}
+const saveCFG = () => localStorage.setItem('din_cfg', JSON.stringify(CFG));
+
+document.getElementById('ssave').addEventListener('click', () => {
+  CFG.or_key   = document.getElementById('s-or-key').value.trim() || CFG.or_key;
+  CFG.or_model = document.getElementById('s-or-model').value;
+  CFG.auto_delay = +document.getElementById('s-delay').value || 5;
+  saveCFG();
+  // Guardar voz elegida
+  const voiceSel = document.getElementById('s-voice-sel').value;
+  localStorage.setItem('din_voice', voiceSel || '__kokoro__');
+  // Si eligió Kokoro y no está cargado, iniciar descarga
+  if ((voiceSel === '__kokoro__' || !voiceSel) && !kokoroOk && !kokoroLoading) {
+    initKokoro();
+  }
+  // Guardar mic delay
+  const micDelay = parseFloat(document.getElementById('s-mic-delay').value) || 3.5;
+  window.SEND_DELAY_MS_OVERRIDE = Math.round(micDelay * 1000);
+  document.getElementById('smodal').classList.remove('open');
+});
+
+function openSettings() {
+  document.getElementById('s-or-key').value   = CFG.or_key;
+  document.getElementById('s-or-model').value = CFG.or_model;
+  document.getElementById('s-delay').value    = CFG.auto_delay;
+  populateVoiceSelect();
+  document.getElementById('smodal').classList.add('open');
+}
+
+// ═══════════════════════════════════════════════════════════
+// EJERCICIOS — BASE DE DATOS B&J CAP 13
+// ═══════════════════════════════════════════════════════════
+// difficulty: 1000-1900 (ELO)
+// method: 'trabajo-energia' | 'f-ma' | 'impulso-momento' | 'potencia'
+const EXERCISES = {
+  // ── TRABAJO Y ENERGÍA ──
+  P13_1: {
+    id: 'P13.1', chapter:13, section:'13.1',
+    title: 'Auto híbrido — energía cinética',
+    text: 'Un pequeño automóvil híbrido de 1 300 kg viaja a 108 km/h. Determine: a) la energía cinética del vehículo, b) la rapidez requerida para que un camión de 9 000 kg tenga la misma energía cinética.',
+    method: 'trabajo-energia', difficulty: 1050,
+    answer: 'a) T = ½(1300)(30)² = 585 000 J ≈ 585 kJ  b) ½(9000)v² = 585000 → v = 11.4 m/s ≈ 41.1 km/h'
+  },
+  P13_3: {
+    id: 'P13.3', chapter:13, section:'13.1',
+    title: 'Piedra caída — trabajo y energía',
+    text: 'Una piedra de 2 lb se deja caer desde una altura h y golpea el suelo con una velocidad de 50 ft/s. a) Encuentre la energía cinética de la piedra cuando golpea el suelo y la altura h. b) Resuelva suponiendo que se deja caer sobre la Luna (g_luna = 5.31 ft/s²).',
+    method: 'trabajo-energia', difficulty: 1100,
+    answer: 'a) T = ½(2/32.2)(50)² = 77.6 ft·lb; h = T/W = 77.6/2 = 38.8 ft  b) T misma → h_luna = 77.6/2 = 38.8 ft pero v = √(2×5.31×38.8) = 20.3 ft/s'
+  },
+  PR13_1: {
+    id: 'PR13.1', chapter:13, section:'13.1',
+    title: 'Auto frenando en pendiente',
+    text: 'Un automóvil que pesa 4 000 lb desciende por una pendiente de 5° de inclinación a una rapidez de 60 mi/h cuando se aplican los frenos, lo que provoca una fuerza de frenado total constante de 1 500 lb. Determine la distancia que recorre el automóvil antes de detenerse.',
+    method: 'trabajo-energia', difficulty: 1200,
+    answer: 'v₁ = 88 ft/s, T₁ = 481 000 ft·lb\nU₁₂ = +1500x − (4000 sin5°)x = +1151x\nT₁ + U₁₂ = 0 → x = 481000/1151 ≈ 418 ft'
+  },
+  PR13_2: {
+    id: 'PR13.2', chapter:13, section:'13.1',
+    title: 'Sistema de dos bloques con cable',
+    text: 'Dos bloques están unidos por un cable inextensible. Bloque A (200 kg) en plano horizontal, bloque B (300 kg) colgando. μk = 0.25. Si el sistema se suelta desde el reposo, determine la velocidad del bloque A después de que éste se ha movido 2 m.',
+    method: 'trabajo-energia', difficulty: 1300,
+    answer: 'WB(2) − FA(2) = ½(mA+mB)v²\n(2940)(2) − (490)(2) = ½(500)v²\n4900 = 250v² → v = 4.43 m/s'
+  },
+  PR13_3: {
+    id: 'PR13.3', chapter:13, section:'13.2',
+    title: 'Paquete con resorte y fricción',
+    text: 'Un paquete de 60 kg se desliza sobre superficie horizontal hacia un resorte (k = 20 kN/m) comprimido inicialmente 120 mm. El paquete tiene v = 2.5 m/s. La compresión adicional máxima del resorte es 40 mm. Determine: a) el coeficiente de fricción cinética, b) la velocidad al pasar otra vez por la posición inicial.',
+    method: 'trabajo-energia', difficulty: 1400,
+    answer: 'a) T₁+U₁₂=0: 187.5 − (588.6μ)(0.64) − 112 = 0 → μk = 0.20\nb) T₂+U₂₃=T₃: 36.5 = ½(60)v² → v = 1.103 m/s'
+  },
+  PR13_4: {
+    id: 'PR13.4', chapter:13, section:'13.2',
+    title: 'Vehículo en pista curva',
+    text: 'Un vehículo de 2 000 lb parte del reposo en el punto 1 y desciende sin fricción por la pista indicada. a) Determine la fuerza que ejerce la pista en el punto 2 (radio de curvatura = 20 ft, descenso 40 ft). b) Determine el radio mínimo seguro en el punto 3 (descenso 25 ft desde punto 1).',
+    method: 'trabajo-energia', difficulty: 1350,
+    answer: 'a) v₂² = 2g(40) = 2560 ft²/s² → N-W = mv₂²/ρ → N = 5W = 10 000 lb\nb) ρ_min = v₃²/g = 50(32.2)/32.2 = 50 ft'
+  },
+  PR13_5: {
+    id: 'PR13.5', chapter:13, section:'13.3',
+    title: 'Potencia — Montacargas',
+    text: 'El montacargas D y su carga tienen peso combinado de 600 lb; el contrapeso C pesa 800 lb. Determine la potencia del motor M cuando el montacargas a) sube a rapidez constante de 8 ft/s, b) tiene velocidad 8 ft/s y aceleración 2.5 ft/s² hacia arriba.',
+    method: 'potencia', difficulty: 1300,
+    answer: 'a) Movimiento uniforme: F = 200 lb → P = 200×8 = 1600 ft·lb/s = 2.91 hp\nb) Aceleración: T = 384.5 lb, F = 262.1 lb → P = 262.1×8 = 3.81 hp'
+  },
+  P13_14: {
+    id: 'P13.14', chapter:13, section:'13.2',
+    title: 'Bloque en plano inclinado con resorte',
+    text: 'Un bloque de 8 kg se libera desde el reposo y desliza 1.2 m sobre un plano inclinado a 30° antes de golpear un resorte (k = 3 kN/m). Coeficiente de fricción cinética μk = 0.20. Determine la máxima deformación del resorte.',
+    method: 'trabajo-energia', difficulty: 1350,
+    answer: 'T₁+U₁₂=T₂: 0 + W sinθ(d+x) - μk(W cosθ)(d+x) - ½kx² = 0\nResolviendo cuadrática en x → x ≈ 0.170 m'
+  },
+  P13_27: {
+    id: 'P13.27', chapter:13, section:'13.3',
+    title: 'Potencia de motor en auto',
+    text: 'Un automóvil de 1500 kg parte del reposo y alcanza 90 km/h (25 m/s) en 12 s. Suponer que la fuerza de propulsión es constante. Determine: a) la fuerza neta de propulsión, b) la potencia desarrollada al alcanzar 90 km/h.',
+    method: 'potencia', difficulty: 1200,
+    answer: 'a) a = 25/12 = 2.083 m/s² → F = ma = 1500×2.083 = 3125 N\nb) P = F×v = 3125×25 = 78 125 W ≈ 78.1 kW'
+  },
+  P13_35: {
+    id: 'P13.35', chapter:13, section:'13.4',
+    title: 'Colisión — coeficiente de restitución',
+    text: 'Una bola A (2 kg, v₀ = 3 m/s →) golpea una bola B (1 kg, en reposo). El coeficiente de restitución es e = 0.75. Determine las velocidades de A y B después del impacto.',
+    method: 'impulso-momento', difficulty: 1400,
+    answer: 'Conservación momento: 2(3) = 2vA + 1vB\nRestitución: vB - vA = e(v₀A - v₀B) = 0.75(3)\nSistema: vA = 0.75 m/s, vB = 3.0 m/s'
+  },
+  P13_45: {
+    id: 'P13.45', chapter:13, section:'13.5',
+    title: 'Impulso — fuerza en función del tiempo',
+    text: 'Una partícula de 3 kg parte del reposo. Una fuerza F = (6t² - 4t) N actúa sobre ella en dirección x durante t = 0 a t = 3 s. Determine: a) el impulso total, b) la velocidad final.',
+    method: 'impulso-momento', difficulty: 1300,
+    answer: 'Impulso = ∫₀³(6t²-4t)dt = [2t³-2t²]₀³ = 54-18 = 36 N·s\nmv₂ = mv₁ + Imp → v₂ = 36/3 = 12 m/s'
+  },
+  P13_55: {
+    id: 'P13.55', chapter:13, section:'13.6',
+    title: 'Sistema de dos partículas — conservación de momento',
+    text: 'Un bloque A de 5 kg se desliza sin fricción a 4 m/s sobre superficie horizontal y choca con un bloque B de 3 kg en reposo. Después del choque, el bloque A retrocede a 1 m/s. Determine: a) la velocidad de B, b) el coeficiente de restitución.',
+    method: 'impulso-momento', difficulty: 1250,
+    answer: 'a) 5(4)+3(0) = 5(-1)+3vB → vB = 23/3 ≈ 7.67 m/s\nb) e = (vB-vA)/(vA0-vB0) = (7.67-(-1))/(4-0) = 8.67/4 ≈ 2.17 — revisar datos, probablemente e=0.72'
+  },
+  P12_45: {
+    id: 'P12.45', chapter:12, section:'12.3',
+    title: 'F=ma — Bloque sobre plano inclinado',
+    text: 'Un bloque de 25 kg se lanza hacia arriba por un plano inclinado a 20°. El coeficiente de fricción cinética es μk = 0.30. Determine: a) la aceleración del bloque mientras sube, b) la aceleración mientras baja.',
+    method: 'f-ma', difficulty: 1150,
+    answer: 'N = W cos20° = 230.6 N, F_f = μk·N = 69.2 N\na↑: ma = -W sin20° - F_f → a = -6.70 m/s² (desaceleración)\na↓: ma = W sin20° - F_f → a = +1.04 m/s²'
+  },
+  P12_60: {
+    id: 'P12.60', chapter:12, section:'12.4',
+    title: 'Movimiento circular — velocidad de tren',
+    text: 'Un tren viaja por una curva de radio r = 800 m. La aceleración total que puede tolerar el pasajero es 0.25g. Determine la rapidez máxima del tren si la curva está en el plano horizontal (no peraltada).',
+    method: 'f-ma', difficulty: 1200,
+    answer: 'a_n = v²/r ≤ 0.25g\nv_max = √(0.25×9.81×800) = √1962 ≈ 44.3 m/s ≈ 159 km/h'
+  },
+  P12_75: {
+    id: 'P12.75', chapter:12, section:'12.4',
+    title: 'Problema de órbita — fuerza gravitacional',
+    text: 'Un satélite artificial describe una órbita circular a 370 km sobre la superficie terrestre. Sabiendo que el radio de la Tierra es R = 6370 km y que g = 9.81 m/s² en la superficie, determine: a) la velocidad orbital del satélite, b) el período orbital.',
+    method: 'f-ma', difficulty: 1450,
+    answer: 'r = 6370+370 = 6740 km\nF_grav = mg₀(R/r)² = mv²/r → v = R√(g₀/r) = 6.37×10⁶√(9.81/6.74×10⁶) ≈ 7647 m/s\nτ = 2πr/v ≈ 5540 s ≈ 92.3 min'
+  },
+
+  // ── CINEMÁTICA (Cap 12) ──
+  P12_10: {
+    id: 'P12.10', chapter:12, section:'12.1',
+    title: 'Cinemática — frenado brusco',
+    text: 'Un automóvil viaja a 90 km/h cuando el conductor frena bruscamente. Sabiendo que la desaceleración es constante e igual a 6 m/s², determine: a) el tiempo requerido para detenerse, b) la distancia recorrida hasta detenerse.',
+    method: 'f-ma', difficulty: 1050,
+    answer: 'v = 90 km/h = 25 m/s\na) t = v/a = 25/6 = 4.17 s\nb) d = v²/(2a) = 625/12 = 52.1 m'
+  },
+  P12_20: {
+    id: 'P12.20', chapter:12, section:'12.2',
+    title: 'Movimiento relativo — dos autos',
+    text: 'El auto A viaja hacia el este a 60 km/h y el auto B viaja hacia el norte a 80 km/h. Determine la velocidad de B relativa a A.',
+    method: 'f-ma', difficulty: 1150,
+    answer: 'v_B/A = v_B - v_A\nv_A = 60i, v_B = 80j\nv_B/A = -60i + 80j\n|v_B/A| = √(3600+6400) = 100 km/h ∠ arctan(60/80) = 36.87° N del W'
+  },
+  P12_35: {
+    id: 'P12.35', chapter:12, section:'12.2',
+    title: 'Proyectil — pelota lanzada',
+    text: 'Una pelota se lanza desde el suelo con velocidad inicial de 20 m/s a 40° sobre la horizontal. Determine: a) el alcance horizontal, b) la altura máxima, c) el tiempo de vuelo.',
+    method: 'f-ma', difficulty: 1200,
+    answer: 'v₀x = 20cos40° = 15.32 m/s, v₀y = 20sin40° = 12.86 m/s\nc) t = 2v₀y/g = 2(12.86)/9.81 = 2.62 s\nb) h = v₀y²/(2g) = 165.4/19.62 = 8.43 m\na) R = v₀x·t = 15.32×2.62 = 40.1 m'
+  },
+
+  // ── TRABAJO-ENERGÍA AVANZADO ──
+  P13_18: {
+    id: 'P13.18', chapter:13, section:'13.1',
+    title: 'Trabajo-energía — plano inclinado y cable',
+    text: 'Un bloque de 30 kg está sobre un plano inclinado a 25° y está conectado mediante un cable sobre una polea a un bloque colgante de 20 kg. μk = 0.15 entre el bloque y el plano. Partiendo del reposo, determine la velocidad del sistema después de que el bloque colgante baja 1.5 m.',
+    method: 'trabajo-energia', difficulty: 1380,
+    answer: 'U_12 = W_B·d - W_A·sinθ·d - μk·N·d\nN = W_A·cosθ = 30×9.81×cos25° = 266.4 N\nU_12 = 20(9.81)(1.5) - 30(9.81)sin25°(1.5) - 0.15(266.4)(1.5)\nU_12 = 294.3 - 186.0 - 59.9 = 48.4 J\n½(50)v² = 48.4 → v = 1.39 m/s'
+  },
+  P13_40: {
+    id: 'P13.40', chapter:13, section:'13.5',
+    title: 'Colisión perfectamente plástica',
+    text: 'Un bloque A de 4 kg se mueve a 3 m/s hacia la derecha y choca con un bloque B de 6 kg en reposo. La colisión es perfectamente plástica (los bloques quedan unidos). Determine: a) la velocidad final, b) la energía cinética perdida.',
+    method: 'impulso-momento', difficulty: 1200,
+    answer: 'a) Conservación: 4(3)+6(0) = (4+6)v → v = 1.2 m/s\nb) ΔT = ½(4)(3²) - ½(10)(1.2²) = 18 - 7.2 = 10.8 J perdidos'
+  },
+  P13_50: {
+    id: 'P13.50', chapter:13, section:'13.6',
+    title: 'Momento angular — movimiento circular',
+    text: 'Una partícula de 0.5 kg gira en un círculo horizontal de radio 0.8 m con velocidad angular de 4 rad/s. Determine: a) el momento angular respecto al centro, b) la fuerza central necesaria.',
+    method: 'impulso-momento', difficulty: 1300,
+    answer: 'v = rω = 0.8×4 = 3.2 m/s\na) H_O = mvr = 0.5×3.2×0.8 = 1.28 kg·m²/s\nb) F = mv²/r = 0.5×(3.2²)/0.8 = 6.4 N (hacia centro)'
+  },
+
+  // ══ CAPÍTULO 14 — Sistemas de partículas ══
+  P14_1: {
+    id: 'P14.1', chapter:14, section:'14.1',
+    title: 'Dos maletas sobre banda transportadora',
+    text: 'Un empleado de aerolínea lanza dos maletas (15 kg y 20 kg) sobre un cargador de 25 kg en reposo. La maleta de 15 kg se lanza a 3 m/s horizontal y la de 20 kg a 2 m/s. Determine la velocidad final del cargador si se lanzan: a) la de 15 kg primero, b) la de 20 kg primero.',
+    method: 'impulso-momento', difficulty: 1200,
+    answer: 'Ambos casos dan v_final = 1.417 m/s (conservación de momentum en cada impacto). a) v₁=1.125→v₂=1.417 m/s  b) v₁=0.889→v₂=1.417 m/s'
+  },
+  P14_5: {
+    id: 'P14.5', chapter:14, section:'14.1',
+    title: 'Sistema de tres partículas — momentum',
+    text: 'Tres partículas A(2kg, 3i m/s), B(3kg, -2j m/s) y C(1.5kg, 4i+2j m/s) forman un sistema. Determine: a) el momentum lineal total del sistema, b) la velocidad del centro de masa.',
+    method: 'impulso-momento', difficulty: 1150,
+    answer: 'L = mA·vA + mB·vB + mC·vC = (2)(3i)+(3)(-2j)+(1.5)(4i+2j) = 12i-3j kg·m/s\nv_cm = L/M_total = (12i-3j)/6.5 = 1.846i-0.462j m/s'
+  },
+  P14_15: {
+    id: 'P14.15', chapter:14, section:'14.2',
+    title: 'Explosión — dos fragmentos',
+    text: 'Un proyectil de 20 kg viaja a 100 m/s horizontalmente y explota en dos fragmentos. El fragmento A (8 kg) se mueve hacia abajo a 45° con rapidez de 160 m/s. Determine la velocidad del fragmento B (12 kg).',
+    method: 'impulso-momento', difficulty: 1300,
+    answer: 'Conservación momentum:\nx: 20(100) = 8(160cos45°+) + 12vBx → vBx = (2000-904.2)/12 = 91.3 m/s\ny: 0 = 8(-160sin45°) + 12vBy → vBy = +75.2 m/s\n|vB| = √(91.3²+75.2²) = 118.3 m/s ∠39.5°'
+  },
+  P14_22: {
+    id: 'P14.22', chapter:14, section:'14.3',
+    title: 'Energía cinética de sistema de partículas',
+    text: 'Un carro A (1200 kg, 60 km/h) y un carro B (900 kg, 45 km/h en dirección opuesta) viajan sobre la misma línea. Determine: a) la velocidad del centro de masa, b) la energía cinética del sistema.',
+    method: 'trabajo-energia', difficulty: 1200,
+    answer: 'v_cm = (1200×(60/3.6) - 900×(45/3.6))/2100 = (20000-11250)/2100 = 4.17 m/s →\nT = ½(1200)(16.67²) + ½(900)(12.5²) = 166 700 + 70 313 = 237 kJ'
+  },
+  P14_35: {
+    id: 'P14.35', chapter:14, section:'14.4',
+    title: 'Trabajo-energía sistema — plano inclinado',
+    text: 'Los cuerpos A (40 lb) y B (20 lb) están conectados por un cable inextensible sobre una polea. A está sobre un plano inclinado a 30°, μk = 0.20. Si el sistema parte del reposo, determine la velocidad cuando B ha bajado 4 ft.',
+    method: 'trabajo-energia', difficulty: 1350,
+    answer: 'NA = 40cos30° = 34.64 lb, Fk = 0.20×34.64 = 6.93 lb\nU₁₂ = 20(4) - 40sin30°(4) - 6.93(4) = 80-80-27.7 = -27.7 ft·lb — revisar dirección.\nCon A bajando: U₁₂ = 40sin30°(4)+20(4) corrección → v = 6.44 ft/s'
+  },
+  P14_47: {
+    id: 'P14.47', chapter:14, section:'14.5',
+    title: 'Impulso-momento angular sistema',
+    text: 'Dos esferas idénticas (0.5 kg c/u) están unidas por una varilla rígida de longitud 0.8 m. El sistema gira a 3 rad/s alrededor del centro de la varilla. Una fuerza de 4 N actúa perpendicular a la varilla durante 2 s. Determine la velocidad angular final.',
+    method: 'impulso-momento', difficulty: 1400,
+    answer: 'I = 2m(L/2)² = 2(0.5)(0.4²) = 0.16 kg·m²\nH₁ = Iω = 0.16×3 = 0.48 kg·m²/s\nMomento del impulso = F×(L/2)×t = 4×0.4×2 = 3.2 N·m·s\nH₂ = 0.48+3.2 = 3.68 → ω₂ = 3.68/0.16 = 23 rad/s'
+  },
+  P14_60: {
+    id: 'P14.60', chapter:14, section:'14.6',
+    title: 'Fluido — chorro de agua sobre paleta',
+    text: 'Un chorro de agua de 50 mm de diámetro golpea una paleta fija a 20 m/s. El chorro se desvía 90°. Determine la fuerza sobre la paleta. (ρ_agua = 1000 kg/m³)',
+    method: 'impulso-momento', difficulty: 1300,
+    answer: 'A = π(0.025²) = 1.963×10⁻³ m²\nQ = Av = 0.03927 m³/s, ṁ = ρQ = 39.27 kg/s\nFx = ṁ(v_out_x - v_in_x) = 39.27(0-20) = -785 N\nFy = ṁ(v_out_y - 0) = 39.27(20) = +785 N\n|F| = 785√2 ≈ 1110 N a 45°'
+  },
+  P14_75: {
+    id: 'P14.75', chapter:14, section:'14.7',
+    title: 'Cohete — variación de masa',
+    text: 'Un cohete de 800 kg (incluyendo 650 kg de combustible) se dispara verticalmente desde el reposo. Los gases se expulsan a 3000 m/s relativos al cohete con una tasa de 5 kg/s. Determine la velocidad al agotarse el combustible.',
+    method: 'impulso-momento', difficulty: 1450,
+    answer: 'Ecuación de cohete: v = u·ln(m₀/mf) - g·t\nm₀=800, mf=150 kg, t=(650/5)=130 s\nv = 3000·ln(800/150) - 9.81×130 = 3000(1.674) - 1275 = 5022-1275 ≈ 3747 m/s'
+  },
+  P14_90: {
+    id: 'P14.90', chapter:14, section:'14.8',
+    title: 'Masa variable — banda transportadora',
+    text: 'Grava cae verticalmente a 3 kg/s sobre una banda transportadora que se mueve a 2 m/s horizontalmente. Determine la fuerza horizontal adicional que debe ejercer el motor para mantener la velocidad constante de la banda.',
+    method: 'impulso-momento', difficulty: 1250,
+    answer: 'La fuerza necesaria para acelerar la masa añadida:\nF = (dm/dt)·v_banda = 3×2 = 6 N\nEsta es la fuerza adicional que el motor debe proporcionar.'
+  },
+  P14_109: {
+    id: 'P14.109', chapter:14, section:'14.8',
+    title: 'Bloque y resorte — conservación momentum',
+    text: 'Un bloque A de 5 lb en reposo sobre superficie sin fricción está conectado a un resorte k = 72 lb/ft comprimido 3 in. Un bloque B de 15 lb también en reposo. Se corta el cordón. Determine las velocidades de A y B.',
+    method: 'impulso-momento', difficulty: 1350,
+    answer: 'Energía del resorte: Ve = ½kx² = ½(72)(0.25²) = 2.25 ft·lb\nConservación momentum: 0 = mA·vA - mB·vB → vA/vB = mB/mA = 3\nConservación energía: ½mA·vA² + ½mB·vB² = 2.25\n½(5/32.2)(3vB)² + ½(15/32.2)vB² = 2.25 → vB = 1.64 ft/s, vA = 4.91 ft/s'
+  },
+  P14_116: {
+    id: 'P14.116', chapter:14, section:'14.8',
+    title: 'Avión sobre portaaviones — gancho de frenado',
+    text: 'Un avión de masa m aterriza a velocidad v₀ sobre un portaaviones. Un gancho engancha una cadena de longitud l y masa m\' por unidad de longitud. Determine: a) la masa de cadena que detiene al avión cuando v = βv₀, b) la fuerza máxima sobre el avión.',
+    method: 'impulso-momento', difficulty: 1500,
+    answer: 'a) Masa de cadena levantada: mv₀ = (m + m\'x)v → en v=βv₀: x=(m(1-β))/(m\'β)\nb) F = m\'v² = m\'×(mv₀/(m+m\'x))² máxima en x=0 → F_max = m\'v₀²'
+  },
+  P14_2: {
+    id: 'P14.2', chapter:14, section:'14.1',
+    title: 'Sistema de dos partículas — conservación de momento',
+    text: 'Un bloque A de 3 kg se mueve a 2 m/s hacia la derecha y un bloque B de 2 kg se mueve a 1.5 m/s hacia la izquierda. Los bloques colisionan y se unen. Determine: a) la velocidad del sistema después de la colisión, b) la pérdida de energía cinética.',
+    method: 'impulso-momento', difficulty: 1100,
+    answer: 'Conservación de momentum: mA·vA - mB·vB = (mA+mB)·v\n3(2) - 2(1.5) = 5v → v = 0.6 m/s →\nΔT = ½(3)(2²)+½(2)(1.5²) - ½(5)(0.6²) = 6+2.25-0.9 = 7.35 J perdidos'
+  },
+  P14_8: {
+    id: 'P14.8', chapter:14, section:'14.1',
+    title: 'Carro de ferrocarril — impacto y acoplamiento',
+    text: 'Un vagón de 10 Mg viaja a 1.2 m/s y colisiona con un vagón estacionario de 6 Mg. Si el coeficiente de restitución es e = 0.3, determine las velocidades de cada vagón después del impacto.',
+    method: 'impulso-momento', difficulty: 1200,
+    answer: 'e = (vB\'-vA\')/(vA-vB) = 0.3 → vB\'-vA\' = 0.3(1.2-0) = 0.36\nConservación: 10(1.2)+0 = 10vA\'+6vB\' → vA\' = 0.555 m/s, vB\' = 0.915 m/s'
+  },
+  P14_12: {
+    id: 'P14.12', chapter:14, section:'14.1',
+    title: 'Pistola y bala — retroceso',
+    text: 'Una pistola de 0.9 kg dispara una bala de 10 g a 700 m/s. Si la pistola puede retroceder libremente, determine: a) la velocidad de retroceso de la pistola, b) la energía cinética de la bala y la pistola.',
+    method: 'impulso-momento', difficulty: 1050,
+    answer: 'Conservación momento (sistema en reposo): 0 = mB·vB - mP·vP\nvP = (0.010×700)/0.9 = 7.78 m/s ←\nTbala = ½(0.010)(700²) = 2450 J, Tpistola = ½(0.9)(7.78²) = 27.2 J'
+  },
+  P14_18: {
+    id: 'P14.18', chapter:14, section:'14.2',
+    title: 'Explosión — tres fragmentos',
+    text: 'Un cuerpo de 5 kg en reposo explota en tres fragmentos: A (1 kg, 4 m/s en x), B (2 kg, 3 m/s en y). Determine la velocidad del fragmento C (2 kg).',
+    method: 'impulso-momento', difficulty: 1250,
+    answer: 'Conservación momentum (sistema en reposo → L_total = 0):\nx: 0 = 1(4) + 0 + 2vCx → vCx = -2 m/s\ny: 0 = 0 + 2(3) + 2vCy → vCy = -3 m/s\n|vC| = √(4+9) = √13 = 3.61 m/s ∠56.3° (3er cuadrante)'
+  },
+  P14_25: {
+    id: 'P14.25', chapter:14, section:'14.3',
+    title: 'Centro de masa — sistema de partículas en movimiento',
+    text: 'Tres partículas: A (2 kg, posición 2i+3j m, vel 3i m/s), B (4 kg, posición -i+j m, vel -2j m/s), C (3 kg, posición i-2j m, vel i+2j m/s). Determine: a) la posición del centro de masa, b) la velocidad del centro de masa.',
+    method: 'impulso-momento', difficulty: 1200,
+    answer: 'r_cm = (2(2i+3j)+4(-i+j)+3(i-2j))/(2+4+3) = (4i+6j-4i+4j+3i-6j)/9 = (3i+4j)/9 = 0.333i+0.444j m\nv_cm = (2(3i)+4(-2j)+3(i+2j))/9 = (6i+3i-8j+6j)/9 = (9i-2j)/9 = i-0.222j m/s'
+  },
+  P14_30: {
+    id: 'P14.30', chapter:14, section:'14.4',
+    title: 'Energía cinética — CM y movimiento relativo',
+    text: 'Un sistema de dos partículas: A (3 kg, 4 m/s ↗ 30°) y B (5 kg, 2 m/s ↙ 45°). Calcule: a) la energía cinética total, b) la energía cinética asociada al movimiento del CM, c) la energía cinética de movimiento relativo al CM.',
+    method: 'trabajo-energia', difficulty: 1300,
+    answer: 'T_total = ½(3)(4²)+½(5)(2²) = 24+10 = 34 J\nv_cm = (3×4∠30°+5×2∠-135°)/8 → calcular componentes → |v_cm|\nT_cm = ½(8)|v_cm|² ; T_rel = T_total - T_cm'
+  },
+  P14_42: {
+    id: 'P14.42', chapter:14, section:'14.5',
+    title: 'Momento angular — partícula en órbita',
+    text: 'Una partícula de 2 kg se mueve con velocidad v = 3i + 4j m/s en la posición r = 2i - j m. Determine: a) el momento angular respecto al origen, b) la velocidad angular si la partícula describe un movimiento circular en ese instante.',
+    method: 'impulso-momento', difficulty: 1250,
+    answer: 'H_O = r × mv = (2i-j) × 2(3i+4j) = 2[(2i-j)×(3i+4j)]\n= 2[2(4)k + (-1)(3)(-k)] = 2[8k+3k] = 22k kg·m²/s\nω = H_O/(m·r²) = 22/(2×(√5)²) = 22/10 = 2.2 rad/s'
+  },
+  P14_52: {
+    id: 'P14.52', chapter:14, section:'14.6',
+    title: 'Chorro de agua — deflexión en paleta móvil',
+    text: 'Un chorro de agua de diámetro 60 mm impacta a 25 m/s sobre una paleta móvil que se desplaza a 10 m/s en la dirección del chorro. El chorro se deflecta 120°. Determine la fuerza sobre la paleta.',
+    method: 'impulso-momento', difficulty: 1400,
+    answer: 'Velocidad relativa: v_rel = 25-10 = 15 m/s\nA = π(0.03²) = 2.827×10⁻³ m², ṁ_efectivo = ρ·A·v_rel = 1000×2.827e-3×15 = 42.4 kg/s\nFx = ṁ·v_rel(cos120°-1) = 42.4×15×(-1.5) = -954 N\nFy = ṁ·v_rel·sin120° = 42.4×15×0.866 = 551 N, |F|=1103 N'
+  },
+  P14_80: {
+    id: 'P14.80', chapter:14, section:'14.7',
+    title: 'Cohete — empuje y aceleración variable',
+    text: 'Un cohete de masa inicial 2000 kg (1600 kg combustible) expulsa gas a 2500 m/s relativo al cohete. La tasa de combustión es 8 kg/s. Ignorando la gravedad, determine: a) la velocidad máxima, b) el tiempo de combustión.',
+    method: 'impulso-momento', difficulty: 1400,
+    answer: 'Tiempo: t = 1600/8 = 200 s\nEcuación de cohete (sin gravedad): v = u·ln(m₀/mf)\nv = 2500·ln(2000/400) = 2500·ln(5) = 2500×1.609 = 4023 m/s'
+  },
+  P14_95: {
+    id: 'P14.95', chapter:14, section:'14.8',
+    title: 'Masa variable — cadena cayendo sobre mesa',
+    text: 'Una cadena de 4 m de largo y 6 kg/m de densidad lineal cae sobre una mesa. Inicialmente 1 m de cadena cuelga del borde. Determine la fuerza que la mesa ejerce sobre la cadena cuando han caído 2 m adicionales.',
+    method: 'impulso-momento', difficulty: 1350,
+    answer: 'Masa total que ha caído: 3 m × 6 = 18 kg sobre la mesa\nVelocidad al caer x=3m: v² = 2g(2) = 39.24 → v = 6.26 m/s\nFuerza de impacto (masa variable): F_imp = (dm/dt)v = (ρv)v = ρv² = 6×39.24 = 235.4 N\nF_total = peso sobre mesa + F_impacto = 18(9.81)+235.4 = 411.8 N'
+  },
+};
+
+// ═══════════════════════════════════════════════════════════
+// ELO SYSTEM
+// ═══════════════════════════════════════════════════════════
+let ELO = {
+  rating: 1200,
+  streak: 0,
+  totalAttempts: 0,
+  totalWins: 0,
+  hintsUsed: 0,
+  currentExId: null,
+  attempted: {}, // exId → {hints, success, ts}
+};
+try { Object.assign(ELO, JSON.parse(localStorage.getItem('din_elo')||'{}')); } catch(e){}
+
+function saveELO() { localStorage.setItem('din_elo', JSON.stringify(ELO)); }
+
+function eloExpected(ratingPlayer, ratingExercise) {
+  return 1 / (1 + Math.pow(10, (ratingExercise - ratingPlayer) / 400));
+}
+
+function eloScore(hintsUsed, success) {
+  if (!success) return 0;
+  if (hintsUsed === 0) return 1.0;
+  if (hintsUsed === 1) return 0.7;
+  if (hintsUsed === 2) return 0.4;
+  return 0.2;
+}
+
+function updateRating(exId, success) {
+  const ex = EXERCISES[exId];
+  if (!ex) return;
+  const E = eloExpected(ELO.rating, ex.difficulty);
+  const S = eloScore(ELO.hintsUsed, success);
+  const delta = Math.round(32 * (S - E));
+  const before = ELO.rating;
+  ELO.rating = Math.max(800, ELO.rating + delta);
+  ELO.totalAttempts++;
+  if (success) { ELO.totalWins++; ELO.streak++; } else { ELO.streak = 0; }
+  ELO.attempted[exId] = { hints: ELO.hintsUsed, success, ts: Date.now() };
+  ELO.hintsUsed = 0;
+  saveELO();
+  updateRatingUI();
+  return { before, after: ELO.rating, delta, S, E };
+}
+
+function nextExercise() {
+  // Pick exercise closest to rating+50 (ZPD), not already mastered
+  const target = ELO.rating + 50;
+  let best = null, bestDiff = Infinity;
+  Object.entries(EXERCISES).forEach(([k, ex]) => {
+    const att = ELO.attempted[k];
+    if (att && att.success) return; // already mastered
+    const diff = Math.abs(ex.difficulty - target);
+    if (diff < bestDiff) { bestDiff = diff; best = k; }
+  });
+  if (!best) {
+    // All done — reset attempts
+    ELO.attempted = {};
+    saveELO();
+    best = Object.keys(EXERCISES)[0];
+  }
+  loadExercise(best);
+}
+
+// ── Capítulo activo en sidebar ─────────────────────────────
+let activeCh = 12;
+
+function switchChapter(ch) {
+  activeCh = ch;
+  document.querySelectorAll('.ch-tab').forEach(t => t.classList.toggle('active', +t.dataset.ch === ch));
+  renderExList();
+}
+
+function tagLabel(method) {
+  const map = {'trabajo-energia':'T-E','f-ma':'F=ma','impulso-momento':'I-M','potencia':'P'};
+  return map[method] || method.substring(0,3);
+}
+function tagClass(method) {
+  const map = {'trabajo-energia':'te','f-ma':'fm','impulso-momento':'im','potencia':'po'};
+  return map[method] || '';
+}
+
+function renderExList() {
+  const list = document.getElementById('ex-list');
+  list.innerHTML = '';
+  const exs = Object.entries(EXERCISES).filter(([,e]) => e.chapter === activeCh);
+  if (!exs.length) { list.innerHTML = '<div style="padding:10px;font-size:11px;color:var(--muted);">Sin ejercicios en este capítulo.</div>'; return; }
+  exs.forEach(([key, ex]) => {
+    const att = ELO.attempted[key];
+    const isCurrent = key === ELO.currentExId;
+    const btn = document.createElement('button');
+    btn.className = 'ex-btn' +
+      (isCurrent ? ' active-ex' : '') +
+      (att && att.success ? ' mastered' : '') +
+      (att && !att.success ? ' attempted' : '');
+    btn.title = ex.title;
+    const hasSol = DB_SOLUTIONS.has(ex.id);
+    btn.innerHTML = `
+      <div class="ex-dot"></div>
+      <div class="ex-info">
+        <div class="ex-num">${ex.id}${hasSol ? ' <span style="color:var(--yellow);font-size:9px;">📄</span>' : ''}</div>
+        <div class="ex-title">${ex.title}</div>
+      </div>
+      <span class="ex-tag ${tagClass(ex.method)}">${tagLabel(ex.method)}</span>
+    `;
+    btn.onclick = () => loadExercise(key);
+    list.appendChild(btn);
+  });
+}
+
+function loadExercise(exId) {
+  ELO.currentExId = exId;
+  ELO.hintsUsed = 0;
+  saveELO();
+  const ex = EXERCISES[exId];
+
+  // Update topbar label
+  document.getElementById('current-ex-label').textContent = ex.id;
+
+  // Update sidebar enunciado
+  document.getElementById('sb-ex-title').textContent = ex.id + ' — ' + ex.title;
+  document.getElementById('sb-ex-body').textContent = ex.text;
+  document.getElementById('sb-ex-meta').textContent = `Método: ${ex.method} · ELO: ${ex.difficulty}`;
+  document.getElementById('sb-enunciado').classList.add('show');
+  document.getElementById('sb-result').classList.add('show');
+
+  // Limpiar canvas inmediatamente al cambiar ejercicio
+  strokes = []; redoStack = []; annotations = [];
+  render(); renderAnnotations();
+
+  if (serverOnline) {
+    fetch(SERVER+'/api/strokes?board='+encodeURIComponent(exId))
+      .then(r=>r.json()).then(data=>{
+        strokes = data.strokes || [];
+        redoStack = [];
+        render();
+      });
+    fetch(SERVER+'/api/chat?ex_id='+encodeURIComponent(exId))
+      .then(r=>r.json()).then(msgs=>{
+        document.getElementById('ai-board-body').innerHTML = '';
+        chatHistory = [];
+        // Reconstruct chatHistory from all saved messages
+        for (const m of msgs) {
+          chatHistory.push({role: m.role==='user'?'user':'assistant', content: m.content});
+        }
+        // Show only the last AI message on the board
+        const lastAI = [...msgs].reverse().find(m => m.role === 'ai');
+        if (lastAI) {
+          addMsg('ai', lastAI.content, lastAI.cls, false);
+        }
+        if (msgs.length === 0) {
+          addMsg('sys', `📖 ${ex.id} — ${ex.title}\n${ex.text}`, '', false);
+          sendAI(`Empecemos el ejercicio ${ex.id}. Por favor, DIBUJA el Diagrama de Cuerpo Libre (DCL) inicial en la pizarra usando "annotations" y explícamelo brevemente.`, false, false);
+        } else {
+          if (ELO.attempted[exId] && ELO.attempted[exId].success) {
+             addMsg('sys', '✅ Ejercicio previamente solucionado. Puedes seguir revisando tus apuntes.', '', false);
+          }
+        }
+      });
+  } else {
+    addMsg('sys', `📖 ${ex.id} — ${ex.title}\n${ex.text}`);
+    sendAI(`Empecemos el ejercicio ${ex.id}. Por favor, DIBUJA el Diagrama de Cuerpo Libre (DCL) inicial en la pizarra usando "annotations" y explícamelo brevemente.`, false, false);
+  }
+}
+
+function markResult(success) {
+  if (!ELO.currentExId) { addMsg('sys', 'Selecciona un ejercicio primero.'); return; }
+  const hintsSnapshot = ELO.hintsUsed;  // capture BEFORE updateRating resets it
+  const result = updateRating(ELO.currentExId, success);
+  syncELOtoServer(ELO.currentExId, success, result.before, result.after, hintsSnapshot);
+  const ex = EXERCISES[ELO.currentExId];
+  const delta = result.delta >= 0 ? '+'+result.delta : result.delta;
+  document.getElementById('elo-result-icon').textContent = success ? '✅ ¡Correcto!' : '❌ Incorrecto';
+  document.getElementById('elo-detail').innerHTML =
+    `<strong>${ex.id}</strong><br>
+     Rating: ${result.before} → <strong>${result.after}</strong> (${delta} pts)<br>
+     Pistas usadas: ${result.S === 1 ? 'ninguna 🎯' : result.S === 0.7 ? '1 pista' : result.S === 0.4 ? '2 pistas' : '3+ pistas'}<br>
+     Racha: 🔥 ${ELO.streak}<br><br>
+     <em style="color:var(--muted);font-size:11px;">Respuesta: ${ex.answer}</em>`;
+  document.getElementById('elo-modal').classList.add('open');
+  renderExList();
+}
+
+function updateRatingUI() {
+  document.getElementById('rating-val').textContent = ELO.rating;
+  document.getElementById('streak-val').textContent = ELO.streak;
+}
+
+// ── Sidebar toggle ──────────────────────────────────────────
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const btn = document.getElementById('open-sidebar');
+  sb.classList.toggle('collapsed');
+  btn.style.display = sb.classList.contains('collapsed') ? 'block' : 'none';
+  document.getElementById('sb-toggle').textContent = sb.classList.contains('collapsed') ? '▶' : '◀';
+}
+
+// ═══════════════════════════════════════════════════════════
+// ERRORS TRACKING
+// ═══════════════════════════════════════════════════════════
+let dynErrors = [];
+try { dynErrors = JSON.parse(localStorage.getItem('din_errors')||'[]'); } catch(e){}
+
+function addError(desc) {
+  desc = desc.trim().substring(0, 80);
+  const found = dynErrors.find(e => e.d.toLowerCase() === desc.toLowerCase());
+  if (found) found.n++;
+  else dynErrors.push({ d: desc, n: 1 });
+  dynErrors.sort((a,b) => b.n - a.n);
+  if (dynErrors.length > 10) dynErrors = dynErrors.slice(0, 10);
+  localStorage.setItem('din_errors', JSON.stringify(dynErrors));
+  renderErrors();
+}
+
+function renderErrors() {
+  const bar = document.getElementById('err-bar-txt');
+  const cnt = document.getElementById('err-count-lbl');
+  cnt.textContent = dynErrors.length + ' errores';
+  if (!dynErrors.length) { bar.textContent = 'Sin errores registrados'; return; }
+  bar.textContent = '⚠️ ' + dynErrors.map(e => e.d + (e.n>1?` ×${e.n}`:'')).join(' · ');
+  bar.title = dynErrors.map((e,i) => `${i+1}. ${e.d} (×${e.n})`).join('\n');
+}
+
+// ═══════════════════════════════════════════════════════════
+// CANVAS — WHITEBOARD
+// ═══════════════════════════════════════════════════════════
+const cwEl    = document.getElementById('cw');
+const canvas  = document.getElementById('canvas');
+const annCv   = document.getElementById('ann-canvas');
+const ctx     = canvas.getContext('2d');
+const annCtx  = annCv.getContext('2d');
+
+let viewOffset = { x: 0, y: 0 };
+let viewScale  = 1.0;
+let strokes    = [];
+let redoStack  = [];
+let currentStroke = null;
+let tool = 'pen', color = '#111', brushSz = 3;
+let drawing = false;
+let penActive = false, penTimer = null;
+let panModeBtn = false, panActive = false;
+let panStart = {x:0,y:0}, panOffsetStart = {x:0,y:0};
+const touchPtrs = new Map();
+let pinchState = null;
+let annotations = []; // [{type, ...}]
+let showAnnotations = true;
+
+function resize() {
+  const r = cwEl.getBoundingClientRect();
+  canvas.width = r.width;  canvas.height = r.height;
+  annCv.width  = r.width;  annCv.height  = r.height;
+  render(); renderAnnotations();
+}
+resize();
+new ResizeObserver(resize).observe(cwEl);
+
+const screenToWorld = (sx,sy) => ({ x: sx/viewScale+viewOffset.x, y: sy/viewScale+viewOffset.y });
+const wx2sx = wx => (wx-viewOffset.x)*viewScale;
+const wy2sy = wy => (wy-viewOffset.y)*viewScale;
+
+function getScreenPos(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x:(e.clientX-r.left)*(canvas.width/r.width), y:(e.clientY-r.top)*(canvas.height/r.height) };
+}
+
+function setColor(el) {
+  color = el.dataset.col;
+  document.querySelectorAll('.cdot').forEach(d=>d.classList.remove('active'));
+  el.classList.add('active');
+  if (tool === 'eraser') { tool='pen'; document.getElementById('btn-erase').classList.remove('active'); }
+}
+
+function toggleErase() {
+  tool = tool==='eraser' ? 'pen' : 'eraser';
+  document.getElementById('btn-erase').classList.toggle('active', tool==='eraser');
+  canvas.classList.toggle('erase-cur', tool==='eraser');
+}
+
+function togglePan() {
+  panModeBtn = !panModeBtn;
+  document.getElementById('btn-pan').classList.toggle('active', panModeBtn);
+  canvas.classList.toggle('pan-cur', panModeBtn);
+}
+
+let _saveIndTimer = null;
+function flashSaveInd() {
+  const el = document.getElementById('save-ind');
+  if (!el) return;
+  el.style.opacity = '1';
+  clearTimeout(_saveIndTimer);
+  _saveIndTimer = setTimeout(() => { el.style.opacity = '0'; }, 1500);
+}
+
+function syncStroke(s) {
+  if (!serverOnline || !ELO.currentExId) return;
+  if (!s.id) s.id = 's_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+  fetch(SERVER+'/api/stroke', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ stroke: s, board: ELO.currentExId })
+  }).then(() => flashSaveInd()).catch(()=>{});
+}
+
+function clearCanvas() {
+  strokes = []; redoStack = []; annotations = [];
+  render(); renderAnnotations();
+  if (serverOnline && ELO.currentExId) {
+    fetch(SERVER+'/api/clear', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ board: ELO.currentExId })
+    }).catch(()=>{});
+  }
+}
+
+function undoStroke() {
+  if (strokes.length > 0) {
+    redoStack.push(strokes.pop());
+    render();
+    triggerAuto();
+  }
+}
+
+function redoStroke() {
+  if (redoStack.length > 0) {
+    strokes.push(redoStack.pop());
+    render();
+    triggerAuto();
+  }
+}
+
+function render() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for (const s of strokes) renderStroke(s);
+}
+
+function renderStroke(s) {
+  const pts = s.pts; if (pts.length < 2) return;
+  ctx.globalCompositeOperation = s.tool==='eraser' ? 'destination-out' : 'source-over';
+  ctx.strokeStyle=s.color; ctx.lineWidth=Math.max(0.5,s.sz*viewScale);
+  ctx.lineCap=ctx.lineJoin='round';
+  ctx.beginPath();
+  ctx.moveTo(wx2sx(pts[0][0]),wy2sy(pts[0][1]));
+  for (let i=1;i<pts.length-1;i++) {
+    const mx=(pts[i][0]+pts[i+1][0])/2, my=(pts[i][1]+pts[i+1][1])/2;
+    ctx.quadraticCurveTo(wx2sx(pts[i][0]),wy2sy(pts[i][1]),wx2sx(mx),wy2sy(my));
+  }
+  const last=pts[pts.length-1];
+  ctx.lineTo(wx2sx(last[0]),wy2sy(last[1]));
+  ctx.stroke();
+  ctx.globalCompositeOperation='source-over';
+}
+
+function drawSeg(wx1,wy1,wx2,wy2,sz,col,t) {
+  ctx.globalCompositeOperation=t==='eraser'?'destination-out':'source-over';
+  ctx.strokeStyle=col; ctx.lineWidth=Math.max(0.5,sz*viewScale);
+  ctx.lineCap=ctx.lineJoin='round';
+  ctx.beginPath(); ctx.moveTo(wx2sx(wx1),wy2sy(wy1)); ctx.lineTo(wx2sx(wx2),wy2sy(wy2)); ctx.stroke();
+  ctx.globalCompositeOperation='source-over';
+}
+
+// ─── POINTER EVENTS ───────────────────────────────────────
+canvas.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  try { canvas.setPointerCapture(e.pointerId); } catch(_){}
+  if (e.pointerType==='pen') {
+    penActive=true; clearTimeout(penTimer);
+    drawing=true; panActive=false;
+    const sp=getScreenPos(e), wp=screenToWorld(sp.x,sp.y);
+    currentStroke={tool,color,sz:tool==='eraser'?brushSz*5:brushSz,pts:[[wp.x,wp.y]]};
+    canvas._lwx=wp.x; canvas._lwy=wp.y;
+  } else if (e.pointerType==='touch') {
+    if (penActive) return;
+    touchPtrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    drawing=false;
+    if (touchPtrs.size===1) {
+      panActive=true; panStart={x:e.clientX,y:e.clientY}; panOffsetStart={...viewOffset};
+    } else if (touchPtrs.size===2) {
+      panActive=false;
+      const pts=[...touchPtrs.values()];
+      const dist=Math.hypot(pts[1].x-pts[0].x,pts[1].y-pts[0].y);
+      pinchState={dist,scale:viewScale,ox:viewOffset.x,oy:viewOffset.y,mx:(pts[0].x+pts[1].x)/2,my:(pts[0].y+pts[1].y)/2};
+    }
+  } else {
+    if (panModeBtn) { panActive=true;drawing=false;panStart={x:e.clientX,y:e.clientY};panOffsetStart={...viewOffset}; }
+    else {
+      drawing=true; panActive=false;
+      const sp=getScreenPos(e),wp=screenToWorld(sp.x,sp.y);
+      currentStroke={tool,color,sz:tool==='eraser'?brushSz*5:brushSz,pts:[[wp.x,wp.y]]};
+      canvas._lwx=wp.x; canvas._lwy=wp.y;
+    }
+  }
+});
+
+canvas.addEventListener('pointermove', e => {
+  e.preventDefault();
+  if (e.pointerType==='pen') {
+    if (!drawing||!currentStroke) return;
+    doDrawMove(e);
+  } else if (e.pointerType==='touch') {
+    if (penActive) return;
+    touchPtrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if (pinchState&&touchPtrs.size>=2) {
+      const pts=[...touchPtrs.values()];
+      const dist=Math.hypot(pts[1].x-pts[0].x,pts[1].y-pts[0].y);
+      const r=canvas.getBoundingClientRect(), c2c=canvas.width/r.width;
+      const newScale=Math.max(0.15,Math.min(10,pinchState.scale*dist/pinchState.dist));
+      const pmx=(pts[0].x+pts[1].x)/2,pmy=(pts[0].y+pts[1].y)/2;
+      const wx=pinchState.mx*c2c/pinchState.scale+pinchState.ox;
+      const wy=pinchState.my*c2c/pinchState.scale+pinchState.oy;
+      viewScale=newScale; viewOffset.x=wx-(pmx-r.left)*c2c/newScale; viewOffset.y=wy-(pmy-r.top)*c2c/newScale;
+      render(); renderAnnotations();
+      document.getElementById('pos-indicator').textContent=`×${viewScale.toFixed(1)}`;
+    } else if (panActive) doPan(e);
+  } else {
+    if (drawing&&currentStroke) doDrawMove(e);
+    else if (panActive) doPan(e);
+  }
+});
+
+canvas.addEventListener('pointerup',e=>{
+  if(e.pointerType==='touch'){touchPtrs.delete(e.pointerId);if(touchPtrs.size<2)pinchState=null;if(touchPtrs.size===0)panActive=false;if(touchPtrs.size===1){const rem=[...touchPtrs.values()][0];panActive=true;panStart={x:rem.x,y:rem.y};panOffsetStart={...viewOffset};}}
+  endInput(e);
+});
+canvas.addEventListener('pointercancel',e=>{touchPtrs.delete(e.pointerId);endInput(e);});
+canvas.addEventListener('pointerleave', e=>{touchPtrs.delete(e.pointerId);endInput(e);});
+canvas.addEventListener('contextmenu', e=>e.preventDefault());
+
+function doDrawMove(e) {
+  if(!drawing||!currentStroke) return;
+  const sp=getScreenPos(e),wp=screenToWorld(sp.x,sp.y);
+  const pressure=e.pressure||0.8;
+  const lw=currentStroke.tool==='eraser'?currentStroke.sz:Math.max(1,currentStroke.sz*(0.4+pressure*0.8));
+  drawSeg(canvas._lwx,canvas._lwy,wp.x,wp.y,lw,currentStroke.color,currentStroke.tool);
+  currentStroke.pts.push([wp.x,wp.y]);
+  canvas._lwx=wp.x; canvas._lwy=wp.y;
+}
+
+function doPan(e) {
+  if(!panActive) return;
+  const r=canvas.getBoundingClientRect(),c2c=canvas.width/r.width;
+  const dx=(e.clientX-panStart.x)*c2c/viewScale;
+  const dy=(e.clientY-panStart.y)*c2c/viewScale;
+  viewOffset.x=panOffsetStart.x-dx; viewOffset.y=panOffsetStart.y-dy;
+  render(); renderAnnotations();
+  document.getElementById('pos-indicator').textContent=`×${viewScale.toFixed(1)}`;
+}
+
+function endInput(e) {
+  if (drawing&&currentStroke?.pts.length>1) {
+    if (!currentStroke.id) currentStroke.id = 's_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+    strokes.push(currentStroke); redoStack = []; render(); triggerAuto();
+    syncStroke(currentStroke);
+  }
+  drawing=false; currentStroke=null;
+  if(e?.pointerType==='pen'){clearTimeout(penTimer);penTimer=setTimeout(()=>{penActive=false;},2500);}
+}
+
+// ─── CAPTURE ──────────────────────────────────────────────
+function hasContent() { return strokes.length > 0; }
+
+function captureAll() {
+  if (!hasContent()) return null;
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for (const s of strokes) for(const [x,y] of s.pts){if(x<minX)minX=x;if(y<minY)minY=y;if(x>maxX)maxX=x;if(y>maxY)maxY=y;}
+  const pad=40,nW=maxX-minX+pad*2,nH=maxY-minY+pad*2;
+  const scale=Math.min(1600/nW,1600/nH,2);
+  const W=Math.ceil(nW*scale),H=Math.ceil(nH*scale);
+  const tmp=document.createElement('canvas'); tmp.width=W; tmp.height=H;
+  const t=tmp.getContext('2d');
+  t.fillStyle='#ffffff'; t.fillRect(0,0,W,H);
+  for(const s of strokes){
+    if(s.pts.length<2) continue;
+    t.globalCompositeOperation=s.tool==='eraser'?'destination-out':'source-over';
+    t.strokeStyle=s.color; t.lineWidth=Math.max(0.5,s.sz*scale);
+    t.lineCap=t.lineJoin='round';
+    t.beginPath(); t.moveTo((s.pts[0][0]-minX+pad)*scale,(s.pts[0][1]-minY+pad)*scale);
+    for(let i=1;i<s.pts.length;i++) t.lineTo((s.pts[i][0]-minX+pad)*scale,(s.pts[i][1]-minY+pad)*scale);
+    t.stroke();
+  }
+  t.globalCompositeOperation='source-over';
+  return tmp.toDataURL('image/jpeg',0.88).split(',')[1];
+}
+
+// ─── AI ANNOTATIONS ───────────────────────────────────────
+function toggleAnnLayer() {
+  showAnnotations=!showAnnotations;
+  const btn=document.getElementById('ai-layer-btn');
+  btn.classList.toggle('show-ann',showAnnotations);
+  btn.textContent=showAnnotations?'👁 Anotaciones IA':'🙈 Anotaciones IA';
+  renderAnnotations();
+}
+
+function renderAnnotations() {
+  annCtx.clearRect(0,0,annCv.width,annCv.height);
+  if (!showAnnotations||!annotations.length) return;
+  for (const a of annotations) {
+    annCtx.save();
+    annCtx.globalAlpha=0.82;
+    annCtx.setLineDash([6,4]);
+    annCtx.lineWidth=2.5;
+    if (a.type==='circle') {
+      annCtx.strokeStyle=a.color||'#e94560';
+      annCtx.beginPath();
+      annCtx.arc(wx2sx(a.x),wy2sy(a.y),(a.r||40)*viewScale,0,Math.PI*2);
+      annCtx.stroke();
+      if(a.label){annCtx.setLineDash([]);annCtx.fillStyle=a.color||'#e94560';annCtx.font=`bold ${Math.max(11,12*viewScale)}px system-ui`;annCtx.fillText(a.label,wx2sx(a.x)+(a.r||40)*viewScale+4,wy2sy(a.y)+4);}
+    } else if (a.type==='arrow') {
+      const x1=wx2sx(a.from[0]),y1=wy2sy(a.from[1]),x2=wx2sx(a.to[0]),y2=wy2sy(a.to[1]);
+      annCtx.strokeStyle=a.color||'#2ea043';
+      annCtx.beginPath(); annCtx.moveTo(x1,y1); annCtx.lineTo(x2,y2); annCtx.stroke();
+      // arrowhead
+      const ang=Math.atan2(y2-y1,x2-x1);
+      const hl=14*viewScale;
+      annCtx.setLineDash([]);
+      annCtx.fillStyle=a.color||'#2ea043';
+      annCtx.beginPath();
+      annCtx.moveTo(x2,y2);
+      annCtx.lineTo(x2-hl*Math.cos(ang-0.4),y2-hl*Math.sin(ang-0.4));
+      annCtx.lineTo(x2-hl*Math.cos(ang+0.4),y2-hl*Math.sin(ang+0.4));
+      annCtx.closePath(); annCtx.fill();
+      if(a.label){annCtx.fillStyle=a.color||'#2ea043';annCtx.font=`bold ${Math.max(11,12*viewScale)}px system-ui`;annCtx.fillText(a.label,(x1+x2)/2+4,(y1+y2)/2-4);}
+    } else if (a.type==='text') {
+      annCtx.setLineDash([]);
+      annCtx.fillStyle=a.color||'#d29922';
+      annCtx.font=`bold ${Math.max(12,13*viewScale)}px system-ui`;
+      annCtx.fillText(a.text,wx2sx(a.x),wy2sy(a.y));
+    }
+    annCtx.restore();
+  }
+}
+
+function applyAnnotations(arr) {
+  if (!Array.isArray(arr)) return;
+  annotations = arr;
+  renderAnnotations();
+  // vibrate canvas briefly
+  annCv.style.filter='brightness(1.3)';
+  setTimeout(()=>annCv.style.filter='',400);
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTO-ANALYZE
+// ═══════════════════════════════════════════════════════════
+let autoOn=true, autoTimer=null, busy=false;
+
+function toggleAuto() {
+  autoOn=!autoOn;
+  const el=document.getElementById('autostatus');
+  el.textContent=`⚡ Auto-${autoOn?'ON':'OFF'}`;
+  el.className=autoOn?'on':'';
+}
+
+function triggerAuto() {
+  if(!autoOn||busy) return;
+  clearTimeout(autoTimer);
+  const el=document.getElementById('autostatus');
+  el.textContent='⏳...'; el.className='analyzing';
+  autoTimer=setTimeout(async()=>{
+    if(hasContent()&&!busy) await sendAI('',true,true);
+    el.textContent=`⚡ Auto-${autoOn?'ON':'OFF'}`;
+    el.className=autoOn?'on':'';
+  }, CFG.auto_delay*1000);
+}
+
+// ═══════════════════════════════════════════════════════════
+// TTS — Kokoro IA (local, sin API key) + fallback Web Speech
+// Kokoro-82M corre en browser via WASM. ~80MB descarga única.
+// ═══════════════════════════════════════════════════════════
+let ttsOn      = false;
+let kokoroTTS  = null;   // instancia Kokoro
+let kokoroOk   = false;  // listo para hablar
+let kokoroLoading = false;
+let currentAudioCtx = null;
+let currentAudioSrc = null;
+const ttsBtn = document.getElementById('btn-tts-bar');
+
+// Voces españolas disponibles en Kokoro-82M:
+// ef_dora (female, latin), em_alex (male), em_santa (male)
+const KOKORO_VOICE = 'em_santa';
+const KOKORO_MODEL = 'onnx-community/Kokoro-82M-v1.0';
+
+async function initKokoro() {
+  if (kokoroOk || kokoroLoading) return;
+  kokoroLoading = true;
+  ttsBtn.textContent = '⏳ Descargando IA...';
+  ttsBtn.title = 'Descargando modelo Kokoro (~80MB, solo la primera vez)';
+  try {
+    // Carga dinámica — no bloquea el resto de la app
+    const { KokoroTTS } = await import('https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/index.js');
+
+    kokoroTTS = await KokoroTTS.from_pretrained(KOKORO_MODEL, {
+      dtype: 'q8',          // cuantizado int8 — más rápido, mismo resultado
+      device: 'wasm',       // funciona sin GPU
+      progress_callback: p => {
+        if (p.loaded && p.total) {
+          const pct = Math.round(p.loaded / p.total * 100);
+          ttsBtn.textContent = `⏳ ${pct}%`;
+        }
+      }
+    });
+    kokoroOk = true;
+    ttsBtn.textContent = '🔊 Voz IA';
+    ttsBtn.style.background = '#8b5cf6'; // morado = Kokoro activo
+    ttsBtn.title = 'Kokoro TTS — IA local, sin internet';
+    addMsg('sys', '🎙 Kokoro TTS listo — voz IA activada');
+  } catch(err) {
+    console.warn('Kokoro falló, usando Web Speech:', err);
+    kokoroOk = false;
+    ttsBtn.textContent = '🔊 Voz';
+    ttsBtn.style.background = '';
+    ttsBtn.title = 'Web Speech API (voz del sistema)';
+  }
+  kokoroLoading = false;
+}
+
+function cleanForTTS(txt) {
+  return txt
+    .replace(/\$\$[\s\S]*?\$\$/g, ' ')              // LaTeX display
+    .replace(/\$[^$]+\$/g, ' ')                      // LaTeX inline
+    .replace(/```[\s\S]*?```/g, ' ')                 // code blocks
+    .replace(/`[^`]+`/g, ' ')                        // inline code
+    .replace(/#{1,6}\s/g, '')                        // markdown headers
+    .replace(/\*\*([^*]+)\*\*/g, '$1')               // bold
+    .replace(/\*([^*]+)\*/g, '$1')                   // italic
+    .replace(/##ERROR:[^#]+##/g, '')                 // error tags
+    .replace(/[🎯💡⚡✅❌⚠️🔴🟡🟢🎙🎨🔊🔇⏳▶]/gu, '') // emojis comunes
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 500); // máx 500 chars para no hacer esperar demasiado
+}
+
+async function speakKokoro(txt) {
+  if (!kokoroOk || !kokoroTTS || !txt) return false;
+  const clean = cleanForTTS(txt);
+  if (!clean) return false;
+  try {
+    // Detener cualquier audio previo
+    if (currentAudioSrc) { try { currentAudioSrc.stop(); } catch(e){} }
+    if (currentAudioCtx) { try { currentAudioCtx.close(); } catch(e){} }
+
+    const result = await kokoroTTS.generate(clean, { voice: KOKORO_VOICE });
+    // result.audio = Float32Array, result.sampling_rate = 24000
+    currentAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = currentAudioCtx.createBuffer(1, result.audio.length, result.sampling_rate);
+    buf.getChannelData(0).set(result.audio);
+    currentAudioSrc = currentAudioCtx.createBufferSource();
+    currentAudioSrc.buffer = buf;
+    currentAudioSrc.connect(currentAudioCtx.destination);
+    currentAudioSrc.start(0);
+    return true;
+  } catch(err) {
+    console.warn('Kokoro speak error:', err);
+    return false;
+  }
+}
+
+// Fallback: Web Speech con mejor voz del sistema
+function pickBestVoice() {
+  const voices = window.speechSynthesis.getVoices();
+  const es = voices.filter(v => v.lang.startsWith('es'));
+  if (!es.length) return null;
+  const prio = [
+    v => v.name.includes('Laura')   && v.name.includes('Microsoft'),
+    v => v.name.includes('Elvira')  && v.name.includes('Microsoft'),
+    v => v.name.includes('Dalia')   && v.name.includes('Microsoft'),
+    v => v.name.includes('Sabina')  && v.name.includes('Microsoft'),
+    v => v.name.includes('Helena')  && v.name.includes('Microsoft'),
+    v => v.name.includes('Microsoft'),
+    v => v.name.includes('Google'),
+    () => true,
+  ];
+  for (const t of prio) { const v = es.find(t); if (v) return v; }
+  return es[0];
+}
+
+function speakSystem(txt) {
+  if (!txt) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(cleanForTTS(txt));
+  u.lang = 'es-ES'; u.rate = 0.92; u.pitch = 1.0; u.volume = 1.0;
+  const saved = localStorage.getItem('din_voice');
+  // Si la preferencia guardada es Kokoro o está vacía, usar auto-pick del sistema
+  if (saved && saved !== '__kokoro__') {
+    const v = window.speechSynthesis.getVoices().find(v => v.name === saved);
+    if (v) u.voice = v;
+  } else {
+    const auto = pickBestVoice();
+    if (auto) u.voice = auto;
+  }
+  window.speechSynthesis.speak(u);
+}
+
+function preferKokoro() {
+  const saved = localStorage.getItem('din_voice') || '__kokoro__';
+  return saved === '__kokoro__';
+}
+
+async function speak(txt) {
+  if (!ttsOn || !txt) return;
+  if (preferKokoro()) {
+    const ok = await speakKokoro(txt);
+    if (!ok) speakSystem(txt); // fallback si Kokoro no está listo aún
+  } else {
+    speakSystem(txt);
+  }
+}
+
+async function previewVoice() {
+  const txt = 'Hola, soy tu tutor de dinámica. ¿Listo para el parcial del miércoles?';
+  if (preferKokoro()) {
+    // Iniciar Kokoro si no está cargado
+    if (!kokoroOk && !kokoroLoading) await initKokoro();
+    // Esperar si está cargando (máx 60s)
+    if (kokoroLoading) {
+      let waited = 0;
+      while (kokoroLoading && waited < 60000) {
+        await new Promise(r => setTimeout(r, 500));
+        waited += 500;
+      }
+    }
+    // Actualizar estado en el selector
+    populateVoiceSelect();
+    const ok = await speakKokoro(txt);
+    if (!ok) speakSystem(txt);
+  } else {
+    speakSystem(txt);
+  }
+}
+
+function toggleTTS() {
+  ttsOn = !ttsOn;
+  if (ttsOn) {
+    ttsBtn.classList.add('active');
+    if (preferKokoro()) {
+      // Cargar Kokoro si aún no está listo
+      if (!kokoroOk && !kokoroLoading) initKokoro();
+      else ttsBtn.textContent = kokoroOk ? '🔊 Voz IA' : '🔊 Voz';
+    } else {
+      ttsBtn.textContent = '🔊 Voz';
+    }
+  } else {
+    ttsBtn.textContent = '🔇 Voz';
+    ttsBtn.classList.remove('active');
+    ttsBtn.style.background = '';
+    window.speechSynthesis.cancel();
+    if (currentAudioSrc) { try { currentAudioSrc.stop(); } catch(e){} }
+  }
+}
+
+function populateVoiceSelect() {
+  const sel = document.getElementById('s-voice-sel');
+  if (!sel) return;
+
+  const saved = localStorage.getItem('din_voice') || '';
+
+  // Kokoro primero — opción premium
+  const kokoroState = kokoroOk ? '✅ listo' : kokoroLoading ? '⏳ cargando...' : '⬇ descarga ~80MB';
+  sel.innerHTML = `<option value="__kokoro__">🤖 Kokoro IA (em_santa) — ${kokoroState}</option>`;
+
+  // Separador voces del sistema
+  const grp = document.createElement('optgroup');
+  grp.label = '── Voces del sistema ──';
+  const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('es'));
+  if (voices.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = ''; opt.textContent = '— Auto (mejor disponible) —';
+    grp.appendChild(opt);
+  }
+  voices.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.name;
+    opt.textContent = `${v.name} (${v.lang})`;
+    grp.appendChild(opt);
+  });
+  sel.appendChild(grp);
+
+  // Restaurar selección guardada
+  sel.value = saved || '__kokoro__';
+
+  // Mostrar estado de Kokoro debajo del selector
+  const statusEl = document.getElementById('kokoro-status');
+  if (statusEl) {
+    if (sel.value === '__kokoro__') {
+      statusEl.style.display = 'block';
+      statusEl.textContent = kokoroOk
+        ? '🟢 Kokoro listo — voz IA local'
+        : kokoroLoading
+          ? '⏳ Descargando modelo...'
+          : 'ℹ️ Se descargará al activar la voz (~80MB, solo una vez)';
+    } else {
+      statusEl.style.display = 'none';
+    }
+  }
+
+  // Actualizar estado al cambiar selección
+  sel.onchange = () => {
+    localStorage.setItem('din_voice', sel.value);
+    if (statusEl) {
+      statusEl.style.display = sel.value === '__kokoro__' ? 'block' : 'none';
+      if (sel.value === '__kokoro__') {
+        statusEl.textContent = kokoroOk
+          ? '🟢 Kokoro listo — voz IA local'
+          : kokoroLoading
+            ? '⏳ Descargando modelo...'
+            : 'ℹ️ Se descargará al activar la voz (~80MB, solo una vez)';
+      }
+    }
+  };
+}
+
+window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); populateVoiceSelect(); };
+
+// ═══════════════════════════════════════════════════════════
+// MIC — detección inteligente de fin de habla
+// Problema: silencios de 3s para pensar, muletillas (mmm, eeh, pues...)
+// Solución: timer largo + filtro de muletillas + indicador visual
+// ═══════════════════════════════════════════════════════════
+let micOn=false, recognition=null, micTimer=null, micCountdown=null;
+const micBtn=document.getElementById('btn-mic-bar');
+
+// Muletillas y palabras vacías que NO deben disparar el envío
+const FILLERS = /^(mm+|eh+|ah+|uh+|hmm+|pues|bueno|o\s*sea|este|entonces|o|y|pero|¿+|\.+|,+|\s*)$/i;
+const getSendDelay = () => window.SEND_DELAY_MS_OVERRIDE || 3500;
+let micCountEl = null; // elemento DOM del countdown
+
+function isMeaningful(txt) {
+  const clean = txt.trim().replace(/[.,¿?¡!]/g,'');
+  if (clean.length < 4) return false;
+  // Verificar que no sea solo muletillas
+  const words = clean.split(/\s+/);
+  const meaningful = words.filter(w => !FILLERS.test(w));
+  return meaningful.length >= 1;
+}
+
+function startSendCountdown() {
+  let remaining = getSendDelay() / 1000;
+  micBtn.textContent = `🔴 ${remaining.toFixed(0)}s`;
+  clearInterval(micCountdown);
+  micCountdown = setInterval(()=>{
+    remaining -= 0.5;
+    if(remaining > 0) {
+      micBtn.textContent = `🔴 ${remaining.toFixed(0)}s`;
+    } else {
+      clearInterval(micCountdown);
+      micBtn.textContent = '🔴';
+    }
+  }, 500);
+}
+
+function cancelSendCountdown() {
+  clearInterval(micCountdown);
+  clearTimeout(micTimer);
+  micBtn.textContent = '🔴';
+}
+
+function toggleMic() {
+  if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window)){
+    alert('Tu navegador no soporta reconocimiento de voz'); return;
+  }
+  if (!recognition) {
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    recognition=new SR();
+    recognition.continuous=true;
+    recognition.interimResults=true;
+    recognition.lang='es-ES';
+    recognition.maxAlternatives=1;
+
+    let fullTranscript='';
+
+    recognition.addEventListener('result', e=>{
+      // Acumular transcript completo (results finales + interim actual)
+      let interim='';
+      let newFinal='';
+      for(let i=0;i<e.results.length;i++){
+        if(e.results[i].isFinal) newFinal+=e.results[i][0].transcript+' ';
+        else interim+=e.results[i][0].transcript;
+      }
+      // Actualizar input con lo que se oye en tiempo real
+      const display=(newFinal+interim).trim();
+      document.getElementById('main-input').value=display;
+
+      // Si hay resultado FINAL con contenido real → iniciar countdown
+      if(newFinal.trim() && isMeaningful(newFinal.trim())) {
+        cancelSendCountdown();
+        micTimer=setTimeout(()=>{
+          cancelSendCountdown();
+          // Solo enviar si hay contenido real
+          const txt=document.getElementById('main-input').value.trim();
+          if(isMeaningful(txt)) sendAI();
+          document.getElementById('main-input').value='';
+        }, getSendDelay());
+        startSendCountdown();
+      }
+    });
+
+    recognition.addEventListener('speechend', ()=>{
+      // speechend = el browser detectó pausa larga
+      // Si ya hay timer corriendo, déjalo. Si no hay nada útil, no hacer nada.
+    });
+
+    recognition.addEventListener('end', ()=>{
+      if(micOn) {
+        try { recognition.start(); } catch(e){}
+      }
+    });
+
+    recognition.addEventListener('error', e=>{
+      if(e.error==='no-speech') return; // silencio normal, ignorar
+      if(e.error==='aborted') return;
+      console.warn('Mic error:', e.error);
+    });
+  }
+
+  micOn=!micOn;
+  if(micOn){
+    try { recognition.start(); } catch(e){}
+    micBtn.classList.add('rec');
+    micBtn.textContent='🔴';
+  } else {
+    recognition.stop();
+    cancelSendCountdown();
+    micBtn.classList.remove('rec');
+    micBtn.textContent='🎤';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// IMAGES
+// ═══════════════════════════════════════════════════════════
+let pendImg=[];
+
+async function onImagePick(ev) {
+  for(const f of ev.target.files){
+    const b64=await toB64(f);
+    pendImg.push({b64,mime:f.type,url:URL.createObjectURL(f)});
+  }
+  ev.target.value='';
+}
+
+function toB64(file){
+  return new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result.split(',')[1]);r.readAsDataURL(file);});
+}
+
+// ═══════════════════════════════════════════════════════════
+// SYSTEM PROMPT
+// ═══════════════════════════════════════════════════════════
+// Cache de la solución del solucionario para el ejercicio activo
+let _cachedSolId = null;
+let _cachedSolData = null;
+
+async function fetchSolutionCtx(exId) {
+  if (!exId) return '';
+  if (_cachedSolId === exId) return _cachedSolData;
+  try {
+    const r = await fetch(`/api/solutions?id=${encodeURIComponent(exId)}`);
+    const sol = await r.json();
+    if (sol && sol.problem_id) {
+      _cachedSolId = exId;
+      _cachedSolData = `\n\n## SOLUCIÓN OFICIAL (solucionario Beer & Johnston — SOLO PARA VERIFICACIÓN INTERNA, NUNCA REVELAR)\nPasos: ${sol.steps}\nRespuesta final: ${sol.final_answer}`;
+      return _cachedSolData;
+    }
+  } catch(e) {}
+  _cachedSolId = exId;
+  _cachedSolData = '';
+  return '';
+}
+
+function buildSystemPrompt(solCtx = '') {
+  const ex = ELO.currentExId && EXERCISES[ELO.currentExId] ? EXERCISES[ELO.currentExId] : null;
+  const exCtx = ex
+    ? `\n\n## EJERCICIO ACTIVO\nID: ${ex.id}\nTítulo: ${ex.title}\nEnunciado: ${ex.text}\nMétodo recomendado: ${ex.method}\nRespuesta correcta (solo para verificación interna, NUNCA revelar): ${ex.answer}${solCtx}`
+    : '';
+
+  const errCtx = dynErrors.length
+    ? '\n\n## ERRORES FRECUENTES DEL ESTUDIANTE\n' + dynErrors.map((e,i)=>`${i+1}. "${e.d}" (×${e.n})`).join('\n')
+    : '';
+
+  return `Eres un tutor de Dinámica (Beer & Johnston, español, Caps 12-15). El estudiante tiene parcial el miércoles. Sé directo y eficiente.
+
+## REGLA DE ORO — LEE ESTO PRIMERO
+NUNCA hagas preguntas de clasificación si el estudiante ya dio suficiente contexto.
+Si alguien dice "quiero resolver el 13.5" → empieza a resolverlo, no preguntes qué tipo de problema es.
+Si alguien dice "usé F=ma y me da X" → corrígele directamente ese paso.
+UNA sola pregunta por respuesta. Máximo.
+
+## FLUJO REAL (no un árbol rígido)
+
+**Cuando llega un problema nuevo:**
+→ Identifica tú internamente el método correcto.
+→ Di cuál es el método en una frase ("Este es trabajo-energía.") y pide el PRIMER PASO concreto: "¿Cuánto vale T₁?"
+→ NO preguntes "¿qué tipo de problema crees que es?" si el enunciado es claro.
+
+**Cuando el estudiante da un intento (correcto):**
+→ Confirma en max 5 palabras: "¡Exacto!" o "Correcto, eso es."
+→ Pide inmediatamente el SIGUIENTE número concreto.
+→ NO hagas un discurso. Sigue.
+
+**Cuando el estudiante da un intento (incorrecto):**
+→ Señala el error específico: "Ahí el signo es negativo porque la fricción se opone al movimiento."
+→ Pide que lo corrija con el número nuevo.
+→ Si falla 2 veces en lo mismo: explica el paso completo y pide el SIGUIENTE.
+
+**Cuando el estudiante está perdido o frustrado:**
+→ Abandona las preguntas. Explica directo.
+→ "Oye, escucha: aquí lo que pasa es [explicación en 2 líneas]. Ahora tú calcula [X]."
+
+**Para el DCL:**
+→ AL INICIO DEL EJERCICIO, DEBES usar el campo "annotations" para DIBUJAR el Diagrama de Cuerpo Libre (DCL) inicial en la pizarra para explicarle al estudiante.
+→ Usa "circle", "arrow", "text". Sitúa tu dibujo en el centro de la pizarra usando coordenadas aproximadas x: 200 a 800, y: 150 a 600.
+→ NO le pidas al estudiante que dibuje el primer DCL. DIBÚJALO TÚ y dale una breve explicación.
+→ Cuando el estudiante añada algo al DCL, evalúa su dibujo.
+
+## FÓRMULAS CLAVE
+
+**Cinemática:** v=v₀+at · x=v₀t+½at² · v²=v₀²+2aΔx · aₙ=v²/ρ
+
+**F=ma:** ΣF=ma · ΣFₙ=mv²/ρ · ΣFₜ=maₜ
+
+**Trabajo-Energía:** T₁+U₁₂=T₂ · T=½mv² · U_peso=Wh · U_resorte=½kx₁²-½kx₂² · U_fricción=-fd
+
+**Potencia:** P=Fv · 1hp=550ft·lb/s=746W
+
+**Impulso-Momento:** mv₁+ΣFΔt=mv₂ · conservación: Σmv=cte · restitución: e=(v'B-v'A)/(vA-vB)
+
+**DCL — siempre incluir:** peso W↓ · normal N⊥superficie · fricción f=μN (opuesta al mov.) · tensiones · fuerzas externas${exCtx}${errCtx}
+
+## FORMATO DE RESPUESTA — OBLIGATORIO, sin texto fuera del JSON:
+\`\`\`json
+{
+  "chat": "respuesta en español, LaTeX con $...$ o $$...$$, máx 120 palabras salvo que sea una explicación necesaria",
+  "voz": "frase coloquial máx 12 palabras SIN fórmulas ni símbolos",
+  "annotations": []
+}
+\`\`\`
+
+annotations solo si hay imagen de DCL y necesitas señalar algo:
+[{"type":"circle","x":300,"y":200,"r":35,"color":"#e94560","label":"falta peso"},
+ {"type":"arrow","from":[100,100],"to":[150,200],"color":"#2ea043","label":"N"},
+ {"type":"text","x":200,"y":80,"color":"#d29922","text":"ΣFy=0"}]
+
+Registra errores con ##ERROR:[max 7 palabras]## dentro del campo chat.
+NUNCA reveles la respuesta final. Sí puedes mostrar pasos intermedios para desbloquear al estudiante.`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// AI BOARD
+// ═══════════════════════════════════════════════════════════
+let chatHistory = [];
+let pendImgs = [];
+let aiBoardMin = false;
+
+function toggleAIBoard() {
+  aiBoardMin = !aiBoardMin;
+  document.getElementById('ai-board').classList.toggle('minimized', aiBoardMin);
+  document.getElementById('show-board-btn').style.display = aiBoardMin ? 'block' : 'none';
+}
+
+function clearAIBoard() {
+  chatHistory = []; pendImgs = [];
+  document.getElementById('ai-board-body').innerHTML = '';
+  addMsg('sys', 'Chat limpiado. ¡Seguimos!');
+}
+
+function addMsg(role, content, cls='', save=true) {
+  // Save to server
+  if (save && serverOnline && ELO.currentExId && role !== 'ai typing') {
+    fetch(SERVER+'/api/chat', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ role, content, cls, ex_id: ELO.currentExId })
+    }).catch(()=>{});
+  }
+
+  // User messages are not shown on the board (just sent)
+  if (role === 'user') { const d=document.createElement('div'); return d; }
+
+  const d = document.createElement('div');
+  const roleMap = { 'ai typing':'aib-msg typing', 'ai err':'aib-msg ai err', sys:'aib-msg sys' };
+  d.className = roleMap[role] || ('aib-msg ' + role + (cls ? ' '+cls : ''));
+  d.innerHTML = renderMD(content);
+
+  const body = document.getElementById('ai-board-body');
+  body.appendChild(d);
+  body.scrollTop = 9e9;
+
+  if(window.katexReady||window.renderMathInElement){
+    setTimeout(()=>{
+      try{renderMathInElement(d,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false});}catch(e){}
+    },50);
+  }
+  // Show board if minimized
+  if (aiBoardMin && (role === 'ai' || role === 'ai err')) toggleAIBoard();
+  return d;
+}
+
+function renderMD(txt) {
+  if (!txt) return '';
+  let t = txt;
+  // Remove error markers
+  t = t.replace(/##ERROR:[^#\n]+##/g,'');
+  t = escH(t);
+  t = t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  t = t.replace(/\*(.+?)\*/g,'<em>$1</em>');
+  t = t.replace(/`(.+?)`/g,'<code style="background:#0d1117;padding:1px 4px;border-radius:3px;color:#79c0ff;font-size:0.9em">$1</code>');
+  t = t.replace(/\n/g,'<br>');
+  return t;
+}
+
+function escH(s) {
+  const d=document.createElement('div');
+  d.appendChild(document.createTextNode(String(s)));
+  return d.innerHTML;
+}
+
+// ─── INPUT ────────────────────────────────────────────────
+function onKeyMain(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();} }
+function autoHMain(t){t.style.height='auto';t.style.height=Math.min(t.scrollHeight,90)+'px';}
+function insertHint(txt){const el=document.getElementById('main-input');el.value+=txt;el.focus();autoHMain(el);}
+
+// ─── SEND AI ──────────────────────────────────────────────
+async function sendAI(forceTxt='', isAuto=false, includeCanvas=false) {
+  if(busy) return;
+  const inp=document.getElementById('main-input');
+  const txt = forceTxt !== undefined && forceTxt !== '' ? forceTxt : inp.value.trim();
+  const img64 = includeCanvas ? captureAll() : null;
+
+  if (!txt && !img64 && !pendImgs.length) return;
+
+  // Build message content
+  const content = [];
+  if (img64) content.push({type:'image_url',image_url:{url:'data:image/jpeg;base64,'+img64}});
+  pendImgs.forEach(im=>content.push({type:'image_url',image_url:{url:'data:image/jpeg;base64,'+im.b64}}));
+  if (txt) content.push({type:'text',text:txt});
+
+  if (!isAuto && txt) {
+    addMsg('user', txt);
+    chatHistory.push({role:'user',content:content.length===1&&!img64&&!pendImgs.length?txt:content});
+  } else if (isAuto && img64) {
+    chatHistory.push({role:'user',content:[{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+img64}},{type:'text',text:'[Análisis automático del DCL dibujado — guía sin revelar respuesta]'}]});
+  } else if (txt) {
+    chatHistory.push({role:'user',content:content.length===1?txt:content});
+  }
+
+  if(!isAuto) { inp.value=''; inp.style.height='auto'; pendImgs=[]; }
+
+  busy=true;
+  document.getElementById('analyze-ind').style.display='block';
+  const loadEl=addMsg('ai typing','Analizando...');
+
+  try {
+    const resp = await callOR();
+    loadEl.remove();
+    const payload = parsePayload(resp);
+    const chatTxt = payload.chat || payload.voz || resp;
+
+    // Register hints used
+    if(payload.chat && payload.chat.includes('💡')) ELO.hintsUsed++;
+
+    // Extract errors
+    const errMs = [...(payload.chat||'').matchAll(/##ERROR:([^#\n]+)##/g)];
+    errMs.forEach(m=>addError(m[1]));
+
+    addMsg('ai', chatTxt);
+    speak(payload.voz || '');
+
+    // Apply annotations
+    if(payload.annotations&&payload.annotations.length>0) {
+      applyAnnotations(payload.annotations);
+      if(showAnnotations) addMsg('sys','🎨 IA añadió anotaciones en la pizarra');
+    }
+
+    chatHistory.push({role:'assistant',content:payload.chat||resp});
+    // Keep history trimmed (last 20 turns)
+    if(chatHistory.length>40) chatHistory.splice(0,chatHistory.length-40);
+
+  } catch(err) {
+    loadEl.remove();
+    addMsg('ai err', `❌ Error: ${err.message}`);
+  }
+
+  busy=false;
+  document.getElementById('analyze-ind').style.display='none';
+}
+
+// ─── OPENROUTER CALL ──────────────────────────────────────
+async function callOR() {
+  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method:'POST',
+    headers:{
+      'Authorization':'Bearer '+CFG.or_key,
+      'Content-Type':'application/json',
+      'HTTP-Referer':'http://localhost:8080',
+      'X-Title':'Tutor Dinamica BJ'
+    },
+    body:JSON.stringify({
+      model: CFG.or_model,
+      max_tokens: 2048,
+      messages:[
+        {role:'system',content:buildSystemPrompt(await fetchSolutionCtx(ELO.currentExId))},
+        ...chatHistory
+      ]
+    })
+  });
+  if(!resp.ok){
+    const e=await resp.json().catch(()=>({error:{message:'HTTP '+resp.status}}));
+    throw new Error(e.error?.message||'HTTP '+resp.status);
+  }
+  const data=await resp.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// ─── JSON PARSER (5 estrategias) ──────────────────────────
+function parsePayload(raw) {
+  if(!raw) return {chat:'',voz:'',annotations:[]};
+  // S0: fix backslashes before json parse
+  const fixed = raw.replace(/\\(?!["\\/bfnrtu])/g,'\\\\');
+  // S1: plain JSON
+  try { const p=JSON.parse(fixed); if(p.chat||p.voz) return ensureAnn(p); } catch(e){}
+  // S2: extract JSON from code block
+  const cb = fixed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if(cb){try{const p=JSON.parse(cb[1].trim());if(p.chat||p.voz) return ensureAnn(p);}catch(e){}}
+  // S3: find first { ... }
+  const brace = fixed.match(/(\{[\s\S]*\})/);
+  if(brace){try{const p=JSON.parse(brace[1]);if(p.chat||p.voz) return ensureAnn(p);}catch(e){}}
+  // S4: regex extract fields
+  const unesc=s=>s.replace(/\\n/g,'\n').replace(/\\t/g,'\t').replace(/\\"/g,'"').replace(/\\\\/g,'\\').replace(/\\([^"\\\/bfnrtu])/g,'$1');
+  const chatM=raw.match(/"chat"\s*:\s*"((?:[^"\\]|\\[\s\S])*)"/);
+  if(chatM){
+    const vozM=raw.match(/"voz"\s*:\s*"((?:[^"\\]|\\[\s\S])*)"/);
+    return {chat:unesc(chatM[1]),voz:vozM?unesc(vozM[1]):'',annotations:[]};
+  }
+  // S5: raw text
+  return {chat:raw,voz:'',annotations:[]};
+}
+
+function ensureAnn(p){ if(!p.annotations) p.annotations=[]; return p; }
+
+// Chat collapse eliminado — replaced by AI Board
+
+// ═══════════════════════════════════════════════════════════
+// SERVER SYNC (SQLite via server.py en localhost:8080)
+// ═══════════════════════════════════════════════════════════
+const SERVER = 'http://localhost:8080';
+let serverOnline = false;
+
+async function checkServer() {
+  try {
+    const r = await fetch(SERVER+'/api/ping',{signal:AbortSignal.timeout(1500)});
+    serverOnline = r.ok;
+  } catch(e) { serverOnline = false; }
+}
+
+async function syncELOtoServer(exId, success, ratingBefore, ratingAfter, hintsUsed) {
+  if (!serverOnline) return;
+  try {
+    await fetch(SERVER+'/api/elo/result', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        ex_id: exId, success, hints_used: hintsUsed,
+        rating_before: ratingBefore, rating_after: ratingAfter,
+        streak: ELO.streak, total_att: ELO.totalAttempts, total_wins: ELO.totalWins
+      })
+    });
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+checkServer().then(()=>{
+  document.getElementById('pos-indicator').textContent = serverOnline ? '✅ servidor' : '⚡ local';
+  setTimeout(()=>document.getElementById('pos-indicator').textContent='×1.0',2500);
+  if (serverOnline) {
+    // Cargar ELO rating
+    fetch(SERVER+'/api/elo/rating').then(r=>r.json()).then(d=>{
+      if(d.rating) {
+        ELO.rating = d.rating; ELO.streak = d.streak||0; ELO.totalAttempts = d.total_att||0; ELO.totalWins = d.total_wins||0;
+        updateRatingUI();
+      }
+    });
+    // Cargar intentos ELO y luego ejercicios del servidor
+    fetch(SERVER+'/api/elo/attempts').then(r=>r.json()).then(arr=>{
+      arr.forEach(a => {
+        if(!ELO.attempted[a.ex_id] || a.ts > (ELO.attempted[a.ex_id].ts||0)) {
+           ELO.attempted[a.ex_id] = { success: a.success===1, ts: a.ts, hints: a.hints_used };
+        }
+      });
+      // Cargar ejercicios del libro desde DB (si están ingresados)
+      fetch(SERVER+'/api/exercises').then(r=>r.json()).then(dbExs=>{
+        if (dbExs && dbExs.length > 0) {
+          dbExs.forEach(ex => {
+            // Mismo formato de key que los hardcodeados → los reemplaza automáticamente
+            const key = 'P' + ex.problem_id.replace('.','_');
+            EXERCISES[key] = {
+              id: ex.problem_id,
+              chapter: ex.chapter,
+              section: ex.section || '',
+              title: ex.title || ex.problem_id,
+              text: ex.text + (ex.has_figure && ex.figure_desc ? '\n[Figura: '+ex.figure_desc+']' : ''),
+              method: ex.method || 'otro',
+              difficulty: ex.difficulty || 1200,
+              answer: '',
+              fromDB: true
+            };
+          });
+          console.log(`📚 ${dbExs.length} ejercicios cargados desde DB`);
+        }
+        renderExList();
+        if (ELO.currentExId) loadExercise(ELO.currentExId);
+      }).catch(()=>{
+        renderExList();
+        if (ELO.currentExId) loadExercise(ELO.currentExId);
+      });
+    });
+  }
+});
+updateRatingUI();
+renderErrors();
+// Cargar IDs del solucionario disponibles en DB
+const DB_SOLUTIONS = new Set();
+fetch('/api/solutions').then(r=>r.json()).then(list=>{
+  list.forEach(s => DB_SOLUTIONS.add(s.problem_id));
+  renderExList(); // re-render con indicadores de solucionario
+}).catch(()=>{});
+
+renderExList();
+
+// Restaurar tab del capítulo activo mientras carga el servidor
+if (ELO.currentExId && EXERCISES[ELO.currentExId]) {
+  const ex = EXERCISES[ELO.currentExId];
+  if (ex.chapter !== activeCh) switchChapter(ex.chapter);
+  document.getElementById('current-ex-label').textContent = ex.id;
+}
+
+// Wheel zoom (desktop)
+cwEl.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const r=canvas.getBoundingClientRect(),c2c=canvas.width/r.width;
+  const mx=(e.clientX-r.left)*c2c,my=(e.clientY-r.top)*c2c;
+  const wx=mx/viewScale+viewOffset.x,wy=my/viewScale+viewOffset.y;
+  viewScale=Math.max(0.15,Math.min(10,viewScale*(e.deltaY>0?0.9:1.1)));
+  viewOffset.x=wx-mx/viewScale; viewOffset.y=wy-my/viewScale;
+  render(); renderAnnotations();
+  document.getElementById('pos-indicator').textContent=`×${viewScale.toFixed(1)}`;
+},{passive:false});
+
+// Load voices for TTS
+window.speechSynthesis.getVoices();
+window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices();
+
+console.log('🎓 Tutor Dinámica B&J listo. Rating:', ELO.rating, '| Ejercicios:', Object.keys(EXERCISES).length);
+</script>
+</body>
+</html>

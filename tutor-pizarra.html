@@ -1,0 +1,2206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tutor IA — Pizarra Socrática</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+  onload="window.katexReady=true"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0d1117;--panel:#161b22;--border:#30363d;
+  --blue:#58a6ff;--green:#2ea043;--accent:#e94560;
+  --yellow:#d29922;--text:#e6edf3;--muted:#8b949e;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,sans-serif;}
+body{display:flex;flex-direction:column;}
+
+/* TOP BAR */
+#topbar{
+  display:flex;align-items:center;gap:6px;padding:5px 10px;
+  background:var(--panel);border-bottom:1px solid var(--border);
+  flex-shrink:0;flex-wrap:wrap;
+}
+#logo{font-weight:800;font-size:14px;color:var(--blue);margin-right:2px;}
+#ex-row{display:flex;gap:3px;flex-wrap:wrap;}
+.ex-btn{
+  padding:3px 8px;border-radius:5px;border:1px solid var(--border);
+  background:#21262d;color:var(--text);cursor:pointer;font-size:11px;
+  font-weight:700;position:relative;transition:all .15s;
+}
+.ex-btn:hover{background:#30363d;}
+.ex-btn.active{border-color:var(--blue);background:#132236;color:var(--blue);}
+.badge{position:absolute;top:-4px;right:-4px;width:9px;height:9px;border-radius:50%;border:1.5px solid var(--bg);}
+.badge.none{background:var(--border);}.badge.working{background:var(--yellow);}
+.badge.mastered{background:var(--green);}.badge.review{background:var(--accent);}
+#overall{font-size:11px;color:var(--blue);font-weight:700;padding:0 4px;}
+.vsep{width:1px;height:22px;background:var(--border);flex-shrink:0;}
+.tbtn{padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:#21262d;color:var(--text);cursor:pointer;font-size:12px;transition:background .15s;white-space:nowrap;}
+.tbtn:hover{background:#30363d;}
+.tbtn.active{background:var(--accent);border-color:var(--accent);}
+.tbtn.pan-on{background:#3a2d00;border-color:var(--yellow);color:var(--yellow);}
+/* api switch */
+#api-wrap{display:flex;align-items:center;gap:4px;margin-left:auto;}
+#api-lbl{font-size:11px;font-weight:700;min-width:22px;}
+.sw{position:relative;width:32px;height:17px;}
+.sw input{opacity:0;width:0;height:0;}
+.sw-t{position:absolute;inset:0;background:#30363d;border-radius:17px;cursor:pointer;transition:.2s;}
+.sw-t::before{content:"";position:absolute;width:12px;height:12px;left:2.5px;top:2.5px;background:#fff;border-radius:50%;transition:.2s;}
+.sw input:checked+.sw-t{background:var(--blue);}
+.sw input:checked+.sw-t::before{transform:translateX(15px);}
+
+/* TOOLBAR */
+#toolbar{
+  display:flex;align-items:center;gap:5px;padding:5px 10px;
+  background:#0a0f14;border-bottom:1px solid var(--border);
+  flex-shrink:0;flex-wrap:wrap;
+}
+.cdot{width:24px;height:24px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:transform .15s;flex-shrink:0;}
+.cdot.active{border-color:#fff;transform:scale(1.2);}
+#sz{width:60px;accent-color:var(--blue);cursor:pointer;}
+#autostatus{font-size:11px;padding:3px 7px;border-radius:10px;background:#21262d;border:1px solid var(--border);color:var(--muted);cursor:pointer;white-space:nowrap;}
+#autostatus.on{border-color:var(--green);color:var(--green);}
+#autostatus.analyzing{border-color:var(--yellow);color:var(--yellow);}
+.mbtn{background:var(--blue);border:none;color:#fff;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;transition:opacity .15s;}
+.mbtn:hover{opacity:.85;}
+.mbtn:disabled{opacity:.4;cursor:default;}
+.mbtn.red{background:var(--accent);}
+.mbtn.dark{background:#21262d;border:1px solid var(--border);color:var(--text);}
+#pos-indicator{font-size:10px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums;}
+
+/* FLOATING EXERCISE BOX */
+#exercise-float {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 20;
+  max-width: min(520px, calc(100% - 28px));
+  background: rgba(13, 17, 23, 0.93);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  padding: 10px 12px;
+  display: none;
+}
+#exercise-float.show { display: block; }
+#exercise-float h4 { font-size: 12px; margin-bottom: 5px; color: var(--blue); }
+#exercise-float p { font-size: 12px; line-height: 1.5; color: var(--text); }
+
+/* MAIN */
+#main{display:flex;flex:1;overflow:hidden;}
+
+/* CANVAS */
+#cw{flex:1;position:relative;overflow:hidden;background:#f8f8f8;touch-action:none;}
+#canvas{position:absolute;top:0;left:0;touch-action:none;cursor:crosshair;z-index:1;}
+#canvas.pan-cur{cursor:grab;}
+#canvas.pan-cur:active{cursor:grabbing;}
+#canvas.erase-cur{cursor:cell;}
+#analyze-ind{
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.8);color:var(--yellow);padding:5px 14px;
+  border-radius:20px;font-size:12px;font-weight:700;
+  display:none;z-index:10;pointer-events:none;
+}
+#pan-hint{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  background:rgba(100,80,0,.85);color:#ffd;padding:4px 12px;
+  border-radius:14px;font-size:11px;display:none;z-index:10;pointer-events:none;
+}
+
+/* CHAT */
+#chat{
+  width:345px;min-width:345px;background:var(--panel);
+  border-left:1px solid var(--border);display:flex;flex-direction:column;
+  transition:min-width .25s,width .25s;flex-shrink:0;overflow:hidden;
+}
+#chat.collapsed{width:0;min-width:0;}
+#openchat{
+  position:absolute;right:0;top:50%;transform:translateY(-50%);
+  z-index:50;background:var(--accent);border:none;color:#fff;
+  padding:12px 4px;cursor:pointer;border-radius:8px 0 0 8px;
+  font-size:11px;writing-mode:vertical-lr;display:none;
+}
+#chat-hd{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+#chat-hd h3{font-size:13px;font-weight:700;}
+#collapse-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 4px;}
+#mastery-chips{padding:5px 10px;border-bottom:1px solid var(--border);display:flex;gap:3px;flex-wrap:wrap;flex-shrink:0;}
+.mchip{font-size:10px;padding:2px 6px;border-radius:10px;background:#21262d;border:1px solid var(--border);cursor:pointer;font-weight:700;}
+.mchip.none{color:var(--muted);}.mchip.working{border-color:var(--yellow);color:var(--yellow);}
+.mchip.mastered{border-color:var(--green);color:var(--green);background:#0d1f12;}
+.mchip.review{border-color:var(--accent);color:var(--accent);}
+#msgs{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:7px;scroll-behavior:smooth;}
+#msgs::-webkit-scrollbar{width:3px;}
+#msgs::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.msg{max-width:97%;padding:8px 11px;border-radius:10px;font-size:13px;line-height:1.6;word-wrap:break-word;}
+.msg.user{background:#1f6feb;align-self:flex-end;border-bottom-right-radius:3px;}
+.msg.ai{background:#21262d;border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:3px;}
+.msg.ai.ok{border-color:var(--green);background:#0a1a0d;}
+.msg.ai.err{border-color:var(--accent);background:#1a0a0d;}
+.msg.ai.hint{border-color:var(--yellow);background:#1a160a;}
+.msg.sys{background:#0d1a2d;border:1px solid var(--blue);align-self:center;font-size:11px;color:var(--blue);border-radius:8px;text-align:center;padding:6px 12px;}
+.msg.typing{font-style:italic;color:var(--muted);font-size:12px;background:none;border:none;align-self:flex-start;}
+/* KaTeX overrides for dark bg */
+.msg .katex{color:inherit;font-size:1em;}
+.msg .katex-display{overflow-x:auto;margin:4px 0;}
+#cin{padding:8px 10px;border-top:1px solid var(--border);display:flex;gap:5px;flex-shrink:0;}
+#minput{flex:1;background:#21262d;border:1px solid var(--border);border-radius:7px;color:var(--text);padding:7px 9px;font-size:13px;resize:none;height:56px;font-family:inherit;}
+#minput:focus{outline:none;border-color:var(--blue);}
+#minput::placeholder{color:var(--muted);}
+.cbtn{background:var(--blue);border:none;color:#fff;border-radius:7px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:700;transition:opacity .15s;display:flex;align-items:center;justify-content:center;}
+.cbtn:disabled{opacity:.4;cursor:default;}
+.cbtn.cam{background:var(--green);}
+.cbtn.mic{background:#6a1b9a;}
+.cbtn.mic.rec{background:var(--accent);}
+
+/* TABS */
+.chat-tabs{display:flex;gap:2px;flex:1;}
+.tab-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;font-weight:600;padding:3px 9px;border-radius:5px;transition:all .15s;white-space:nowrap;}
+.tab-btn.active{background:#21262d;color:var(--text);}
+.tab-btn:hover{color:var(--text);}
+
+/* KANBAN */
+#kanban-board{overflow-y:auto;padding:10px;flex-direction:column;gap:8px;display:none;}
+
+/* FORMULAS */
+#formulas-panel{overflow-y:auto;padding:10px;display:none;font-size:12px;line-height:1.6;}
+.fp-section{margin-bottom:14px;}
+.fp-title{font-size:11px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid var(--border);}
+.fp-tree{display:flex;flex-direction:column;gap:5px;}
+.fp-node{background:#21262d;border-radius:7px;padding:7px 10px;border-left:3px solid var(--border);}
+.fp-node.binomial{border-color:#58a6ff;}
+.fp-node.hyper{border-color:#d29922;}
+.fp-node.poisson{border-color:#2ea043;}
+.fp-node.disc{border-color:#e94560;}
+.fp-kw{font-size:10px;color:var(--muted);margin-bottom:2px;}
+.fp-kw span{background:#30363d;border-radius:3px;padding:1px 5px;margin-right:3px;font-style:italic;}
+.fp-name{font-weight:700;margin-bottom:3px;}
+.fp-formula{font-family:monospace;font-size:11px;background:#0d1117;border-radius:4px;padding:4px 7px;color:#79c0ff;white-space:pre-wrap;margin-top:3px;}
+.fp-note{font-size:10px;color:var(--muted);margin-top:2px;}
+.fp-table{width:100%;border-collapse:collapse;font-size:11px;}
+.fp-table th{background:#21262d;padding:4px 7px;text-align:left;color:var(--blue);font-size:10px;text-transform:uppercase;}
+.fp-table td{padding:4px 7px;border-top:1px solid var(--border);}
+.fp-table tr:hover td{background:#21262d;}
+.fp-badge{display:inline-block;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;margin-right:3px;}
+.fp-badge.b{background:#132236;color:#58a6ff;}
+.fp-badge.h{background:#2d2200;color:#d29922;}
+.fp-badge.p{background:#0d2e1a;color:#2ea043;}
+.fp-badge.d{background:#2a0e15;color:#e94560;}
+
+/* TABLEROS */
+#tableros-panel{overflow-y:auto;padding:10px;display:none;font-size:12px;}
+#tableros-panel h4{font-size:11px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;}
+.tb-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.tb-card{display:flex;align-items:center;gap:6px;padding:8px 10px;background:#21262d;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:all .15s;}
+.tb-card:hover{border-color:var(--blue);}
+.tb-card.active-board{border-color:var(--blue);background:#132236;}
+.tb-card-info{flex:1;min-width:0;}
+.tb-card-name{font-weight:700;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-card-meta{font-size:10px;color:var(--muted);}
+.tb-card-btns{display:flex;gap:4px;flex-shrink:0;}
+.tb-icon-btn{background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);cursor:pointer;padding:2px 5px;font-size:11px;transition:all .15s;}
+.tb-icon-btn:hover{border-color:var(--blue);color:var(--text);}
+.tb-icon-btn.del:hover{border-color:var(--accent);color:var(--accent);}
+#sync-status{font-size:10px;padding:3px 8px;border-radius:10px;background:#21262d;border:1px solid var(--border);color:var(--muted);margin-bottom:8px;text-align:center;}
+#sync-status.online{border-color:var(--green);color:var(--green);}
+#sync-status.offline{border-color:var(--accent);color:var(--accent);}
+
+/* FORMULA POLL */
+.poll-card{background:#161b22;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:4px 0;}
+.poll-q{font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.4;}
+.poll-ex{font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.poll-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.poll-opt{padding:8px 10px;border-radius:7px;border:1px solid var(--border);background:#21262d;cursor:pointer;font-size:12px;font-weight:600;text-align:center;transition:all .15s;line-height:1.3;}
+.poll-opt:hover{border-color:var(--blue);background:#132236;}
+.poll-opt.correct{background:#0d2e1a;border-color:var(--green);color:var(--green);cursor:default;}
+.poll-opt.wrong{background:#2a0e15;border-color:var(--accent);color:var(--accent);cursor:default;}
+.poll-opt.disabled{opacity:.45;cursor:default;}
+.poll-feedback{margin-top:8px;font-size:12px;padding:6px 9px;border-radius:6px;line-height:1.4;}
+.poll-feedback.ok{background:#0d2e1a;color:#3fb950;border:1px solid var(--green);}
+.poll-feedback.err{background:#2a0e15;color:#f85149;border:1px solid var(--accent);}
+.poll-attempts{font-size:10px;color:var(--muted);margin-top:5px;text-align:right;}
+.kb-prog{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-top:5px;}
+.kb-prog-fill{height:100%;background:var(--green);border-radius:3px;transition:width .5s;}
+.kb-group-hdr{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:700;padding:5px 8px;border-left:3px solid;background:#21262d;border-radius:0 5px 5px 0;margin-bottom:5px;cursor:default;}
+.kb-cards-wrap{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:2px;}
+.kb-card{background:#21262d;border:1px solid var(--border);border-radius:6px;padding:5px 8px;cursor:pointer;min-width:66px;max-width:88px;transition:transform .12s,background .12s;}
+.kb-card:hover{background:#30363d;transform:translateY(-2px);}
+.kb-card:active{transform:translateY(0);}
+.kb-card-id{font-size:11px;font-weight:800;}
+.kb-card-cat{font-size:9px;color:var(--muted);margin-top:1px;}
+.kb-card-pct{font-size:10px;color:var(--green);font-weight:700;margin-top:2px;}
+
+/* TIP FLOTANTE */
+#tip-float{
+  position:absolute;bottom:14px;left:14px;z-index:21;
+  max-width:min(370px,calc(100% - 28px));
+  background:rgba(10,14,20,0.97);border:1.5px solid var(--border);
+  border-radius:11px;padding:11px 14px;box-shadow:0 8px 24px rgba(0,0,0,.5);
+  display:none;
+}
+#tip-float.show{display:block;}
+.tip-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.tip-title{font-size:12px;font-weight:800;letter-spacing:.3px;}
+.tip-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 2px;line-height:1;}
+.tip-close:hover{color:var(--text);}
+.tip-formulas{font-family:monospace;font-size:11.5px;background:#080c11;border-radius:6px;padding:7px 9px;margin-bottom:8px;line-height:1.85;color:#79c0ff;white-space:pre;}
+.tip-steps{font-size:11.5px;line-height:1.85;color:var(--text);}
+.tip-steps b{color:var(--yellow);}
+.tip-toggle{background:#21262d;border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer;padding:4px 10px;font-size:12px;font-weight:700;white-space:nowrap;transition:all .15s;}
+.tip-toggle:hover{border-color:var(--yellow);color:var(--yellow);}
+.tip-toggle.active{border-color:var(--yellow);background:#2d2200;color:var(--yellow);}
+
+/* POMODORO */
+#pomo-widget{
+  position:absolute;top:12px;right:12px;z-index:20;
+  background:rgba(13,17,23,0.93);border:1.5px solid var(--green);
+  border-radius:10px;padding:7px 12px;display:flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.4);user-select:none;
+}
+#pomo-display{color:var(--green);min-width:90px;letter-spacing:.5px;}
+#pomo-btn{background:none;border:1px solid var(--border);border-radius:5px;color:var(--text);cursor:pointer;padding:2px 8px;font-size:14px;transition:all .15s;}
+#pomo-btn:hover{border-color:var(--green);color:var(--green);}
+#pomo-mode{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
+#pomo-widget.break-mode{border-color:var(--yellow);}
+#pomo-widget.break-mode #pomo-display{color:var(--yellow);}
+/* mic always-on pulse */
+.mic-always{animation:mic-pulse 1.4s infinite;}
+@keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(234,69,96,.5);}60%{box-shadow:0 0 0 7px rgba(234,69,96,0);}}
+
+/* SETTINGS */
+#smodal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:300;align-items:center;justify-content:center;}
+#smodal.open{display:flex;}
+#sbox{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;width:90%;max-width:450px;}
+#sbox h2{margin-bottom:12px;font-size:14px;}
+.srow{margin-bottom:10px;}
+.srow label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px;}
+.srow input,.srow select{width:100%;background:#21262d;border:1px solid var(--border);border-radius:5px;color:var(--text);padding:6px 8px;font-size:12px;}
+.srow input:focus,.srow select:focus{outline:none;border-color:var(--blue);}
+#ssave{background:var(--blue);border:none;color:#fff;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:13px;font-weight:700;}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div id="logo">🎓 Tutor IA</div>
+  <div id="ex-row">
+    <span style="font-size:9px;color:var(--muted);align-self:center">Disc</span>
+    <button class="ex-btn" data-ex="E1" style="border-color:#1565c0">E1<span class="badge none"></span></button>
+    <button class="ex-btn" data-ex="E2" style="border-color:#1565c0">E2<span class="badge none"></span></button>
+    <button class="ex-btn" data-ex="E3" style="border-color:#1565c0">E3<span class="badge none"></span></button>
+    <button class="ex-btn" data-ex="E4" style="border-color:#1565c0">E4<span class="badge none"></span></button>
+    <span style="font-size:9px;color:var(--muted);align-self:center">Binom</span>
+    <button class="ex-btn" data-ex="E5" style="border-color:#2ea043">E5<span class="badge none"></span></button>
+    <button class="ex-btn" data-ex="E6" style="border-color:#2ea043">E6<span class="badge none"></span></button>
+    <button class="ex-btn" data-ex="E8" style="border-color:#2ea043">E8<span class="badge none"></span></button>
+    <button class="ex-btn" data-ex="E10" style="border-color:#2ea043">E10<span class="badge none"></span></button>
+    <span style="font-size:9px;color:var(--muted);align-self:center">Hiperg</span>
+    <button class="ex-btn" data-ex="E11" style="border-color:#d29922">E11<span class="badge none"></span></button>
+    <button class="ex-btn" data-ex="E12" style="border-color:#d29922">E12<span class="badge none"></span></button>
+    <button class="ex-btn" data-ex="E13" style="border-color:#d29922">E13<span class="badge none"></span></button>
+    <button class="ex-btn" data-ex="E14" style="border-color:#d29922">E14<span class="badge none"></span></button>
+    <span style="font-size:9px;color:var(--muted);align-self:center">Poisson</span>
+    <button class="ex-btn" data-ex="E15" style="border-color:#8b5cf6">E15<span class="badge none"></span></button>
+    <button class="ex-btn" data-ex="E16" style="border-color:#8b5cf6">E16<span class="badge none"></span></button>
+  </div>
+  <div class="vsep"></div>
+  <span id="overall">0%</span>
+  <div class="vsep"></div>
+  <button class="tbtn" id="btn-cfg">⚙️</button>
+  <div id="api-wrap">
+    <span id="api-lbl" style="color:var(--blue)">OR</span>
+    <label class="sw"><input type="checkbox" id="api-tog"><span class="sw-t"></span></label>
+    <span style="font-size:11px;color:var(--muted)">CL</span>
+  </div>
+</div>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <div class="cdot active" style="background:#111" data-c="#111"></div>
+  <div class="cdot" style="background:#1565c0" data-c="#1565c0"></div>
+  <div class="cdot" style="background:#b71c1c" data-c="#b71c1c"></div>
+  <div class="cdot" style="background:#1b5e20" data-c="#1b5e20"></div>
+  <div class="cdot" style="background:#6a1b9a" data-c="#6a1b9a"></div>
+  <div class="vsep"></div>
+  <button class="tbtn active" id="btn-pen">✏️</button>
+  <button class="tbtn" id="btn-erase">🧹</button>
+  <button class="tbtn" id="btn-pan">🤚 Pan</button>
+  <input type="range" id="sz" min="1" max="18" value="3" title="Grosor">
+  <div class="vsep"></div>
+  <button class="tbtn" id="btn-undo">↩</button>
+  <button class="tbtn" id="btn-clear">🗑️</button>
+  <button class="tbtn" id="btn-home" title="Volver al inicio">⌂</button>
+  <div class="vsep"></div>
+  <div id="autostatus" class="on">⚡ Auto</div>
+  <button class="mbtn" id="btn-verify">📷 Verificar</button>
+  <button class="mbtn" id="btn-tts" title="Voz">🔇</button>
+  <button class="mbtn dark" id="btn-exercise">📌 Enunciado</button>
+  <button class="tip-toggle" id="btn-tip" title="Ver método y fórmulas del ejercicio">💡 Método</button>
+  <button class="mbtn red" id="btn-toggle-chat" style="margin-left:4px">💬</button>
+  <span id="pos-indicator">0, 0</span>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="cw">
+    <canvas id="canvas"></canvas>
+    <div id="exercise-float">
+      <h4>Ejercicio actual</h4>
+      <p id="exercise-text">Selecciona E1–E5b para mostrar el enunciado aquí.</p>
+    </div>
+    <div id="analyze-ind">⏳ Analizando...</div>
+    <div id="pan-hint">🤚 Modo pan activo — arrastra para mover la pizarra</div>
+    <!-- TIP FLOTANTE -->
+    <div id="tip-float">
+      <div class="tip-hdr">
+        <span class="tip-title" id="tip-title">Método</span>
+        <button class="tip-close" onclick="hideTip()">✕</button>
+      </div>
+      <div class="tip-formulas" id="tip-formulas"></div>
+      <div class="tip-steps" id="tip-steps"></div>
+    </div>
+    <!-- POMODORO WIDGET -->
+    <div id="pomo-widget">
+      <div>
+        <div id="pomo-mode">Estudio</div>
+        <div id="pomo-display">📚 30:00</div>
+      </div>
+      <button id="pomo-btn" title="Iniciar/pausar">▶</button>
+    </div>
+  </div>
+  <button id="openchat">💬</button>
+  <div id="chat">
+    <div id="chat-hd">
+      <div class="chat-tabs">
+        <button class="tab-btn active" data-tab="chat">💬 Chat</button>
+        <button class="tab-btn" data-tab="kanban">📋 Kanban</button>
+        <button class="tab-btn" data-tab="formulas">📄 Fórmulas</button>
+        <button class="tab-btn" data-tab="tableros">🗂️ Tableros</button>
+      </div>
+      <button id="collapse-btn">✕</button>
+    </div>
+    <div id="mastery-chips"></div>
+    <div id="kanban-board"></div>
+    <div id="formulas-panel"></div>
+    <div id="tableros-panel"></div>
+    <div id="msgs"></div>
+    <div id="cin">
+      <textarea id="minput" placeholder="Escribe tu duda o 'practica E3'..."></textarea>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <button class="cbtn" id="btn-send">→</button>
+        <button class="cbtn cam" id="btn-cam">📷</button>
+        <button class="cbtn mic" id="btn-mic" title="Dictado por voz">🎤</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="smodal">
+  <div id="sbox">
+    <h2>⚙️ Configuración</h2>
+    <div class="srow"><label>OpenRouter Key</label><input type="password" id="s-or-key" placeholder="sk-or-v1-..."></div>
+    <div class="srow"><label>Modelo OpenRouter</label>
+      <select id="s-or-model">
+        <option value="google/gemini-2.5-flash">google/gemini-2.5-flash ⚡</option>
+        <option value="google/gemini-2.5-pro">google/gemini-2.5-pro</option>
+        <option value="anthropic/claude-sonnet-4-5">anthropic/claude-sonnet-4-5</option>
+      </select>
+    </div>
+    <div class="srow"><label>Claude API Key</label><input type="password" id="s-cl-key" placeholder="sk-ant-..."></div>
+    <div class="srow"><label>Modelo Claude</label>
+      <select id="s-cl-model">
+        <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
+        <option value="claude-opus-4-5">claude-opus-4-5</option>
+      </select>
+    </div>
+    <div class="srow"><label>Delay auto-análisis (segundos)</label><input type="number" id="s-delay" min="1" max="15" value="4"></div>
+    <button id="ssave">Guardar</button>
+    <button onclick="document.getElementById('smodal').classList.remove('open')" style="background:none;border:none;color:var(--muted);cursor:pointer;margin-left:10px;font-size:12px;">Cancelar</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════
+const CFG = {
+  or_key: '',
+  or_model: 'google/gemini-2.5-flash',
+  cl_key: '', cl_model: 'claude-sonnet-4-6',
+  use_claude: false, auto_delay: 4,
+};
+try { Object.assign(CFG, JSON.parse(localStorage.getItem('tcfg')||'{}')); } catch(e){}
+if (!CFG.or_key) CFG.or_key = localStorage.getItem('or_key') || '';
+const saveCFG = () => localStorage.setItem('tcfg', JSON.stringify(CFG));
+
+// ═══════════════════════════════════════
+// MASTERY
+// ═══════════════════════════════════════
+const EX = {
+  // ── DISTRIBUCIONES DISCRETAS ──
+  E1:  { title:'Dist. discreta: media y varianza (tabla x=0,1,2,3)', answer:'μ=1.3, σ²=0.81', status:'none', correct:0, attempts:0, distrib:'discreta' },
+  E2:  { title:'Dist. discreta: media y varianza (x=5,10,15,20)', answer:'μ=14.5, σ²=27.25', status:'none', correct:0, attempts:0, distrib:'discreta' },
+  E3:  { title:'Refrescos: ¿es discreta? media, varianza, σ', answer:'μ=0.93, σ²=0.0201, σ≈0.1418', status:'none', correct:0, attempts:0, distrib:'discreta' },
+  E4:  { title:'Llamadas telefónicas: construir distribución, μ, σ', answer:'μ=1.70, σ≈1.005', status:'none', correct:0, attempts:0, distrib:'discreta' },
+  // ── BINOMIAL ──
+  E5:  { title:'Binomial n=5 p=0.6: tabla acumulada completa', answer:'P(x≤0)=0.0102 … P(x≤5)=1.0', status:'none', correct:0, attempts:0, distrib:'binomial' },
+  E6:  { title:'Binomial n=6 p=0.8: P(x≥4), P(x=2), P(x<2), P(x>1)', answer:'0.9011 / 0.0154 / 0.0016 / 0.9984', status:'none', correct:0, attempts:0, distrib:'binomial' },
+  E8:  { title:'5 clientes p=0.20: P(ninguno tarde), P(exactamente 1)', answer:'0.3277 / 0.4096', status:'none', correct:0, attempts:0, distrib:'binomial' },
+  E10: { title:'Binomial n=12 p=0.762: P(=7), P(≥7)', answer:'0.0902 / 0.9565', status:'none', correct:0, attempts:0, distrib:'binomial' },
+  // ── HIPERGEOMÉTRICA ──
+  E11: { title:'5 azules 3 rojos, extraer 3: P(2 azul 1 rojo), P(todos rojos), P(todos azules)', answer:'0.5357 / 0.0179 / 0.1786', status:'none', correct:0, attempts:0, distrib:'hipergeometrica' },
+  E12: { title:'N=10 K=5 tratadas n=4: P(x=4), P(x≤3), P(2≤x≤3)', answer:'0.0238 / 0.9762 / 0.7143', status:'none', correct:0, attempts:0, distrib:'hipergeometrica' },
+  E13: { title:'12 candidatos (8H 4M), elegir 5: P(3 hombres)', answer:'14/33 ≈ 0.4242', status:'none', correct:0, attempts:0, distrib:'hipergeometrica' },
+  E14: { title:'8 profesores (6 titulares 2 no), comité 3: P(todos titulares), P(al menos 1 no titular)', answer:'5/14 / 9/14', status:'none', correct:0, attempts:0, distrib:'hipergeometrica' },
+  // ── POISSON ──
+  E15: { title:'Poisson λ=5/día: P(x=2), P(x≤2), P(x>10)', answer:'0.0842 / 0.1247 / 0.0137', status:'none', correct:0, attempts:0, distrib:'poisson' },
+  E16: { title:'Poisson λ=2.5: P(x≤5), P(x>5), interpretación 95%', answer:'0.9580 / 0.0420 / "a lo sumo 5"', status:'none', correct:0, attempts:0, distrib:'poisson' },
+};
+try { const m=JSON.parse(localStorage.getItem('tmastery_stats')||'{}'); Object.keys(m).forEach(k=>EX[k]&&Object.assign(EX[k],m[k])); } catch(e){}
+let currentEx = localStorage.getItem('tcurrentEx') || null;
+// Validar que el ejercicio guardado exista
+if (currentEx && !EX[currentEx]) currentEx = null;
+const saveMastery = () => {
+  const out={};
+  Object.keys(EX).forEach(k=>out[k]={status:EX[k].status,correct:EX[k].correct,attempts:EX[k].attempts});
+  localStorage.setItem('tmastery_stats',JSON.stringify(out));
+  if (currentEx) localStorage.setItem('tcurrentEx', currentEx);
+  saveMasteryToSQLite();   // SQLite sync
+};
+const pct = ex => ex.attempts ? Math.round(ex.correct/ex.attempts*100) : 0;
+const overallPct = () => Math.round(Object.values(EX).reduce((s,e)=>s+pct(e),0)/Object.keys(EX).length);
+const icon = s => ({none:'⚪',working:'🟡',mastered:'🟢',review:'🔴'}[s]||'⚪');
+
+function updateMasteryUI() {
+  document.querySelectorAll('.ex-btn').forEach(b => {
+    const e=EX[b.dataset.ex];
+    b.querySelector('.badge').className='badge '+(e?.status||'none');
+    b.classList.toggle('active', b.dataset.ex===currentEx);
+  });
+  document.getElementById('overall').textContent = overallPct()+'%';
+  const chips = document.getElementById('mastery-chips');
+  chips.innerHTML='';
+  Object.keys(EX).forEach(k => {
+    const e=EX[k], p=pct(e);
+    const c=document.createElement('span');
+    c.className='mchip '+e.status; c.dataset.ex=k;
+    c.textContent=`${k} ${icon(e.status)} ${p}%`;
+    c.title='Clic para ciclar estado';
+    c.addEventListener('click', ()=>{
+      const states=['none','working','mastered','review'];
+      e.status=states[(states.indexOf(e.status)+1)%4];
+      if(e.status==='mastered') e.correct=Math.max(e.correct,1);
+      updateMasteryUI(); saveMastery();
+    });
+    chips.appendChild(c);
+  });
+  saveMastery();
+  updateExerciseFloat();
+  if (activeTab === 'kanban') renderKanban();
+}
+
+function updateExerciseFloat() {
+  const txt = document.getElementById('exercise-text');
+  if (!txt) return;
+  if (currentEx && EX[currentEx]) {
+    txt.textContent = `${currentEx}: ${EX[currentEx].title}`;
+  } else {
+    txt.textContent = 'Selecciona un ejercicio para mostrar el enunciado aquí.';
+  }
+}
+
+// ═══════════════════════════════════════
+// KANBAN + TABS
+// ═══════════════════════════════════════
+let activeTab = 'chat';
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  const isC = tab === 'chat';
+  const isK = tab === 'kanban';
+  const isF = tab === 'formulas';
+  const isT = tab === 'tableros';
+  document.getElementById('msgs').style.display           = isC ? 'flex' : 'none';
+  document.getElementById('cin').style.display            = isC ? 'flex' : 'none';
+  document.getElementById('mastery-chips').style.display  = isC ? 'flex' : 'none';
+  document.getElementById('kanban-board').style.display   = isK ? 'flex' : 'none';
+  document.getElementById('formulas-panel').style.display = isF ? 'block' : 'none';
+  document.getElementById('tableros-panel').style.display = isT ? 'block' : 'none';
+  if (isK) renderKanban();
+  if (isF) renderFormulas();
+  if (isT) renderBoards();
+}
+
+document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+const CAT_COLOR = {
+  E1:'#1565c0',E2:'#1565c0',E3:'#1565c0',E4:'#1565c0',
+  E5:'#2ea043',E6:'#2ea043',E8:'#2ea043',E10:'#2ea043',
+  E11:'#d29922',E12:'#d29922',E13:'#d29922',E14:'#d29922',
+  E15:'#8b5cf6',E16:'#8b5cf6',
+};
+const CAT_NAME = {
+  E1:'Discreta',E2:'Discreta',E3:'Discreta',E4:'Discreta',
+  E5:'Binomial',E6:'Binomial',E8:'Binomial',E10:'Binomial',
+  E11:'Hiperg',E12:'Hiperg',E13:'Hiperg',E14:'Hiperg',
+  E15:'Poisson',E16:'Poisson',
+};
+
+const GROUPS = [
+  { status:'review',   label:'⚠️ Repasar urgente', color:'var(--accent)' },
+  { status:'working',  label:'🔄 Practicando',      color:'var(--yellow)' },
+  { status:'none',     label:'📚 Por dominar',      color:'var(--muted)' },
+  { status:'mastered', label:'✅ Dominado',          color:'var(--green)' },
+];
+
+function renderKanban() {
+  const board = document.getElementById('kanban-board');
+  if (!board) return;
+  board.innerHTML = '';
+
+  const total = Object.keys(EX).length;
+  const dominated = Object.values(EX).filter(e => e.status === 'mastered').length;
+  const inReview  = Object.values(EX).filter(e => e.status === 'review').length;
+  const progPct   = Math.round(dominated / total * 100);
+
+  // ── Summary card ──
+  const sum = document.createElement('div');
+  sum.style.cssText = 'background:#21262d;border-radius:8px;padding:10px 12px;border:1px solid var(--border);flex-shrink:0;';
+  sum.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span style="font-size:14px;font-weight:800;color:var(--green)">${dominated}/${total}</span>
+      <span style="font-size:11px;color:var(--muted)">dominados</span>
+      ${inReview > 0 ? `<span style="font-size:11px;color:var(--accent);font-weight:700">⚠️ ${inReview} urgentes</span>` : '<span style="font-size:11px;color:var(--green)">Sin urgencias</span>'}
+    </div>
+    <div class="kb-prog"><div class="kb-prog-fill" style="width:${progPct}%"></div></div>
+    <div style="font-size:10px;color:var(--muted);margin-top:3px;text-align:right">${progPct}% completado</div>
+  `;
+  board.appendChild(sum);
+
+  // ── Groups ──
+  GROUPS.forEach(({ status, label, color }) => {
+    const keys = Object.keys(EX).filter(k => EX[k].status === status);
+    if (!keys.length) return;
+
+    const grp = document.createElement('div');
+    grp.style.flexShrink = '0';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'kb-group-hdr';
+    hdr.style.borderLeftColor = color;
+    hdr.innerHTML = `<span style="color:${color}">${label}</span><span style="background:var(--border);border-radius:10px;padding:1px 6px;font-size:10px;color:var(--text)">${keys.length}</span>`;
+    grp.appendChild(hdr);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'kb-cards-wrap';
+
+    keys.forEach(k => {
+      const e = EX[k];
+      const p = pct(e);
+      const card = document.createElement('div');
+      card.className = 'kb-card';
+      card.style.borderLeft = `3px solid ${CAT_COLOR[k] || 'var(--border)'}`;
+      card.title = `${e.title}\nClic para avanzar estado`;
+      card.innerHTML = `
+        <div class="kb-card-id" style="color:${CAT_COLOR[k]}">${k}</div>
+        <div class="kb-card-cat">${CAT_NAME[k] || ''}</div>
+        ${p > 0 ? `<div class="kb-card-pct">${p}%</div>` : ''}
+      `;
+      card.addEventListener('click', () => {
+        const order = ['none','working','review','mastered'];
+        e.status = order[(order.indexOf(e.status) + 1) % order.length];
+        if (e.status === 'mastered') e.correct = Math.max(e.correct, 1);
+        if (e.status === 'working') { currentEx = k; }
+        updateMasteryUI();
+      });
+      wrap.appendChild(card);
+    });
+
+    grp.appendChild(wrap);
+    board.appendChild(grp);
+  });
+}
+
+// ═══════════════════════════════════════
+// FORMULAS PANEL
+// ═══════════════════════════════════════
+function renderFormulas() {
+  const fp = document.getElementById('formulas-panel');
+  if (!fp || fp._rendered) return;
+  fp._rendered = true;
+  fp.innerHTML = `
+<div class="fp-section">
+  <div class="fp-title">🔍 Árbol de decisión — ¿qué distribución usar?</div>
+  <div class="fp-tree">
+
+    <div class="fp-node disc">
+      <div class="fp-kw"><span>tabla de probabilidades</span><span>P(x=k) dada</span><span>distribución propia</span></div>
+      <div class="fp-name"><span class="fp-badge d">DISCRETA GENERAL</span> Media y varianza de tabla</div>
+      <div class="fp-formula">μ = Σ x·P(x)
+σ² = Σ x²·P(x) − μ²
+σ  = √σ²</div>
+      <div class="fp-note">Úsala cuando te dan la tabla x / P(x) directamente (E1, E2, E3, E4)</div>
+    </div>
+
+    <div class="fp-node binomial">
+      <div class="fp-kw"><span>n intentos</span><span>probabilidad de éxito p</span><span>independientes</span><span>con reposición</span></div>
+      <div class="fp-name"><span class="fp-badge b">BINOMIAL</span> B(n, p)</div>
+      <div class="fp-formula">P(x=k) = C(n,k) · pᵏ · (1−p)ⁿ⁻ᵏ
+μ = n·p
+σ² = n·p·(1−p)
+C(n,k) = n! / (k!(n−k)!)</div>
+      <div class="fp-note">Palabras clave: "n clientes", "n lanzamientos", "probabilidad p de éxito", "con reemplazo" (E5, E6, E8, E10)</div>
+    </div>
+
+    <div class="fp-node hyper">
+      <div class="fp-kw"><span>sin reposición</span><span>población finita N</span><span>K éxitos en población</span><span>extraer n</span></div>
+      <div class="fp-name"><span class="fp-badge h">HIPERGEOMÉTRICA</span> H(N, K, n)</div>
+      <div class="fp-formula">P(x=k) = C(K,k)·C(N−K, n−k) / C(N,n)
+μ = n·K/N
+σ² = n·(K/N)·(1−K/N)·(N−n)/(N−1)
+
+Variables:
+  N = total en la urna/grupo
+  K = cuántos son "éxito" en la urna
+  n = cuántos extraes
+  x = cuántos éxitos quieres en tu extracción</div>
+      <div class="fp-note">Palabras clave: "sin reemplazo", "de un grupo de N", "elegir n" (E11, E12, E13, E14)</div>
+    </div>
+
+    <div class="fp-node poisson">
+      <div class="fp-kw"><span>tasa promedio λ</span><span>por intervalo de tiempo/espacio</span><span>eventos raros</span></div>
+      <div class="fp-name"><span class="fp-badge p">POISSON</span> P(λ)</div>
+      <div class="fp-formula">P(x=k) = (e⁻λ · λᵏ) / k!
+μ = λ
+σ² = λ
+e ≈ 2.71828</div>
+      <div class="fp-note">Palabras clave: "promedio de X por hora/día/metro", "llamadas por minuto", "defectos por unidad" (E15, E16)</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="fp-section">
+  <div class="fp-title">📐 Reglas de complemento (acumuladas)</div>
+  <table class="fp-table">
+    <tr><th>Lo que piden</th><th>Cómo calcularlo</th></tr>
+    <tr><td>P(x ≤ k)</td><td>Suma directa: P(0)+P(1)+…+P(k)</td></tr>
+    <tr><td>P(x &lt; k)</td><td>P(x ≤ k−1)</td></tr>
+    <tr><td>P(x ≥ k)</td><td>1 − P(x ≤ k−1)</td></tr>
+    <tr><td>P(x > k)</td><td>1 − P(x ≤ k)</td></tr>
+    <tr><td>P(a ≤ x ≤ b)</td><td>P(x ≤ b) − P(x ≤ a−1)</td></tr>
+    <tr><td>P(ninguno)</td><td>P(x = 0)</td></tr>
+    <tr><td>P(al menos 1)</td><td>1 − P(x = 0)</td></tr>
+  </table>
+</div>
+
+<div class="fp-section">
+  <div class="fp-title">🧩 Identificar variables hipergeométrica rápido</div>
+  <table class="fp-table">
+    <tr><th>Variable</th><th>Pregunta mental</th><th>Ejemplo E13</th></tr>
+    <tr><td><b>N</b></td><td>¿Cuántos hay en total?</td><td>12 candidatos</td></tr>
+    <tr><td><b>K</b></td><td>¿Cuántos son del tipo que busco?</td><td>8 hombres</td></tr>
+    <tr><td><b>n</b></td><td>¿Cuántos extraigo/elijo?</td><td>elegir 5</td></tr>
+    <tr><td><b>x</b></td><td>¿Cuántos éxitos quiero en mi muestra?</td><td>3 hombres</td></tr>
+  </table>
+</div>
+
+<div class="fp-section">
+  <div class="fp-title">⚡ Fórmulas rápidas — no olvidar</div>
+  <table class="fp-table">
+    <tr><th>Concepto</th><th>Fórmula</th></tr>
+    <tr><td>Combinaciones C(n,k)</td><td>n! / (k! · (n−k)!)</td></tr>
+    <tr><td>Factorial rápido</td><td>0!=1, 1!=1, 2!=2, 3!=6, 4!=24, 5!=120, 6!=720</td></tr>
+    <tr><td>Varianza alternativa</td><td>σ² = E(x²) − [E(x)]² = Σx²P(x) − μ²</td></tr>
+    <tr><td>CV (variabilidad)</td><td>CV = (σ/μ)·100%</td></tr>
+    <tr><td>e⁻¹≈0.368, e⁻²≈0.135, e⁻²·⁵≈0.082, e⁻⁵≈0.0067</td><td></td></tr>
+  </table>
+</div>
+`;
+}
+
+// ═══════════════════════════════════════
+// SYSTEM PROMPT
+// ═══════════════════════════════════════
+const SYS = `Eres un tutor de estadística de emergencia. El estudiante tiene parcial en horas y parte de CERO — no entiende nada del taller todavía. Tu misión: llevarle de la mano desde el concepto más básico hasta que pueda resolver solo.
+
+## CONTEXTO CRÍTICO — LEE ESTO PRIMERO
+- El estudiante NO entiende el taller. No asumas nada.
+- No esperes que él tome la iniciativa ni que sepa por dónde empezar.
+- TÚ diriges la sesión. TÚ decides qué explicar primero.
+- Cuando arranque un ejercicio, PRIMERO explica el concepto en 2 líneas con analogía simple, LUEGO haz la pregunta guía.
+- Si el estudiante dice "no sé", "no entiendo", "no tengo idea" → no preguntes más, explica directamente con un ejemplo concreto.
+- Si falla 2 veces seguidas → baja el nivel, descompón el problema aún más.
+
+## REGLA DE ORO
+Cuando hay error o confusión: NUNCA das la respuesta final.
+❌ PROHIBIDO: "La respuesta es 1.3"
+✅ CORRECTO: dar contexto + pista operacional + pregunta concreta
+
+## NIVELES DE ANDAMIAJE (ajusta según el estudiante)
+Nivel 1 (por defecto para este estudiante): Concepto + analogía + pregunta MUY concreta
+  → "La media es como el promedio de notas. Si tienes x=0,1,2,3 con probabilidades, ¿qué harías para calcular el promedio ponderado?"
+Nivel 2: Pista con la fórmula parcial
+  → "La fórmula es $\\mu = \\sum x \\cdot P(x)$. El primer término sería $0 \\times 0.2$, ¿y el segundo?"
+Nivel 3: Solo si falla 3+ veces — muestra el paso completo y pide que replique el siguiente
+  → "Mira: $0(0.2) + 1(0.4) = 0.4$. ¿Y cómo seguiría con x=2?"
+
+## CUANDO ALGO ESTÁ CORRECTO
+Cálido y breve: "¡Exacto!", "¡Eso es!", "¡Bien pensado!"
+Luego: siguiente paso inmediatamente. No lo dejes sin dirección.
+NUNCA digas solo "Correcto." o "Bien." — suena a robot y no ayuda.
+
+## SI EL ESTUDIANTE ESTÁ PERDIDO O FRUSTRADO
+No hagas más preguntas. Explica. Di:
+"Oye, tranquilo. Esto es lo que hay que hacer aquí: [explicación simple]"
+Luego pide que él replique ese paso con el siguiente número.
+
+## TALLER COMPLETO — ESTADÍSTICA PROBABILIDAD
+
+### DISTRIBUCIONES DISCRETAS (E1–E4)
+Fórmulas clave:
+- $\\mu = \\sum x \\cdot P(x)$
+- $\\sigma^2 = \\sum x^2 P(x) - \\mu^2$
+- $\\sigma = \\sqrt{\\sigma^2}$
+- Verificar: $\\sum P(x) = 1$
+
+**E1:** tabla x=0,1,2,3 con P=0.2,0.4,0.3,0.1 → $\\mu=1.3$, $\\sigma^2=0.81$
+**E2:** x=5,10,15,20 con P=0.1,0.3,0.2,0.4 → $\\mu=14.5$, $\\sigma^2=27.25$
+**E3:** refrescos chico/mediano/grande \$0.80/0.90/1.20 P=0.30/0.50/0.20
+- ¿Es discreta? Sí (valores contables, suma=1). $\\mu=0.93$, $\\sigma^2=0.0201$, $\\sigma\\approx0.1418$
+**E4:** frecuencias de llamadas (50 datos) → convertir a P(x), $\\mu=1.70$, $\\sigma\\approx1.005$
+TRAMPAS: olvidar restar $\\mu^2$ en varianza; no verificar $\\sum P(x)=1$
+
+### BINOMIAL (E5–E10)
+Condiciones: $n$ ensayos independientes, solo éxito/fracaso, $p$ constante.
+Fórmula: $P(x) = \\binom{n}{x} p^x (1-p)^{n-x}$
+Media: $\\mu=np$. Varianza: $\\sigma^2=np(1-p)$
+En Casio: $\\binom{n}{x}$ = SHIFT ÷ (tecla nCr)
+
+**E5:** n=5, p=0.6 — tabla acumulada: P(x≤0)=0.0102, P(x≤1)=0.0870, P(x≤2)=0.3174, P(x≤3)=0.6630, P(x≤4)=0.9222
+Complementos: P(x≥4)=1-P(x≤3)=0.337, P(x>4)=1-P(x≤4)=0.078
+
+**E6:** n=6, p=0.8
+P(x≥4)=0.9011, P(x=2)=0.0154, P(x<2)=0.0016, P(x>1)=0.9984
+
+**E8:** n=5, p=0.20 — P(ninguno)=$(0.8)^5$=0.3277; P(exactamente 1)=$5(0.2)(0.8)^4$=0.4096
+
+**E10:** n=12, p=0.762 — P(=7)=0.0902; P(≥7)=0.9565
+
+TRAMPAS: confundir P(x>k) con P(x≥k); confundir "menos de" con "a lo sumo"
+
+### HIPERGEOMÉTRICA (E11–E14)
+Cuándo: selección SIN reemplazo de población finita.
+Fórmula: $P(x) = \\dfrac{\\binom{K}{x}\\binom{N-K}{n-x}}{\\binom{N}{n}}$
+Donde: N=total población, K=total éxitos en población, n=tamaño muestra, x=éxitos en muestra.
+
+**E11:** N=8 (5 azules K=5, 3 rojos), n=3
+- P(2 azul, 1 rojo) = C(5,2)·C(3,1)/C(8,3) = 30/56 = 0.5357
+- P(todos rojos) = 1/56 = 0.0179
+- P(todos azules) = 10/56 = 0.1786
+
+**E12:** N=10, K=5 tratadas, n=4
+- P(x=4) = C(5,4)·C(5,0)/C(10,4) = 5/210 ≈ 0.0238
+- P(x≤3) = 1 - P(x=4) ≈ 0.9762
+- P(2≤x≤3) = 150/210 ≈ 0.7143
+
+**E13:** N=12 (8H, 4M), n=5, P(3H 2M) = C(8,3)·C(4,2)/C(12,5) = 336/792 ≈ 0.4242
+
+**E14:** N=8 (6 titulares, 2 no), n=3
+- P(todos titulares) = C(6,3)/C(8,3) = 20/56 ≈ 0.3571
+- P(al menos 1 no titular) = 1 - 20/56 = 36/56 ≈ 0.6429
+
+TRAMPAS: identificar N, K, n, x correctamente; usar complemento cuando "al menos" aparece
+
+### POISSON (E15–E16)
+Cuándo: eventos en tiempo/espacio con tasa media $\\lambda$.
+Fórmula: $P(x) = \\dfrac{e^{-\\lambda} \\lambda^x}{x!}$
+Media = Varianza = $\\lambda$
+
+**E15:** $\\lambda=5$/día
+- P(x=2) = $e^{-5} \\cdot 5^2 / 2!$ = 0.0842
+- P(x≤2) = P(0)+P(1)+P(2) = 0.1247
+- P(x>10) = 1 - P(x≤10) ≈ 0.0137 (muy poco probable)
+
+**E16:** $\\lambda=2.5$
+- P(x≤5) = 0.9580; P(x>5) = 0.0420
+- "95% de los casos": cubre hasta x=5 porque P(x≤5)=95.8%
+
+TRAMPAS: no tener $e^{-\\lambda}$ en calculadora; confundir $\\lambda$ con $x$
+
+## LO QUE EVALÚA LA PROFESORA
+- Identificar qué distribución aplica (discreta/binomial/hipergeométrica/Poisson)
+- Aplicar correctamente la fórmula de varianza $\\sigma^2 = \\sum x^2 P(x) - \\mu^2$
+- Manejo de probabilidades acumuladas y sus complementos
+- Interpretación de resultados en contexto (no solo el número)
+
+## FORMATO DE RESPUESTA — OBLIGATORIO SIEMPRE
+Responde ÚNICAMENTE con este JSON, sin texto antes ni después:
+\`\`\`json
+{
+  "chat": "texto completo para mostrar en pantalla, con LaTeX $...$ y $$...$$, señales [✅OK] [❌ERR] [🏆] si aplican",
+  "voz": "frase coloquial corta para hablar en voz alta, SIN fórmulas, máx 12 palabras"
+}
+\`\`\`
+
+Ejemplos de campo "voz" — VOZ CÁLIDA, ENERGÉTICA, HUMANA:
+- Paso correcto: "¡Exacto, eso es! ¿Y el siguiente?"
+- Error: "Mmm, casi. ¿En qué parte crees que se fue?"
+- Pista: "Piensa en la fórmula alternativa de varianza."
+- Completo: "¡Lo dominaste! Vamos al siguiente."
+- Explicación: "Escucha, te lo explico con calma."
+- Frustracion del estudiante: "Tranquilo, lo encontramos juntos. Vamos paso a paso."
+- Primer intento bien: "¡Oye, bien! Eso estuvo muy bien pensado."
+
+Reglas del campo "voz":
+- Habla como un amigo que sabe estadística, NO como un profesor de secundaria aburrido
+- Usa "oye", "mira", "vamos", "dale", "eso es", "exacto"
+- Máx 15 palabras
+- NUNCA empieces con "¡Excelente trabajo estudiante!" — suena a robot
+Responde en español.`;
+
+// ═══════════════════════════════════════
+// CANVAS — INFINITE WORLD COORDINATES
+// ═══════════════════════════════════════
+const cw = document.getElementById('cw');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// World state
+let viewOffset = { x: 0, y: 0 }; // world coord at canvas top-left
+let viewScale  = 1.0;             // zoom level
+let strokes = [];
+let currentStroke = null;
+let tool = 'pen', color = '#111', brushSz = 3;
+
+// Board sync state
+let currentBoardId = 'default';
+let syncedIds = new Set();   // stroke IDs received from server (don't re-upload)
+let lastSyncTs = 0;
+let serverOnline = false;
+let syncInterval = null;
+let strokeIdCounter = 0;
+const genStrokeId = () => `${Date.now()}_${++strokeIdCounter}_${Math.random().toString(36).slice(2,6)}`;
+let drawing = false;
+
+// Pointer / palm rejection
+let penActive = false, penTimer = null;
+
+// Pan state
+let panModeBtn = false;
+let panActive = false;
+let panStart = { x: 0, y: 0 };
+let panOffsetStart = { x: 0, y: 0 };
+
+// Pinch-zoom state (touch only)
+const touchPtrs = new Map(); // pointerId → {x,y}
+let pinchState = null;        // reference snapshot when pinch starts
+
+function resize() {
+  const r = cw.getBoundingClientRect();
+  canvas.width = r.width;
+  canvas.height = r.height;
+  render();
+}
+resize();
+new ResizeObserver(resize).observe(cw);
+
+const screenToWorld = (sx, sy) => ({ x: sx / viewScale + viewOffset.x, y: sy / viewScale + viewOffset.y });
+const wx2sx = wx => (wx - viewOffset.x) * viewScale; // world → canvas px
+const wy2sy = wy => (wy - viewOffset.y) * viewScale;
+
+function getScreenPos(e) {
+  const r = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - r.left) * (canvas.width / r.width),
+    y: (e.clientY - r.top) * (canvas.height / r.height),
+  };
+}
+
+function render() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (const s of strokes) renderStroke(s);
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+function renderStroke(s) {
+  const pts = s.pts;
+  if (pts.length < 2) return;
+  ctx.globalCompositeOperation = s.tool==='eraser' ? 'destination-out' : 'source-over';
+  ctx.strokeStyle = s.color;
+  ctx.lineWidth = Math.max(0.5, s.sz * viewScale);
+  ctx.lineCap = ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(wx2sx(pts[0][0]), wy2sy(pts[0][1]));
+  // Bezier smoothing: quadratic curves through midpoints
+  for (let i = 1; i < pts.length - 1; i++) {
+    const mx = (pts[i][0] + pts[i+1][0]) / 2;
+    const my = (pts[i][1] + pts[i+1][1]) / 2;
+    ctx.quadraticCurveTo(wx2sx(pts[i][0]), wy2sy(pts[i][1]), wx2sx(mx), wy2sy(my));
+  }
+  const last = pts[pts.length-1];
+  ctx.lineTo(wx2sx(last[0]), wy2sy(last[1]));
+  ctx.stroke();
+}
+
+function drawSegment(wx1,wy1,wx2,wy2,sz,col,t) {
+  ctx.globalCompositeOperation = t==='eraser' ? 'destination-out' : 'source-over';
+  ctx.strokeStyle = col;
+  ctx.lineWidth = Math.max(0.5, sz * viewScale);
+  ctx.lineCap = ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(wx2sx(wx1), wy2sy(wy1));
+  ctx.lineTo(wx2sx(wx2), wy2sy(wy2));
+  ctx.stroke();
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+// ── POINTER EVENTS ───────────────────────────
+// REGLA ABSOLUTA: pen → dibuja | touch → mueve | mouse → dibuja
+// Igual que Nebo en Lenovo Tab M11
+
+canvas.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  try { canvas.setPointerCapture(e.pointerId); } catch(_){}
+
+  if (e.pointerType === 'pen') {
+    // Lápiz: SIEMPRE dibuja, activa palm rejection
+    penActive = true;
+    clearTimeout(penTimer);
+    drawing = true; panActive = false;
+    const sp = getScreenPos(e);
+    const wp = screenToWorld(sp.x, sp.y);
+    currentStroke = { tool, color, sz: tool==='eraser'?brushSz*5:brushSz, pts:[[wp.x,wp.y]] };
+    canvas._lwx = wp.x; canvas._lwy = wp.y;
+
+  } else if (e.pointerType === 'touch') {
+    // Dedo: pan o pinch. JAMÁS dibuja.
+    if (penActive) return;
+    touchPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    drawing = false;
+    if (touchPtrs.size === 1) {
+      panActive = true;
+      panStart = { x: e.clientX, y: e.clientY };
+      panOffsetStart = { ...viewOffset };
+    } else if (touchPtrs.size === 2) {
+      // Segundo dedo: cambiar a pinch-zoom
+      panActive = false;
+      const pts = [...touchPtrs.values()];
+      const dist = Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y);
+      pinchState = {
+        dist, scale: viewScale,
+        ox: viewOffset.x, oy: viewOffset.y,
+        mx: (pts[0].x+pts[1].x)/2,
+        my: (pts[0].y+pts[1].y)/2,
+      };
+    }
+
+  } else if (e.pointerType === 'mouse') {
+    // Mouse (escritorio): dibuja, o pan si panModeBtn activo
+    if (panModeBtn) {
+      panActive = true; drawing = false;
+      panStart = { x: e.clientX, y: e.clientY };
+      panOffsetStart = { ...viewOffset };
+      canvas.style.cursor = 'grabbing';
+    } else {
+      drawing = true; panActive = false;
+      const sp = getScreenPos(e);
+      const wp = screenToWorld(sp.x, sp.y);
+      currentStroke = { tool, color, sz: tool==='eraser'?brushSz*5:brushSz, pts:[[wp.x,wp.y]] };
+      canvas._lwx = wp.x; canvas._lwy = wp.y;
+    }
+  }
+});
+
+canvas.addEventListener('pointermove', e => {
+  e.preventDefault();
+
+  if (e.pointerType === 'pen') {
+    if (!drawing || !currentStroke) return;
+    doDrawMove(e);
+
+  } else if (e.pointerType === 'touch') {
+    if (penActive) return;
+    touchPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinchState && touchPtrs.size >= 2) {
+      // Pinch zoom
+      const pts = [...touchPtrs.values()];
+      const dist = Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y);
+      const mx = (pts[0].x+pts[1].x)/2;
+      const my = (pts[0].y+pts[1].y)/2;
+      const r = canvas.getBoundingClientRect();
+      const css2c = canvas.width / r.width;
+      const newScale = Math.max(0.15, Math.min(10, pinchState.scale * dist / pinchState.dist));
+      // Zoom towards midpoint in canvas pixels
+      const pmx = (mx - r.left) * css2c;
+      const pmy = (my - r.top)  * css2c;
+      const wx = pinchState.mx * css2c / pinchState.scale + pinchState.ox;
+      const wy = pinchState.my * css2c / pinchState.scale + pinchState.oy;
+      viewScale = newScale;
+      viewOffset.x = wx - pmx / newScale;
+      viewOffset.y = wy - pmy / newScale;
+      render();
+      document.getElementById('pos-indicator').textContent = `×${viewScale.toFixed(1)}`;
+    } else if (panActive) {
+      doPan(e);
+    }
+
+  } else if (e.pointerType === 'mouse') {
+    if (drawing && currentStroke) doDrawMove(e);
+    else if (panActive) doPan(e);
+  }
+});
+
+canvas.addEventListener('pointerup', e => {
+  if (e.pointerType === 'touch') {
+    touchPtrs.delete(e.pointerId);
+    if (touchPtrs.size < 2) { pinchState = null; }
+    if (touchPtrs.size === 1) {
+      // Quedó un dedo: reanudar pan desde posición actual
+      const rem = [...touchPtrs.values()][0];
+      panActive = true;
+      panStart = { x: rem.x, y: rem.y };
+      panOffsetStart = { ...viewOffset };
+    }
+    if (touchPtrs.size === 0) { panActive = false; }
+  }
+  endInput(e);
+});
+canvas.addEventListener('pointercancel', e => { touchPtrs.delete(e.pointerId); endInput(e); });
+canvas.addEventListener('pointerleave',  e => { touchPtrs.delete(e.pointerId); endInput(e); });
+canvas.addEventListener('contextmenu',   e => e.preventDefault());
+
+function doDrawMove(e) {
+  if (!drawing || !currentStroke) return;
+  const sp = getScreenPos(e);
+  const wp = screenToWorld(sp.x, sp.y);
+  const pressure = e.pressure||0.8;
+  const lw = currentStroke.tool==='eraser' ? currentStroke.sz : Math.max(1, currentStroke.sz*(0.4+pressure*0.8));
+  drawSegment(canvas._lwx, canvas._lwy, wp.x, wp.y, lw, currentStroke.color, currentStroke.tool);
+  currentStroke.pts.push([wp.x, wp.y]);
+  canvas._lwx=wp.x; canvas._lwy=wp.y;
+}
+
+function startPan(e) {
+  panActive=true; drawing=false;
+  panStart={ x:e.clientX, y:e.clientY };
+  panOffsetStart={ ...viewOffset };
+  canvas.classList.add('pan-cur');
+}
+
+function doPan(e) {
+  if (!panActive) return;
+  const r = canvas.getBoundingClientRect();
+  const css2c = canvas.width / r.width;
+  const dx = (e.clientX - panStart.x) * css2c / viewScale;
+  const dy = (e.clientY - panStart.y) * css2c / viewScale;
+  viewOffset.x = panOffsetStart.x - dx;
+  viewOffset.y = panOffsetStart.y - dy;
+  render();
+  document.getElementById('pos-indicator').textContent =
+    `×${viewScale.toFixed(1)}`;
+}
+
+// Pulso natural: jitter suave con ruido seudoaleatorio estable
+function applyTremor(stroke) {
+  if (stroke.tool === 'eraser' || stroke.pts.length < 3) return;
+  const intensity = 0.55; // px en coordenadas mundo
+  let s = (stroke.pts.length * 7919 + Math.round(stroke.pts[0][0]) * 104729) | 0;
+  stroke.pts = stroke.pts.map(([x, y], i) => {
+    // LCG — misma secuencia siempre para el mismo trazo
+    s = Math.imul(s, 1664525) + 1013904223 | 0;
+    const nx = ((s >>> 0) / 0xffffffff - 0.5) * intensity;
+    s = Math.imul(s, 1664525) + 1013904223 | 0;
+    const ny = ((s >>> 0) / 0xffffffff - 0.5) * intensity;
+    // Extremos del trazo con menos jitter para que no se vean sueltos
+    const fade = Math.min(i, stroke.pts.length-1-i, 4) / 4;
+    return [x + nx * fade, y + ny * fade];
+  });
+}
+
+function endInput(e) {
+  if (drawing && currentStroke?.pts.length > 1) {
+    applyTremor(currentStroke);
+    currentStroke.id = genStrokeId();
+    strokes.push(currentStroke);
+    render();
+    triggerAuto();
+    if (serverOnline) uploadStroke(currentStroke);
+  }
+  drawing=false; currentStroke=null;
+  if (e?.pointerType==='pen') {
+    clearTimeout(penTimer);
+    penTimer=setTimeout(()=>{ penActive=false; },2500);
+  }
+}
+
+// ═══════════════════════════════════════
+// CAPTURE — BOUNDING BOX OF ALL STROKES
+// ═══════════════════════════════════════
+function hasContent() { return strokes.length > 0; }
+
+function captureAll() {
+  if (!hasContent()) return null;
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  for (const s of strokes) for (const [x,y] of s.pts) {
+    if(x<minX)minX=x; if(y<minY)minY=y; if(x>maxX)maxX=x; if(y>maxY)maxY=y;
+  }
+  const pad=50, nW=maxX-minX+pad*2, nH=maxY-minY+pad*2;
+  const scale=Math.min(2000/nW, 2000/nH, 1.5);
+  const W=Math.max(Math.ceil(nW*scale),100), H=Math.max(Math.ceil(nH*scale),100);
+  const tmp=document.createElement('canvas');
+  tmp.width=W; tmp.height=H;
+  const t=tmp.getContext('2d');
+  t.fillStyle='#ffffff'; t.fillRect(0,0,W,H);
+  for (const s of strokes) {
+    if(s.pts.length<2) continue;
+    t.globalCompositeOperation=s.tool==='eraser'?'destination-out':'source-over';
+    t.strokeStyle=s.color; t.lineWidth=Math.max(0.5,s.sz*scale);
+    t.lineCap=t.lineJoin='round';
+    t.beginPath();
+    t.moveTo((s.pts[0][0]-minX+pad)*scale,(s.pts[0][1]-minY+pad)*scale);
+    for(let i=1;i<s.pts.length;i++) t.lineTo((s.pts[i][0]-minX+pad)*scale,(s.pts[i][1]-minY+pad)*scale);
+    t.stroke();
+  }
+  t.globalCompositeOperation='source-over';
+  return tmp.toDataURL('image/jpeg',0.88).split(',')[1];
+}
+
+// ═══════════════════════════════════════
+// AUTO-VERIFY
+// ═══════════════════════════════════════
+let autoOn=true, autoTimer=null, busy=false;
+const autoSt = document.getElementById('autostatus');
+autoSt.addEventListener('click', () => {
+  autoOn=!autoOn;
+  autoSt.textContent=`⚡ Auto-${autoOn?'ON':'OFF'}`;
+  autoSt.className=autoOn?'on':'';
+});
+function triggerAuto() {
+  if(!autoOn||busy) return;
+  clearTimeout(autoTimer);
+  autoSt.textContent='⏳...'; autoSt.className='analyzing';
+  autoTimer=setTimeout(async()=>{
+    if(hasContent()&&!busy) await sendAI('',true,true);
+    autoSt.textContent=`⚡ Auto-${autoOn?'ON':'OFF'}`;
+    autoSt.className=autoOn?'on':'';
+  }, CFG.auto_delay*1000);
+}
+
+// ═══════════════════════════════════════
+// TTS
+// ═══════════════════════════════════════
+let ttsOn=false;
+const ttsBtn=document.getElementById('btn-tts');
+ttsBtn.addEventListener('click',()=>{
+  ttsOn=!ttsOn;
+  ttsBtn.textContent=ttsOn?'🔊':'🔇';
+  if(!ttsOn) speechSynthesis?.cancel();
+});
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let micOn = false;
+let micAlwaysOn = false;
+let micAutoSendTimer = null;
+let recognition = null;
+const micBtn = document.getElementById('btn-mic');
+
+if (SpeechRecognition && micBtn) {
+  recognition = new SpeechRecognition();
+  recognition.lang = 'es-ES';
+  recognition.interimResults = true;
+  recognition.continuous = true;   // siempre escuchando
+
+  recognition.onresult = (ev) => {
+    const inp = document.getElementById('minput');
+    if (!inp) return;
+    let interim = '', finalText = '';
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const t = ev.results[i][0]?.transcript || '';
+      if (ev.results[i].isFinal) finalText += t + ' ';
+      else interim += t;
+    }
+    // Mostrar texto interim en gris
+    if (interim) {
+      inp.value = interim;
+      inp.style.opacity = '0.6';
+    }
+    if (finalText.trim()) {
+      inp.value = finalText.trim();
+      inp.style.opacity = '1';
+      // Auto-enviar tras 1.4s de silencio
+      clearTimeout(micAutoSendTimer);
+      micAutoSendTimer = setTimeout(() => {
+        if (inp.value.trim()) doSend();
+      }, 1400);
+    }
+  };
+
+  recognition.onend = () => {
+    if (micAlwaysOn) {
+      // Reiniciar automáticamente — mic siempre abierto
+      try { recognition.start(); } catch(_) {}
+    } else {
+      micOn = false;
+      micBtn.classList.remove('rec', 'mic-always');
+      micBtn.textContent = '🎤';
+    }
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'no-speech' && micAlwaysOn) return; // normal, ignorar
+    if (micAlwaysOn) { try { recognition.start(); } catch(_) {} return; }
+    micOn = false;
+    micBtn.classList.remove('rec', 'mic-always');
+    micBtn.textContent = '🎤';
+  };
+
+  micBtn.addEventListener('click', () => {
+    if (!micAlwaysOn && !micOn) {
+      // Primera pulsación: activar modo siempre-escuchando
+      micAlwaysOn = true;
+      micOn = true;
+      micBtn.classList.add('rec', 'mic-always');
+      micBtn.textContent = '🎙️';
+      micBtn.title = 'Mic siempre abierto — pulsa para apagar';
+      try { recognition.start(); } catch(_) {}
+    } else {
+      // Segunda pulsación: apagar
+      micAlwaysOn = false;
+      micOn = false;
+      micBtn.classList.remove('rec', 'mic-always');
+      micBtn.textContent = '🎤';
+      micBtn.title = 'Dictado por voz';
+      try { recognition.stop(); } catch(_) {}
+      clearTimeout(micAutoSendTimer);
+    }
+  });
+} else if (micBtn) {
+  micBtn.disabled = true;
+  micBtn.title = 'Tu navegador no soporta dictado por voz';
+}
+
+function bestSpanishVoice() {
+  const voices = speechSynthesis.getVoices();
+  const score = v => {
+    if (!v.lang.startsWith('es')) return -1;
+    let s = 0;
+    if (!v.localService) s += 10;        // red = mejor calidad
+    if (v.name.includes('Google')) s += 8;
+    if (v.name.toLowerCase().includes('female') || v.name.includes('Monica') || v.name.includes('Paulina') || v.name.includes('Lucia')) s += 4;
+    if (v.lang === 'es-US') s += 3;
+    if (v.lang === 'es-MX') s += 2;      // mexicano suena más natural
+    if (v.lang === 'es-ES') s += 1;
+    return s;
+  };
+  return voices.filter(v=>v.lang.startsWith('es')).sort((a,b)=>score(b)-score(a))[0] || null;
+}
+
+function speak(text) {
+  if(!ttsOn||!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const clean = text.replace(/[*_`#]/g,'').slice(0, 300);
+  const u = new SpeechSynthesisUtterance(clean);
+  u.lang = 'es-US';
+  u.rate = 0.87;    // más lento = más natural, menos robótico
+  u.pitch = 1.08;   // ligeramente más cálido
+  u.volume = 1.0;
+  const voice = bestSpanishVoice();
+  if (voice) u.voice = voice;
+  speechSynthesis.speak(u);
+}
+
+// ═══════════════════════════════════════
+// MESSAGES + KATEX
+// ═══════════════════════════════════════
+const msgsEl=document.getElementById('msgs');
+let chatHistory=[];
+let chatDb = null;
+
+function openChatDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('tutor_ia_db', 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('chat_messages')) {
+        const store = db.createObjectStore('chat_messages', { keyPath: 'id', autoIncrement: true });
+        store.createIndex('ts', 'ts');
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function initChatDB() {
+  try {
+    chatDb = await openChatDB();
+  } catch (err) {
+    console.warn('No se pudo abrir IndexedDB', err);
+  }
+}
+
+function saveChatMessageDB(role, content, meta = {}) {
+  // IndexedDB local
+  if (chatDb) {
+    try {
+      const tx = chatDb.transaction('chat_messages', 'readwrite');
+      tx.objectStore('chat_messages').add({ role, content, meta, ts: Date.now() });
+    } catch (err) {
+      console.warn('IndexedDB write error', err);
+    }
+  }
+  // SQLite via server (cuando está online)
+  saveChatToSQLite(role, content, meta?.cls || '');
+}
+
+function loadChatMessagesDB(limit = 120) {
+  return new Promise((resolve) => {
+    if (!chatDb) { resolve([]); return; }
+    try {
+      const tx = chatDb.transaction('chat_messages', 'readonly');
+      const req = tx.objectStore('chat_messages').getAll();
+      req.onsuccess = () => {
+        const all = Array.isArray(req.result) ? req.result : [];
+        resolve(all.slice(-limit));
+      };
+      req.onerror = () => resolve([]);
+    } catch (_) {
+      resolve([]);
+    }
+  });
+}
+
+function renderKatex(el) {
+  if(!window.katexReady||!window.renderMathInElement) {
+    setTimeout(()=>renderKatex(el),300); return;
+  }
+  try {
+    renderMathInElement(el,{
+      delimiters:[
+        {left:'$$',right:'$$',display:true},
+        {left:'$',right:'$',display:false},
+      ],
+      throwOnError:false,
+    });
+  } catch(_){}
+}
+
+function addMsg(text,role,cls='',persist=true) {
+  const d=document.createElement('div');
+  d.className=`msg ${role} ${cls}`.trim();
+  // Set as innerHTML (preserve newlines, let KaTeX find math)
+  d.innerHTML=text.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  // Undo escaping of $ for KaTeX (safe for local app)
+  d.innerHTML=d.innerHTML.replace(/\$\$([^$]+)\$\$/g,'$$$$1$$')
+    .replace(/\$([^$\n<]+)\$/g,'$$$1$$');
+  // Actually - just set textContent + let KaTeX scan for delimiters
+  // Better approach: use a real sanitize
+  d.textContent=text; // reset
+  d.style.whiteSpace='pre-wrap';
+  msgsEl.appendChild(d);
+  renderKatex(d);
+  msgsEl.scrollTop=msgsEl.scrollHeight;
+  if (persist && (role === 'user' || role === 'ai' || role === 'assistant' || role === 'sys')) {
+    saveChatMessageDB(role, text, { cls });
+  }
+  return d;
+}
+
+function addTyping() {
+  const d=document.createElement('div');
+  d.className='msg typing'; d.textContent='Analizando...';
+  msgsEl.appendChild(d); msgsEl.scrollTop=msgsEl.scrollHeight;
+  return d;
+}
+
+function parseSignals(text) {
+  let cls='';
+  if(text.includes('[✅OK]')||text.includes('[🏆]')) {
+    if(currentEx){ EX[currentEx].attempts++; EX[currentEx].correct++; }
+    if(text.includes('[🏆]')&&currentEx) EX[currentEx].status='mastered';
+    cls='ok'; updateMasteryUI();
+  } else if(text.includes('[❌ERR]')) {
+    if(currentEx){ EX[currentEx].attempts++; EX[currentEx].status='review'; }
+    cls='err'; updateMasteryUI();
+  }
+  return cls;
+}
+
+function tryParseAssistantPayload(raw) {
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+  const text = raw.trim();
+
+  // Pre-procesador: escapa backslashes sueltos que no son secuencias JSON válidas
+  // (ej: \mu, \sigma, \sum → \\mu, \\sigma, \\sum)
+  const fixBackslashes = s => s.replace(/\\(?!["\\/bfnrtu0-9])/g, '\\\\');
+
+  const tryJSON = str => {
+    if (!str || !str.trim()) return null;
+    // Intento 1: tal cual
+    try {
+      const p = JSON.parse(str.trim());
+      if (p && typeof p === 'object' && typeof p.chat === 'string') return p;
+    } catch(_) {}
+    // Intento 2: con backslashes corregidos
+    try {
+      const p = JSON.parse(fixBackslashes(str.trim()));
+      if (p && typeof p === 'object' && typeof p.chat === 'string') return p;
+    } catch(_) {}
+    return null;
+  };
+
+  // S1: bloque ```json ... ``` (usa lastIndexOf para evitar corte prematuro)
+  const fenceStart = text.search(/```(?:json)?/i);
+  const fenceEnd   = text.lastIndexOf('```');
+  if (fenceStart !== -1 && fenceEnd > fenceStart) {
+    const inner = text.slice(fenceStart, fenceEnd + 3).replace(/```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+    const r = tryJSON(inner); if (r) return r;
+  }
+
+  // S2: prefijo "json" sin backticks
+  { const r = tryJSON(text.replace(/^json\s*/i, '')); if (r) return r; }
+
+  // S3: {primero, }último greedy
+  const fb = text.indexOf('{'), lb = text.lastIndexOf('}');
+  if (fb !== -1 && lb > fb) { const r = tryJSON(text.slice(fb, lb + 1)); if (r) return r; }
+
+  // S4: scanner de profundidad
+  if (fb !== -1) {
+    let depth = 0, inStr = false, esc = false;
+    for (let i = fb; i < text.length; i++) {
+      const ch = text[i];
+      if (inStr) { if (esc) esc=false; else if (ch==='\\') esc=true; else if (ch==='"') inStr=false; continue; }
+      if (ch==='"') { inStr=true; continue; }
+      if (ch==='{') depth++;
+      else if (ch==='}') { depth--; if (depth===0) { const r=tryJSON(text.slice(fb,i+1)); if(r) return r; break; } }
+    }
+  }
+
+  // S5 (FALLBACK FINAL): extracción directa por regex, sin JSON.parse
+  // Captura el valor de "chat" y "voz" aunque el JSON sea inválido
+  const chatM = text.match(/"chat"\s*:\s*"((?:[^"\\]|\\[\s\S])*)"/);
+  if (chatM) {
+    const unescape = s => s
+      .replace(/\\n/g,'\n').replace(/\\t/g,'\t')
+      .replace(/\\"/g,'"').replace(/\\\\/g,'\\')
+      .replace(/\\([^"\\\/bfnrtu])/g,'$1'); // limpia escapes LaTeX inválidos
+    const vozM = text.match(/"voz"\s*:\s*"((?:[^"\\]|\\[\s\S])*)"/);
+    return {
+      chat: unescape(chatM[1]),
+      voz:  vozM ? unescape(vozM[1]) : '',
+    };
+  }
+
+  return null;
+}
+
+// ═══════════════════════════════════════
+// API
+// ═══════════════════════════════════════
+async function callOR(userText,img64) {
+  const content=img64
+    ? [{type:'text',text:userText||'Analiza mi pizarra.'},{type:'image_url',image_url:{url:`data:image/jpeg;base64,${img64}`}}]
+    : userText;
+  const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+    method:'POST',
+    headers:{'Authorization':`Bearer ${CFG.or_key}`,'Content-Type':'application/json','HTTP-Referer':'https://tutor-ia.local','X-Title':'Tutor IA'},
+    body:JSON.stringify({model:CFG.or_model,messages:[{role:'system',content:SYS},...chatHistory,{role:'user',content}],max_tokens:500,temperature:0.3})
+  });
+  if(!r.ok){const e=await r.text();throw new Error(`OR ${r.status}: ${e.slice(0,200)}`);}
+  return (await r.json()).choices[0].message.content;
+}
+
+async function callCL(userText,img64) {
+  if(!CFG.cl_key) throw new Error('Falta Claude key en ⚙️');
+  const uc=img64
+    ? [{type:'image',source:{type:'base64',media_type:'image/jpeg',data:img64}},{type:'text',text:userText||'Analiza mi pizarra.'}]
+    : [{type:'text',text:userText}];
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'x-api-key':CFG.cl_key,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:CFG.cl_model,system:SYS,messages:[...chatHistory.map(m=>({role:m.role,content:[{type:'text',text:typeof m.content==='string'?m.content:'[prev]'}]})),{role:'user',content:uc}],max_tokens:500})
+  });
+  if(!r.ok){const e=await r.text();throw new Error(`CL ${r.status}: ${e.slice(0,200)}`);}
+  return (await r.json()).content[0].text;
+}
+
+// ═══════════════════════════════════════
+// MAIN SEND
+// ═══════════════════════════════════════
+async function sendAI(userText,withCanvas,silent) {
+  if(busy) return;
+  busy=true;
+  const img64=(withCanvas&&hasContent())?captureAll():null;
+  const prefix=currentEx?`[Ejercicio: ${currentEx} — ${EX[currentEx].title}]\n`:'';
+  const timerCtx = pomoRunning
+    ? `[TIEMPO RESTANTE: ${pomoFmt(pomoSecsLeft)} de ${pomoState==='study'?'estudio':'descanso'} — sesión urgente, el estudiante tiene el parcial pronto]\n`
+    : '';
+  const full=timerCtx+prefix+(userText||'');
+  if(!silent) {
+    if(userText) addMsg(userText,'user');
+    else if(img64) addMsg('📷 Enviando pizarra completa...','user');
+    expandChat();
+  }
+  chatHistory.push({role:'user',content:full||'Analiza mi pizarra'});
+  const typing=addTyping();
+  const ind=document.getElementById('analyze-ind');
+  if(silent) ind.style.display='block';
+  try {
+    const resp=CFG.use_claude?await callCL(full,img64):await callOR(full,img64);
+    typing.remove(); ind.style.display='none';
+
+    // Parsear JSON dual {chat, voz}
+    let chatText = resp, vozText = '';
+    const parsed = tryParseAssistantPayload(resp);
+    if (parsed) {
+      chatText = typeof parsed.chat === 'string' && parsed.chat.trim() ? parsed.chat : resp;
+      vozText  = typeof parsed.voz === 'string' ? parsed.voz : '';
+    }
+
+    const cls = parseSignals(chatText);
+    const clean = chatText.replace(/\[✅OK\]|\[❌ERR\]|\[🏆\]/g,'').trim();
+    addMsg(clean,'ai',cls);
+    speak(vozText || clean.slice(0,80)); // voz = campo voz, o primeras palabras si no hay
+    chatHistory.push({role:'assistant',content:chatText});
+    if(chatHistory.length>24) chatHistory=chatHistory.slice(-20);
+    if(!silent) expandChat();
+  } catch(err) {
+    typing.remove(); ind.style.display='none';
+    addMsg(`❌ ${err.message}`,'ai','err');
+    console.error(err);
+  } finally { busy=false; }
+}
+
+// ═══════════════════════════════════════
+// TOOLBAR EVENTS
+// ═══════════════════════════════════════
+document.querySelectorAll('.cdot').forEach(d => d.addEventListener('click',()=>{
+  document.querySelectorAll('.cdot').forEach(x=>x.classList.remove('active'));
+  d.classList.add('active'); color=d.dataset.c;
+  if(tool==='eraser') setTool('pen');
+}));
+document.getElementById('sz').addEventListener('input',e=>brushSz=+e.target.value);
+document.getElementById('btn-pen').addEventListener('click',()=>setTool('pen'));
+document.getElementById('btn-erase').addEventListener('click',()=>setTool('eraser'));
+document.getElementById('btn-pan').addEventListener('click',()=>{
+  panModeBtn=!panModeBtn;
+  document.getElementById('btn-pan').classList.toggle('pan-on',panModeBtn);
+  document.getElementById('pan-hint').style.display=panModeBtn?'block':'none';
+  if(panModeBtn) { setTool('pen'); canvas.style.cursor='grab'; }
+  else canvas.style.cursor='crosshair';
+});
+document.getElementById('btn-undo').addEventListener('click',()=>{ strokes.pop(); render(); });
+document.getElementById('btn-clear').addEventListener('click',()=>{
+  if(!confirm('¿Limpiar toda la pizarra?')) return;
+  strokes=[]; syncedIds.clear(); render(); clearTimeout(autoTimer);
+  autoSt.textContent=`⚡ Auto-${autoOn?'ON':'OFF'}`; autoSt.className=autoOn?'on':'';
+  if(serverOnline) fetch('/api/clear',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({board:currentBoardId})}).catch(()=>{});
+});
+document.getElementById('btn-home').addEventListener('click',()=>{
+  viewOffset={x:0,y:0}; viewScale=1;
+  render();
+  document.getElementById('pos-indicator').textContent='×1.0';
+});
+document.getElementById('btn-verify').addEventListener('click',()=>sendAI('',true,false));
+document.getElementById('btn-cam').addEventListener('click',()=>sendAI('',true,false));
+document.getElementById('btn-exercise').addEventListener('click',()=>{
+  const box = document.getElementById('exercise-float');
+  box.classList.toggle('show');
+});
+// mic listener ya incluido arriba en el bloque SpeechRecognition
+
+function setTool(t) {
+  tool=t;
+  canvas.className=(t==='eraser'?'erase-cur':panModeBtn?'pan-cur':'');
+  document.getElementById('btn-pen').classList.toggle('active',t==='pen');
+  document.getElementById('btn-erase').classList.toggle('active',t==='eraser');
+}
+
+// ═══════════════════════════════════════
+// FORMULA POLL
+// ═══════════════════════════════════════
+const POLL_OPTS = [
+  { id:'discreta',       label:'📊 Discreta general',  hint:'Se usa cuando te dan la tabla x / P(x) directamente. Calculas μ = Σx·P(x).' },
+  { id:'binomial',       label:'🎯 Binomial',          hint:'Se usa con n intentos independientes, probabilidad fija p, CON reposición.' },
+  { id:'hipergeometrica',label:'🔵 Hipergeométrica',   hint:'Se usa sin reposición: extraes n de una urna con N total y K del tipo que buscas.' },
+  { id:'poisson',        label:'⚡ Poisson',            hint:'Se usa cuando el dato es una tasa promedio λ por intervalo (tiempo, espacio).' },
+];
+
+const POLL_WRONG_HINTS = {
+  discreta:        '¿Hay una tabla explícita con x y P(x) ya dada? Si no, no es discreta general.',
+  binomial:        '¿Los intentos son independientes y con reposición? ¿Hay una n y una p fijas?',
+  hipergeometrica: '¿El problema dice "sin reemplazo" o extrae de un grupo finito SIN devolver?',
+  poisson:         '¿El dato clave es un promedio por intervalo de tiempo o espacio (λ)?',
+};
+
+function showDistribPoll(exKey) {
+  switchTab('chat');
+  const ex = EX[exKey];
+  const msgsEl = document.getElementById('msgs');
+  const card = document.createElement('div');
+  card.className = 'poll-card';
+  let tries = 0;
+
+  const shuffle = arr => [...arr].sort(() => Math.random() - .5);
+  const opts = shuffle(POLL_OPTS);
+
+  card.innerHTML = `
+    <div class="poll-q">Antes de resolver, dime: <b>¿qué distribución usarías?</b></div>
+    <div class="poll-ex">${exKey}: ${ex.title}</div>
+    <div class="poll-opts">${opts.map(o=>`<button class="poll-opt" data-id="${o.id}">${o.label}</button>`).join('')}</div>
+    <div class="poll-feedback" style="display:none"></div>
+    <div class="poll-attempts"></div>
+  `;
+
+  const btns = card.querySelectorAll('.poll-opt');
+  const fb   = card.querySelector('.poll-feedback');
+  const att  = card.querySelector('.poll-attempts');
+
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('disabled') || btn.classList.contains('correct') || btn.classList.contains('wrong')) return;
+      tries++;
+      const chosen = btn.dataset.id;
+      const correct = chosen === ex.distrib;
+
+      if (correct) {
+        btn.classList.add('correct');
+        btns.forEach(b => { if(b!==btn) b.classList.add('disabled'); });
+        const label = POLL_OPTS.find(o=>o.id===ex.distrib).label;
+        fb.className = 'poll-feedback ok';
+        fb.textContent = tries === 1
+          ? `✅ Correcto al primer intento. ${label} — ${POLL_OPTS.find(o=>o.id===ex.distrib).hint}`
+          : `✅ Correcto (intento ${tries}). ${label} — ${POLL_OPTS.find(o=>o.id===ex.distrib).hint}`;
+        fb.style.display = 'block';
+        att.textContent = `${tries} intento${tries>1?'s':''} para identificar la distribución`;
+        // Track in mastery
+        if (tries === 1) { ex.correct = (ex.correct||0) + 0.5; }
+        saveMastery();
+        // Mostrar tip automático del método
+        showExerciseTip(exKey);
+        // Now launch the exercise with AI
+        setTimeout(() => {
+          sendAI(`El estudiante identificó correctamente que ${exKey} usa ${ex.distrib} (en ${tries} intento${tries>1?'s':''}). Ahora inicia la práctica socrática de "${ex.title}". Preséntame el ejercicio y pregúntame cuál es el primer paso. No resuelvas nada.`, false, false);
+        }, 800);
+      } else {
+        btn.classList.add('wrong');
+        btn.classList.add('disabled');
+        fb.className = 'poll-feedback err';
+        fb.textContent = `❌ No es ${POLL_OPTS.find(o=>o.id===chosen).label.replace(/^.+ /,'')}. Pista: ${POLL_WRONG_HINTS[chosen]}`;
+        fb.style.display = 'block';
+        att.textContent = `Intento ${tries} — quedan ${POLL_OPTS.filter(o=>o.id!==ex.distrib).length - (tries-1)} opciones incorrectas`;
+        if (tries >= 3) {
+          // Reveal after 3 wrong
+          btns.forEach(b => {
+            if (b.dataset.id === ex.distrib) { b.classList.add('correct'); b.classList.remove('disabled'); }
+            else b.classList.add('disabled');
+          });
+          fb.className = 'poll-feedback err';
+          fb.textContent = `Era ${POLL_OPTS.find(o=>o.id===ex.distrib).label}. ${POLL_OPTS.find(o=>o.id===ex.distrib).hint}`;
+          ex.status = 'review';
+          updateMasteryUI();
+          showExerciseTip(exKey);
+          setTimeout(() => {
+            sendAI(`El estudiante NO identificó la distribución de ${exKey} después de 3 intentos. La correcta es ${ex.distrib}. Inicia la práctica socrática de "${ex.title}" explicando primero POR QUÉ se usa esa distribución, con una pregunta guía. No resuelvas nada.`, false, false);
+          }, 800);
+        }
+      }
+    });
+  });
+
+  msgsEl.appendChild(card);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+// ═══════════════════════════════════════
+// BOARD SYNC
+// ═══════════════════════════════════════
+async function uploadStroke(stroke) {
+  try {
+    await fetch('/api/stroke', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({board: currentBoardId, stroke})
+    });
+  } catch(_) {}
+}
+
+async function pollStrokes() {
+  try {
+    const r = await fetch(`/api/strokes?board=${currentBoardId}&since=${lastSyncTs}`);
+    if (!r.ok) return;
+    const {strokes: remote, ts} = await r.json();
+    lastSyncTs = ts;
+    let added = false;
+    for (const s of remote) {
+      if (s.id && !syncedIds.has(s.id)) {
+        syncedIds.add(s.id);
+        strokes.push(s);
+        added = true;
+      }
+    }
+    if (added) render();
+  } catch(_) {}
+}
+
+async function loadBoard(boardId) {
+  currentBoardId = boardId;
+  strokes = []; syncedIds.clear(); lastSyncTs = 0;
+  render();
+  if (!serverOnline) return;
+  try {
+    const r = await fetch(`/api/strokes?board=${boardId}&since=0`);
+    const {strokes: remote, ts} = await r.json();
+    lastSyncTs = ts;
+    for (const s of remote) {
+      if (s.id) syncedIds.add(s.id);
+    }
+    strokes = remote;
+    render();
+  } catch(_) {}
+}
+
+function updateSyncStatus() {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  if (serverOnline) {
+    el.className = 'online';
+    el.textContent = '🟢 Servidor online — sync activo';
+  } else {
+    el.className = 'offline';
+    el.textContent = '🔴 Sin servidor — solo local (inicia server.py)';
+  }
+}
+
+async function checkServer() {
+  try {
+    const r = await fetch('/api/ping', {signal: AbortSignal.timeout(1500)});
+    const wasOffline = !serverOnline;
+    serverOnline = r.ok;
+    if (wasOffline && serverOnline) {
+      // Just came online — load current board from server
+      await loadBoard(currentBoardId);
+    }
+  } catch(_) {
+    serverOnline = false;
+  }
+  updateSyncStatus();
+}
+
+function renderBoards() {
+  const panel = document.getElementById('tableros-panel');
+  if (!panel) return;
+
+  fetch('/api/boards').then(r => r.json()).then(data => {
+    panel.innerHTML = `
+      <div id="sync-status" class="${serverOnline?'online':'offline'}">
+        ${serverOnline ? '🟢 Servidor online — sync activo' : '🔴 Sin servidor — solo local (inicia server.py)'}
+      </div>
+      <h4>Tableros</h4>
+      <button class="mbtn" style="width:100%;margin-bottom:8px" onclick="newBoard()">+ Nuevo tablero</button>
+      <div class="tb-list" id="tb-list"></div>
+    `;
+    const list = panel.querySelector('#tb-list');
+    const entries = Object.entries(data);
+    if (!entries.length) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:11px;text-align:center">Sin tableros en servidor</div>';
+      return;
+    }
+    entries.forEach(([id, info]) => {
+      const card = document.createElement('div');
+      card.className = 'tb-card' + (id === currentBoardId ? ' active-board' : '');
+      card.innerHTML = `
+        <div class="tb-card-info">
+          <div class="tb-card-name">${info.name}</div>
+          <div class="tb-card-meta">${info.count} trazos</div>
+        </div>
+        <div class="tb-card-btns">
+          <button class="tb-icon-btn" title="Renombrar" onclick="renameBoard('${id}','${info.name}')">✏️</button>
+          ${id !== 'default' ? `<button class="tb-icon-btn del" title="Eliminar" onclick="deleteBoard('${id}')">🗑️</button>` : ''}
+        </div>
+      `;
+      card.addEventListener('click', e => {
+        if (e.target.closest('.tb-card-btns')) return;
+        loadBoard(id).then(() => renderBoards());
+      });
+      list.appendChild(card);
+    });
+  }).catch(() => {
+    panel.innerHTML = `
+      <div id="sync-status" class="offline">🔴 Sin servidor — solo local</div>
+      <h4>Tableros</h4>
+      <p style="font-size:11px;color:var(--muted);line-height:1.6">
+        Para sync en tiempo real corre:<br>
+        <code style="background:#21262d;padding:2px 6px;border-radius:4px">python server.py</code><br>
+        en la carpeta del proyecto.
+      </p>
+    `;
+  });
+}
+
+async function newBoard() {
+  const name = prompt('Nombre del tablero:', 'Tablero ' + (Date.now()%1000));
+  if (!name) return;
+  const id = 'board_' + Date.now();
+  await fetch('/api/board/create', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id, name})
+  }).catch(()=>{});
+  await loadBoard(id);
+  renderBoards();
+}
+
+async function renameBoard(id, current) {
+  const name = prompt('Nuevo nombre:', current);
+  if (!name || name === current) return;
+  await fetch('/api/board/rename', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id, name})
+  }).catch(()=>{});
+  renderBoards();
+}
+
+async function deleteBoard(id) {
+  if (!confirm('¿Eliminar este tablero?')) return;
+  await fetch('/api/board/delete', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id})
+  }).catch(()=>{});
+  if (currentBoardId === id) await loadBoard('default');
+  renderBoards();
+}
+
+// ── SQLite sync helpers ──────────────────────────────────
+async function sqlitePost(endpoint, body) {
+  if (!serverOnline) return false;
+  try {
+    const r = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return r.ok;
+  } catch(_) { return false; }
+}
+
+async function sqliteGet(endpoint) {
+  if (!serverOnline) return null;
+  try {
+    const r = await fetch(endpoint);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch(_) { return null; }
+}
+
+// Guardar mensaje en SQLite
+function saveChatToSQLite(role, content, cls = '') {
+  sqlitePost('/api/chat', { role, content, cls, ts: Date.now() / 1000 });
+}
+
+// Guardar mastery en SQLite
+function saveMasteryToSQLite() {
+  const out = {};
+  Object.keys(EX).forEach(k => {
+    out[k] = { status: EX[k].status, correct: EX[k].correct, attempts: EX[k].attempts };
+  });
+  sqlitePost('/api/mastery', out);
+}
+
+// Guardar config (currentEx) en SQLite
+function saveConfigToSQLite(key, value) {
+  sqlitePost('/api/config', { key, value });
+}
+
+// Cargar estado desde SQLite en el arranque
+async function loadFromSQLite() {
+  // Mastery
+  const mastery = await sqliteGet('/api/mastery');
+  if (mastery && Object.keys(mastery).length) {
+    Object.keys(mastery).forEach(k => {
+      if (EX[k]) Object.assign(EX[k], mastery[k]);
+    });
+  }
+  // currentEx
+  const cfg = await sqliteGet('/api/config?key=current_ex');
+  if (cfg && cfg.value && EX[cfg.value]) {
+    currentEx = cfg.value;
+    localStorage.setItem('tcurrentEx', currentEx);
+  }
+  // Chat
+  const msgs = await sqliteGet('/api/chat?limit=150');
+  return msgs || null;
+}
+
+// Start sync loop
+(async function initSync() {
+  await checkServer();
+  setInterval(checkServer, 5000);
+  setInterval(() => { if (serverOnline) pollStrokes(); }, 1500);
+})();
+
+// ═══════════════════════════════════════
+// TIP FLOTANTE — método + fórmulas por distribución
+// ═══════════════════════════════════════
+const DIST_TIPS = {
+  discreta: {
+    title: '📊 Distribución Discreta General',
+    color: '#e94560',
+    formulas: 'μ = Σ x·P(x)\nσ² = Σ x²·P(x) − μ²\nσ = √σ²',
+    steps: `<b>① Verifica:</b> ΣP(x) debe dar 1.0\n<b>② Media μ:</b> multiplica cada x por P(x) y suma todo\n<b>③ E(x²):</b> multiplica cada x<sup>2</sup> por P(x) y suma todo\n<b>④ Varianza:</b> σ² = E(x²) − μ²\n<b>⑤ Desv. std:</b> σ = √σ²`,
+  },
+  binomial: {
+    title: '🎯 Binomial B(n, p)',
+    color: '#2ea043',
+    formulas: 'P(x) = C(n,x) · pˣ · (1−p)ⁿ⁻ˣ\nμ = n·p\nσ² = n·p·(1−p)\nC(n,x) = n! / (x!·(n−x)!)',
+    steps: `<b>① Identifica:</b> n = nº ensayos, p = prob éxito\n<b>② Combinación:</b> C(n,x) con calculadora (SHIFT ÷)\n<b>③ Calcula:</b> pˣ y (1−p)ⁿ⁻ˣ por separado\n<b>④ Multiplica:</b> C(n,x) × pˣ × (1−p)ⁿ⁻ˣ\n<b>Acumulada P(x≤k):</b> suma P(0)+P(1)+…+P(k)`,
+  },
+  hipergeometrica: {
+    title: '🔵 Hipergeométrica H(N, K, n)',
+    color: '#d29922',
+    formulas: 'P(x) = C(K,x)·C(N−K, n−x) / C(N,n)\nμ = n·K/N',
+    steps: `<b>N</b> = total en el grupo/urna\n<b>K</b> = cuántos son del tipo que busco en el grupo\n<b>n</b> = cuántos extraes o eliges\n<b>x</b> = cuántos éxitos quieres en tu muestra\n<b>Truco "al menos 1":</b> 1 − P(x=0)`,
+  },
+  poisson: {
+    title: '⚡ Poisson P(λ)',
+    color: '#8b5cf6',
+    formulas: 'P(x) = (e⁻λ · λˣ) / x!\nμ = λ     σ² = λ\ne⁻¹≈0.368  e⁻²·⁵≈0.082  e⁻⁵≈0.0067',
+    steps: `<b>① Identifica λ:</b> el promedio por intervalo (hora, día…)\n<b>② Calcula e⁻λ:</b> en calc tecla e^x con valor −λ\n<b>③ Calcula λˣ:</b> λ elevado a la x\n<b>④ Divide entre x!:</b> (2!=2, 3!=6, 4!=24, 5!=120)\n<b>P(x≤k):</b> suma P(0)+P(1)+…+P(k)\n<b>P(x>k):</b> 1 − P(x≤k)`,
+  },
+};
+
+let tipVisible = false;
+
+function showExerciseTip(exKey) {
+  const ex = EX[exKey];
+  if (!ex || !DIST_TIPS[ex.distrib]) return;
+  const tip = DIST_TIPS[ex.distrib];
+  document.getElementById('tip-title').textContent = tip.title;
+  document.getElementById('tip-title').style.color = tip.color;
+  document.getElementById('tip-float').style.borderColor = tip.color;
+  document.getElementById('tip-formulas').textContent = tip.formulas;
+  document.getElementById('tip-steps').innerHTML = tip.steps;
+  document.getElementById('tip-float').classList.add('show');
+  document.getElementById('btn-tip').classList.add('active');
+  tipVisible = true;
+}
+
+function hideTip() {
+  document.getElementById('tip-float').classList.remove('show');
+  document.getElementById('btn-tip').classList.remove('active');
+  tipVisible = false;
+}
+
+document.getElementById('btn-tip').addEventListener('click', () => {
+  if (tipVisible) hideTip();
+  else if (currentEx) showExerciseTip(currentEx);
+});
+
+// ═══════════════════════════════════════
+// POMODORO TIMER
+// ═══════════════════════════════════════
+const POMO_STUDY = 30 * 60;
+const POMO_BREAK = 15 * 60;
+let pomoState = 'study';
+let pomoSecsLeft = POMO_STUDY;
+let pomoRunning = false;
+let pomoInterval = null;
+
+function pomoFmt(s) {
+  return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+}
+function updatePomoUI() {
+  const disp = document.getElementById('pomo-display');
+  const mode = document.getElementById('pomo-mode');
+  const widget = document.getElementById('pomo-widget');
+  if (!disp) return;
+  const isStudy = pomoState === 'study';
+  disp.textContent = `${isStudy ? '📚' : '😴'} ${pomoFmt(pomoSecsLeft)}`;
+  mode.textContent = isStudy ? 'Estudio' : 'Descanso';
+  widget.classList.toggle('break-mode', !isStudy);
+  // Urgencia: parpadeo cuando quedan menos de 3 min
+  disp.style.animation = (pomoRunning && pomoSecsLeft < 180) ? 'mic-pulse 1s infinite' : 'none';
+}
+function pomoTick() {
+  pomoSecsLeft--;
+  updatePomoUI();
+  if (pomoSecsLeft <= 0) {
+    if (pomoState === 'study') {
+      pomoState = 'break';
+      pomoSecsLeft = POMO_BREAK;
+      speak('¡Muy bien! Tomate 15 minutos de descanso. Aléjate de la pantalla.');
+      addMsg('😴 DESCANSO — 15 min. Cierra los ojos, estira, hidratate.', 'sys');
+    } else {
+      pomoState = 'study';
+      pomoSecsLeft = POMO_STUDY;
+      speak('¡Volvemos! 30 minutos de estudio. A concentrarse, vamos.');
+      addMsg('🔥 ESTUDIO — 30 min. Enfoque total. ¿Por cuál ejercicio seguimos?', 'sys');
+    }
+    updatePomoUI();
+  }
+}
+function togglePomo() {
+  pomoRunning = !pomoRunning;
+  const btn = document.getElementById('pomo-btn');
+  if (pomoRunning) {
+    pomoInterval = setInterval(pomoTick, 1000);
+    btn.textContent = '⏸';
+    speak('Temporizador iniciado. ¡Dale!');
+    addMsg(`⏱️ Cronómetro iniciado — ${pomoState === 'study' ? '30 min estudio' : '15 min descanso'}. El tutor sabe que el tiempo es poco.`, 'sys');
+  } else {
+    clearInterval(pomoInterval);
+    btn.textContent = '▶';
+  }
+  updatePomoUI();
+}
+document.getElementById('pomo-btn').addEventListener('click', togglePomo);
+// Click en el display para resetear
+document.getElementById('pomo-display').addEventListener('dblclick', () => {
+  clearInterval(pomoInterval);
+  pomoRunning = false;
+  pomoState = 'study';
+  pomoSecsLeft = POMO_STUDY;
+  document.getElementById('pomo-btn').textContent = '▶';
+  updatePomoUI();
+});
+
+// ═══════════════════════════════════════
+// EXERCISE BUTTONS
+// ═══════════════════════════════════════
+document.querySelectorAll('.ex-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const k=btn.dataset.ex;
+    currentEx=k;
+    localStorage.setItem('tcurrentEx', k);
+    saveConfigToSQLite('current_ex', k);
+    if(EX[k].status==='none') EX[k].status='working';
+    updateMasteryUI();
+    showExerciseTip(k);
+    showDistribPoll(k);
+  });
+});
+
+// ═══════════════════════════════════════
+// CHAT UI
+// ═══════════════════════════════════════
+const chatEl=document.getElementById('chat');
+const openBtn=document.getElementById('openchat');
+const expandChat=()=>{ chatEl.classList.remove('collapsed'); openBtn.style.display='none'; };
+const collapseChat=()=>{ chatEl.classList.add('collapsed'); openBtn.style.display='block'; };
+document.getElementById('collapse-btn').addEventListener('click',collapseChat);
+document.getElementById('btn-toggle-chat').addEventListener('click',()=>chatEl.classList.contains('collapsed')?expandChat():collapseChat());
+openBtn.addEventListener('click',expandChat);
+
+document.getElementById('btn-send').addEventListener('click',doSend);
+document.getElementById('minput').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend();}
+});
+function doSend() {
+  const t=document.getElementById('minput').value.trim();
+  if(!t) return;
+  document.getElementById('minput').value='';
+  // Detect "practica EX"
+  const m=t.match(/practica[r]?\s+(E[0-9]+[ab]?)/i);
+  if(m){ const k=m[1].toUpperCase(); if(EX[k]){ currentEx=k; if(EX[k].status==='none')EX[k].status='working'; updateMasteryUI(); } }
+  sendAI(t,false,false);
+}
+
+// ═══════════════════════════════════════
+// API TOGGLE
+// ═══════════════════════════════════════
+document.getElementById('api-tog').checked=CFG.use_claude;
+document.getElementById('api-lbl').textContent=CFG.use_claude?'CL':'OR';
+document.getElementById('api-tog').addEventListener('change',e=>{
+  CFG.use_claude=e.target.checked;
+  document.getElementById('api-lbl').textContent=CFG.use_claude?'CL':'OR';
+  document.getElementById('api-lbl').style.color=CFG.use_claude?'var(--accent)':'var(--blue)';
+  saveCFG();
+  addMsg(`API: ${CFG.use_claude?'Claude directo':CFG.or_model+' vía OpenRouter'}`,'sys');
+});
+
+// ═══════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════
+document.getElementById('btn-cfg').addEventListener('click',()=>{
+  document.getElementById('s-or-key').value=CFG.or_key;
+  document.getElementById('s-or-model').value=CFG.or_model;
+  document.getElementById('s-cl-key').value=CFG.cl_key;
+  document.getElementById('s-cl-model').value=CFG.cl_model;
+  document.getElementById('s-delay').value=CFG.auto_delay;
+  document.getElementById('smodal').classList.add('open');
+});
+document.getElementById('ssave').addEventListener('click',()=>{
+  CFG.or_key=document.getElementById('s-or-key').value.trim()||CFG.or_key;
+  CFG.or_model=document.getElementById('s-or-model').value;
+  CFG.cl_key=document.getElementById('s-cl-key').value.trim();
+  CFG.cl_model=document.getElementById('s-cl-model').value;
+  CFG.auto_delay=+document.getElementById('s-delay').value||4;
+  saveCFG(); document.getElementById('smodal').classList.remove('open');
+  addMsg('✅ Config guardada.','sys');
+});
+document.getElementById('smodal').addEventListener('click',e=>{
+  if(e.target===document.getElementById('smodal')) document.getElementById('smodal').classList.remove('open');
+});
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+async function boot() {
+  await initChatDB();
+
+  // ── Intentar cargar desde SQLite (servidor) primero ──
+  await checkServer();   // saber si el server está online antes de cargar
+  let chatMsgs = null;
+  if (serverOnline) {
+    chatMsgs = await loadFromSQLite();  // carga mastery + currentEx + chat desde SQLite
+  }
+
+  // ── Fallback: localStorage para mastery si SQLite no respondió ──
+  if (!serverOnline) {
+    try {
+      const m = JSON.parse(localStorage.getItem('tmastery_stats') || '{}');
+      Object.keys(m).forEach(k => EX[k] && Object.assign(EX[k], m[k]));
+    } catch(_) {}
+    const saved = localStorage.getItem('tcurrentEx');
+    if (saved && EX[saved]) currentEx = saved;
+  }
+
+  // ── Mostrar mensajes del chat ──
+  if (chatMsgs && chatMsgs.length) {
+    chatMsgs.forEach(m => addMsg(m.content, m.role, m.cls || '', false));
+    addMsg('🗄️ Chat restaurado desde SQLite.', 'sys');
+  } else {
+    // Fallback a IndexedDB local
+    const prev = await loadChatMessagesDB(100);
+    if (prev.length) {
+      prev.forEach(m => addMsg(m.content, m.role, m.meta?.cls || '', false));
+      addMsg('🗂️ Chat restaurado desde IndexedDB local.', 'sys');
+    } else {
+      addMsg(`⚡ ${CFG.or_model} via OpenRouter — Auto-análisis: ${CFG.auto_delay}s\n\n• Lápiz = dibuja | Toque/🤚 Pan = mueve\n• 💡 Método = ver fórmulas del ejercicio activo\n• 🎙️ = mic siempre abierto (habla y envía solo)\n• ▶ = cronómetro 30 min estudio / 15 min descanso`, 'sys');
+    }
+  }
+
+  updateMasteryUI();
+
+  // ── Restaurar ejercicio activo ──
+  if (currentEx && EX[currentEx]) {
+    updateExerciseFloat();
+    showExerciseTip(currentEx);
+    addMsg(`📌 Ejercicio activo: ${currentEx} — ${EX[currentEx].title}`, 'sys');
+  }
+
+  if (window.speechSynthesis) {
+    speechSynthesis.getVoices();
+    speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

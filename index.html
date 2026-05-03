@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PARCIALES 5 — Tutor IA</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --card: #161b22;
+  --card2: #1c2128;
+  --border: #30363d;
+  --primary: #7c6ff7;
+  --primary-dark: #5a53d0;
+  --danger: #f85149;
+  --warning: #f0883e;
+  --success: #3fb950;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:var(--font); display:flex; min-height:100vh; overflow-x:hidden; }
+
+/* SIDEBAR */
+#sidebar {
+  width:240px; min-width:240px; background:var(--card); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; padding:0; position:sticky; top:0; height:100vh; overflow-y:auto;
+}
+#sidebar-header { padding:20px 16px 12px; border-bottom:1px solid var(--border); }
+#sidebar-header h1 { font-size:18px; font-weight:700; color:var(--primary); letter-spacing:2px; }
+#sidebar-header p { font-size:11px; color:var(--muted); margin-top:2px; }
+.nav-section { padding:12px 0; border-bottom:1px solid var(--border); }
+.nav-label { font-size:10px; font-weight:600; color:var(--muted); letter-spacing:1px; padding:0 16px 6px; text-transform:uppercase; }
+.nav-btn {
+  display:flex; align-items:center; gap:10px; width:100%; padding:8px 16px;
+  background:none; border:none; color:var(--muted); font-size:14px; cursor:pointer; transition:all .15s;
+  text-align:left;
+}
+.nav-btn:hover { background:#ffffff0a; color:var(--text); }
+.nav-btn.active { background:#7c6ff71a; color:var(--primary); border-right:2px solid var(--primary); }
+.nav-btn .icon { font-size:16px; width:20px; text-align:center; }
+
+/* EXAM COUNTDOWNS in sidebar */
+.exam-card {
+  margin:8px 10px; padding:10px 12px; border-radius:8px; border:1px solid var(--border);
+  background:var(--card2);
+}
+.exam-card.urgent { border-color:#f8514944; background:#f8514908; }
+.exam-card.medium { border-color:#f0883e44; background:#f0883e08; }
+.exam-card.ok { border-color:#3fb95044; background:#3fb95008; }
+.exam-name { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+.exam-time { font-size:20px; font-weight:700; font-family:monospace; margin-top:2px; }
+.exam-card.urgent .exam-time { color:var(--danger); }
+.exam-card.medium .exam-time { color:var(--warning); }
+.exam-card.ok .exam-time { color:var(--success); }
+.exam-label { font-size:10px; color:var(--muted); margin-top:2px; }
+
+/* MAIN */
+#main { flex:1; padding:24px; overflow-y:auto; }
+.section { display:none; }
+.section.active { display:block; }
+
+/* PAGE HEADER */
+.page-header { margin-bottom:24px; }
+.page-header h2 { font-size:24px; font-weight:700; }
+.page-header p { color:var(--muted); margin-top:4px; font-size:14px; }
+
+/* TABS */
+.tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:0; }
+.tab-btn {
+  padding:8px 16px; background:none; border:none; color:var(--muted); font-size:14px; cursor:pointer;
+  border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .15s; font-family:var(--font);
+}
+.tab-btn:hover { color:var(--text); }
+.tab-btn.active { color:var(--primary); border-bottom-color:var(--primary); }
+
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+
+/* WEAKNESS PANEL */
+.weakness-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px; }
+.topic-card {
+  padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--card2);
+  cursor:pointer; transition:all .2s; user-select:none;
+}
+.topic-card:hover { border-color:var(--primary); }
+.topic-card .topic-name { font-size:13px; font-weight:500; }
+.topic-card .topic-status { font-size:20px; margin-bottom:6px; }
+.topic-card.no-idea { border-color:#f8514966; background:#f8514910; }
+.topic-card.weak { border-color:#f0883e66; background:#f0883e10; }
+.topic-card.ok { border-color:#3fb95066; background:#3fb95010; }
+.topic-card.strong { border-color:#7c6ff766; background:#7c6ff710; }
+.status-bar { display:flex; gap:6px; margin-top:8px; }
+.status-opt {
+  flex:1; padding:4px; border-radius:4px; border:1px solid var(--border); background:none;
+  color:var(--muted); font-size:11px; cursor:pointer; text-align:center; transition:all .15s;
+}
+.status-opt:hover { border-color:var(--primary); color:var(--text); }
+
+/* FLASHCARDS */
+.flashcard-container { display:flex; flex-direction:column; align-items:center; gap:16px; }
+.flashcard-wrap { perspective:1000px; width:100%; max-width:560px; height:260px; cursor:pointer; }
+.flashcard {
+  width:100%; height:100%; position:relative; transform-style:preserve-3d;
+  transition:transform .5s cubic-bezier(.4,0,.2,1);
+}
+.flashcard.flipped { transform:rotateY(180deg); }
+.fc-face {
+  position:absolute; width:100%; height:100%; backface-visibility:hidden;
+  border-radius:12px; border:1px solid var(--border); background:var(--card2);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:24px; text-align:center;
+}
+.fc-back { transform:rotateY(180deg); background:var(--card); }
+.fc-label { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:12px; }
+.fc-formula { font-size:22px; font-family:monospace; color:var(--primary); line-height:1.5; }
+.fc-explanation { font-size:15px; line-height:1.6; color:var(--text); }
+.fc-tip { font-size:12px; color:var(--warning); margin-top:12px; }
+.flashcard-controls { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+.btn {
+  padding:8px 20px; border-radius:8px; border:none; font-size:14px; cursor:pointer;
+  font-family:var(--font); transition:all .15s; font-weight:500;
+}
+.btn-primary { background:var(--primary); color:white; }
+.btn-primary:hover { background:var(--primary-dark); }
+.btn-danger { background:var(--danger); color:white; }
+.btn-danger:hover { background:#da3633; }
+.btn-success { background:var(--success); color:white; }
+.btn-success:hover { background:#2ea043; }
+.btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--border); }
+.btn-ghost:hover { border-color:var(--primary); color:var(--primary); }
+.btn-warning { background:var(--warning); color:white; }
+.fc-progress { display:flex; gap:6px; align-items:center; font-size:13px; color:var(--muted); }
+.fc-dot { width:8px; height:8px; border-radius:50%; background:var(--border); transition:all .2s; }
+.fc-dot.known { background:var(--success); }
+.fc-dot.unknown { background:var(--danger); }
+
+/* PROBLEMS */
+.problem-box {
+  background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:24px;
+  max-width:680px;
+}
+.problem-num { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+.problem-title { font-size:13px; color:var(--muted); margin-bottom:8px; }
+.problem-statement {
+  font-size:18px; font-family:monospace; color:var(--primary);
+  background:#7c6ff710; border-radius:8px; padding:12px 16px; margin-bottom:16px; line-height:1.6;
+}
+.hint-box { margin-top:12px; padding:12px 16px; border-radius:8px; border-left:3px solid var(--warning); background:#f0883e0d; }
+.hint-label { font-size:11px; color:var(--warning); font-weight:600; text-transform:uppercase; margin-bottom:4px; }
+.hint-text { font-size:14px; line-height:1.5; }
+.solution-box { margin-top:12px; padding:16px; border-radius:8px; border-left:3px solid var(--success); background:#3fb95010; }
+.solution-label { font-size:11px; color:var(--success); font-weight:600; text-transform:uppercase; margin-bottom:8px; }
+.solution-step { font-size:14px; font-family:monospace; margin-bottom:6px; line-height:1.6; padding:6px 0; border-bottom:1px solid #3fb95020; }
+.solution-step:last-child { border-bottom:none; }
+.solution-answer { font-size:18px; font-family:monospace; color:var(--success); font-weight:700; margin-top:8px; }
+.problem-controls { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+.tag { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
+.tag-urgente { background:#f851490d; color:var(--danger); border:1px solid #f8514933; }
+.tag-tema { background:#7c6ff70d; color:var(--primary); border:1px solid #7c6ff733; }
+
+/* FORMULA SHEET */
+.formula-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:12px; }
+.formula-card { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:16px; }
+.formula-topic { font-size:11px; color:var(--primary); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; font-weight:600; }
+.formula-eq { font-size:15px; font-family:monospace; line-height:1.7; color:var(--text); }
+.formula-note { font-size:12px; color:var(--muted); margin-top:8px; line-height:1.5; }
+.formula-warn { font-size:12px; color:var(--warning); margin-top:6px; }
+
+/* STUDY PLAN */
+.plan-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px; }
+.plan-card { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:16px; }
+.plan-time { font-size:24px; font-weight:700; color:var(--primary); font-family:monospace; }
+.plan-activity { font-size:14px; margin-top:4px; }
+.plan-sub { font-size:12px; color:var(--muted); margin-top:4px; }
+.timeline { display:flex; flex-direction:column; gap:0; margin-top:12px; }
+.timeline-item { display:flex; gap:16px; padding:12px 0; border-bottom:1px solid var(--border); }
+.timeline-item:last-child { border-bottom:none; }
+.timeline-hour { font-size:13px; font-family:monospace; color:var(--primary); min-width:80px; font-weight:600; }
+.timeline-text { font-size:13px; }
+.timeline-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+.progress-bar-wrap { background:var(--border); border-radius:4px; height:6px; margin-top:8px; overflow:hidden; }
+.progress-bar { height:100%; border-radius:4px; background:var(--primary); transition:width .5s; }
+
+/* POMODORO */
+.pomodoro-wrap {
+  background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:24px;
+  max-width:320px; text-align:center;
+}
+.pom-timer { font-size:56px; font-family:monospace; font-weight:700; margin:16px 0; }
+.pom-timer.work { color:var(--primary); }
+.pom-timer.rest { color:var(--success); }
+.pom-label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+.pom-count { font-size:13px; color:var(--muted); margin-top:8px; }
+.pom-controls { display:flex; gap:8px; justify-content:center; margin-top:16px; }
+
+/* GRID LAYOUT */
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media (max-width:800px) { .two-col { grid-template-columns:1fr; } #sidebar { display:none; } }
+
+/* MISC */
+.badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:600; }
+.badge-danger { background:#f8514920; color:var(--danger); border:1px solid #f8514944; }
+.badge-warning { background:#f0883e20; color:var(--warning); border:1px solid #f0883e44; }
+.badge-success { background:#3fb95020; color:var(--success); border:1px solid #3fb95044; }
+.badge-primary { background:#7c6ff720; color:var(--primary); border:1px solid #7c6ff744; }
+.divider { height:1px; background:var(--border); margin:20px 0; }
+.alert { padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px; line-height:1.5; }
+.alert-info { background:#7c6ff710; border:1px solid #7c6ff744; color:var(--text); }
+.alert-danger { background:#f8514910; border:1px solid #f8514944; color:var(--text); }
+.row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+input[type=text], select {
+  background:var(--card2); border:1px solid var(--border); color:var(--text); border-radius:6px;
+  padding:8px 12px; font-size:14px; font-family:var(--font); outline:none;
+}
+input[type=text]:focus, select:focus { border-color:var(--primary); }
+
+/* Interleaving Quiz */
+.quiz-box {
+  background:var(--card2); border:1px solid var(--border); border-radius:12px; padding:24px;
+  max-width:620px;
+}
+.quiz-options { display:flex; flex-direction:column; gap:8px; margin:16px 0; }
+.quiz-opt {
+  padding:12px 16px; border-radius:8px; border:1px solid var(--border); background:none;
+  color:var(--text); font-size:14px; cursor:pointer; text-align:left; transition:all .2s; font-family:var(--font);
+}
+.quiz-opt:hover { border-color:var(--primary); background:#7c6ff710; }
+.quiz-opt.correct { border-color:var(--success); background:#3fb95015; color:var(--success); }
+.quiz-opt.wrong { border-color:var(--danger); background:#f8514915; color:var(--danger); }
+.quiz-feedback { margin-top:12px; padding:12px; border-radius:8px; font-size:14px; line-height:1.5; }
+.quiz-score { font-size:18px; font-weight:700; margin-bottom:4px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <h1>PARCIALES 5</h1>
+    <p>Tutor IA de Emergencia</p>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Navegación</div>
+    <button class="nav-btn active" onclick="showSection('plan')">
+      <span class="icon">🗺️</span> Plan de Ataque
+    </button>
+    <button class="nav-btn" onclick="showSection('calculo')">
+      <span class="icon">∫</span> Cálculo
+    </button>
+    <button class="nav-btn" onclick="showSection('estadistica')">
+      <span class="icon">σ</span> Estadística
+    </button>
+    <button class="nav-btn" onclick="showSection('electro')">
+      <span class="icon">⚡</span> Electromecánica
+    </button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">⏰ Cuenta Regresiva</div>
+    <div class="exam-card urgent">
+      <div class="exam-name">🔴 Cálculo</div>
+      <div class="exam-time" id="timer-calc">--:--:--</div>
+      <div class="exam-label">Integrales Dobles</div>
+    </div>
+    <div class="exam-card medium">
+      <div class="exam-name">🟡 Estadística</div>
+      <div class="exam-time" id="timer-stats">--:--:--</div>
+      <div class="exam-label">Descriptiva</div>
+    </div>
+    <div class="exam-card urgent">
+      <div class="exam-name">🔴 Electro Quiz</div>
+      <div class="exam-time" id="timer-electro">--:--:--</div>
+      <div class="exam-label">6:00 AM · Mallas</div>
+    </div>
+  </div>
+
+  <div style="padding:12px 10px; margin-top:auto;">
+    <div style="font-size:11px; color:var(--muted); line-height:1.5;">
+      Método: Recuperación Activa + Interleaving + Feynman<br>
+      <span style="color:var(--success);">✓</span> Basado en ciencia cognitiva
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main id="main">
+
+  <!-- ===== PLAN ===== -->
+  <div id="section-plan" class="section active">
+    <div class="page-header">
+      <div class="row">
+        <h2>Plan de Ataque</h2>
+        <span class="badge badge-danger">24h Cálculo</span>
+        <span class="badge badge-warning">42h Estadística</span>
+      </div>
+      <p>Basado en la ciencia: Active Recall + Interleaving + Revisión espaciada</p>
+    </div>
+
+    <div class="alert alert-danger">
+      🚨 <strong>ELECTRO QUIZ a las 6:00 AM</strong> — Es PRIMERO. Domina las mallas de tu circuito AHORA, luego estudia cálculo. El circuito ya está resuelto en la pestaña ⚡ Electromecánica.
+    </div>
+
+    <div class="two-col" style="margin-bottom:20px;">
+      <div class="pomodoro-wrap">
+        <div class="pom-label" id="pom-mode-label">TRABAJO</div>
+        <div class="pom-timer work" id="pom-display">25:00</div>
+        <div class="pom-count" id="pom-count">Pomodoro 1 / 8</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:4px;">25 min trabajo · 5 min descanso</div>
+        <div class="pom-controls">
+          <button class="btn btn-primary" id="pom-btn" onclick="togglePomodoro()">▶ Iniciar</button>
+          <button class="btn btn-ghost" onclick="resetPomodoro()">↺ Reset</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="plan-card" style="margin-bottom:12px; border-color:#f8514944;">
+          <div style="font-size:13px; color:var(--danger); margin-bottom:8px; font-weight:700;">⚡ PRIORIDAD ACTUALIZADA</div>
+          <div style="font-size:14px; line-height:2.2;">
+            1️⃣ <strong style="color:var(--danger);">Electro Mallas</strong> — Tu circuito · Estudia AHORA<br>
+            2️⃣ <strong>Integral Doble Rect.</strong> — Ejercicio 1 y 4<br>
+            3️⃣ <strong>Coordenadas Polares</strong> — Ejercicio 5a y 5b<br>
+            4️⃣ <strong>Área entre curvas</strong> — Ejercicio 2<br>
+            5️⃣ <strong>Centro de Masa</strong> — Ejercicio 3<br>
+            6️⃣ <strong>Estadística</strong> — Fórmulas post-examen electro
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:16px; font-weight:600; margin-bottom:12px;">📅 Línea de tiempo REAL — Noche de hoy</div>
+    <div class="plan-card">
+      <div class="timeline">
+        <div class="timeline-item">
+          <div>
+            <div class="timeline-hour" style="color:var(--danger);">AHORA → 2h</div>
+            <div class="timeline-sub" style="color:var(--danger);">🔴 ELECTRO QUIZ</div>
+          </div>
+          <div>
+            <div class="timeline-text">Ve a ⚡ Electromecánica. Lee el circuito resuelto. Entiende cada ecuación de malla. Practica escribirlas de memoria con el circuito cubierto.</div>
+            <div class="timeline-sub">Prepara: 3 copias del circuito dibujadas + colores listos para mañana 6am</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div>
+            <div class="timeline-hour">2h → 5h</div>
+            <div class="timeline-sub">∫ CÁLCULO — Ronda 1</div>
+          </div>
+          <div>
+            <div class="timeline-text">Ejercicios del taller: 1, 4 primero (integrales dobles directas). Luego 5a y 5b (polares). Con pistas si necesitas.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div>
+            <div class="timeline-hour">5h → 5:30h</div>
+            <div class="timeline-sub">💤 SUEÑO (mínimo)</div>
+          </div>
+          <div>
+            <div class="timeline-text">Duerme aunque sea 1.5h. El cerebro consolida lo que estudias en el sueño. Sin dormir = rendimiento cognitivo -40%.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div>
+            <div class="timeline-hour">6:00 AM</div>
+            <div class="timeline-sub" style="color:var(--danger);">🎯 QUIZ ELECTRO</div>
+          </div>
+          <div>
+            <div class="timeline-text">Llevas: 3 copias del circuito dibujado + colores + las ecuaciones de malla memorizadas. El profe lo resuelve de forma guiada.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div>
+            <div class="timeline-hour">8h → 14h</div>
+            <div class="timeline-sub">∫ CÁLCULO — Ronda 2</div>
+          </div>
+          <div>
+            <div class="timeline-text">Post-electro: ejercicios 2, 3 del taller (área, centro de masa). Luego interleaving: mezcla los 5 tipos de ejercicio sin ver soluciones.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div>
+            <div class="timeline-hour">14h → 15h</div>
+            <div class="timeline-sub">🔁 REPASO FINAL</div>
+          </div>
+          <div>
+            <div class="timeline-text">Solo fórmulas clave: dA=r dr dθ, centro de masa, límites polares. No estudies nada nuevo.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div>
+            <div class="timeline-hour">4:00 PM</div>
+            <div class="timeline-sub" style="color:var(--danger);">🎯 PARCIAL CÁLCULO</div>
+          </div>
+          <div>
+            <div class="timeline-text">Los mismos 5 ejercicios del taller. Ya los tienes resueltos.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CÁLCULO ===== -->
+  <div id="section-calculo" class="section">
+    <div class="page-header">
+      <div class="row">
+        <h2>∫∫ Cálculo — Integrales Dobles</h2>
+        <span class="badge badge-danger">⏰ 24 horas</span>
+      </div>
+      <p>Taller de la profesora = Parcial exacto. Domina estos 5 ejercicios.</p>
+    </div>
+
+    <div class="tabs" id="calc-tabs">
+      <button class="tab-btn active" onclick="showTab('calc','formulas')">📋 Fórmulas Clave</button>
+      <button class="tab-btn" onclick="showTab('calc','flashcards')">🃏 Flashcards</button>
+      <button class="tab-btn" onclick="showTab('calc','taller')">📝 Taller Resuelto</button>
+      <button class="tab-btn" onclick="showTab('calc','debilidades')">🎯 Mis Debilidades</button>
+    </div>
+
+    <!-- FÓRMULAS CLAVE -->
+    <div id="calc-formulas" class="tab-content active">
+      <div class="alert alert-info">
+        💡 Imprime o memoriza estas fórmulas. Son TODO lo que necesitas saber para el parcial.
+      </div>
+      <div class="formula-grid">
+
+        <div class="formula-card">
+          <div class="formula-topic">Integral Doble — Rectángulo</div>
+          <div class="formula-eq">
+            ∬_R f(x,y) dA<br>
+            = ∫_c^d ∫_a^b f(x,y) dx dy<br>
+            = ∫_a^b ∫_c^d f(x,y) dy dx
+          </div>
+          <div class="formula-note">R = [a,b]×[c,d]. Puedes cambiar el orden de integración libremente.</div>
+        </div>
+
+        <div class="formula-card">
+          <div class="formula-topic">Integral Doble — Región Acotada</div>
+          <div class="formula-eq">
+            ∬_R f(x,y) dA<br>
+            = ∫_a^b [∫_{g₁(x)}^{g₂(x)} f(x,y) dy] dx
+          </div>
+          <div class="formula-note">Los límites de y dependen de x (o viceversa). Dibujar siempre la región primero.</div>
+          <div class="formula-warn">⚠️ El límite inferior debe ser MENOR que el superior</div>
+        </div>
+
+        <div class="formula-card">
+          <div class="formula-topic">Área con Integral Doble</div>
+          <div class="formula-eq">
+            A = ∬_R 1 dA<br><br>
+            Entre curvas: A = ∫_a^b [f_arriba - f_abajo] dx
+          </div>
+          <div class="formula-note">Paso 1: Iguala las curvas → intersecciones<br>Paso 2: Determina cuál está arriba<br>Paso 3: Integra entre los puntos de intersección</div>
+        </div>
+
+        <div class="formula-card">
+          <div class="formula-topic">Centro de Masa con Densidad ρ(x,y)</div>
+          <div class="formula-eq">
+            M = ∬_R ρ(x,y) dA<br>
+            M_y = ∬_R x·ρ(x,y) dA<br>
+            M_x = ∬_R y·ρ(x,y) dA<br><br>
+            x̄ = M_y / M<br>
+            ȳ = M_x / M
+          </div>
+          <div class="formula-warn">⚠️ M_y usa x (no y). M_x usa y (no x). Es contra-intuitivo.</div>
+        </div>
+
+        <div class="formula-card">
+          <div class="formula-topic">Coordenadas Polares</div>
+          <div class="formula-eq">
+            x = r·cos(θ)<br>
+            y = r·sin(θ)<br>
+            x² + y² = r²<br>
+            dA = r dr dθ
+          </div>
+          <div class="formula-warn">⚠️ NUNCA olvides la r en dA = r dr dθ. Sin r = error garantizado.</div>
+          <div class="formula-note">Círculo r≤R completo: θ:0→2π<br>Semicírculo superior: θ:0→π<br>Cuarto de círculo: θ:0→π/2</div>
+        </div>
+
+        <div class="formula-card">
+          <div class="formula-topic">¿Cuándo usar Polares?</div>
+          <div class="formula-eq">
+            Señales de alerta:<br>
+            √(x²+y²) en el integrando<br>
+            Región circular o semicircular<br>
+            x²+y² en el integrando<br>
+            1/(1+√(x²+y²))
+          </div>
+          <div class="formula-note">Si ves cualquiera de estas señales → cambiar a polares simplifica TODO.</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- FLASHCARDS -->
+    <div id="calc-flashcards" class="tab-content">
+      <div id="fc-calc-container" class="flashcard-container">
+        <!-- injected by JS -->
+      </div>
+    </div>
+
+    <!-- TALLER RESUELTO -->
+    <div id="calc-taller" class="tab-content">
+      <div class="alert alert-info">
+        🎯 <strong>Estrategia:</strong> Lee el enunciado → intenta resolver solo → solo si te bloqueas, abre las pistas. La solución es el último recurso.
+      </div>
+      <div id="problems-container">
+        <!-- injected by JS -->
+      </div>
+    </div>
+
+    <!-- DEBILIDADES -->
+    <div id="calc-debilidades" class="tab-content">
+      <div style="margin-bottom:16px; font-size:14px; color:var(--muted);">
+        Califica honestamente. El sistema prioriza lo que más necesitas.
+      </div>
+      <div class="weakness-grid" id="calc-weakness-grid">
+        <!-- injected by JS -->
+      </div>
+      <div class="divider"></div>
+      <div id="calc-weakness-plan" style="max-width:600px;"></div>
+    </div>
+
+  </div>
+
+  <!-- ===== ESTADÍSTICA ===== -->
+  <div id="section-estadistica" class="section">
+    <div class="page-header">
+      <div class="row">
+        <h2>σ Estadística Descriptiva</h2>
+        <span class="badge badge-warning">⏰ 42 horas</span>
+      </div>
+      <p>Medidas de tendencia central, dispersión, tablas de frecuencia, gráficas.</p>
+    </div>
+
+    <div class="tabs" id="stats-tabs">
+      <button class="tab-btn active" onclick="showTab('stats','formulas')">📋 Fórmulas</button>
+      <button class="tab-btn" onclick="showTab('stats','flashcards')">🃏 Flashcards</button>
+      <button class="tab-btn" onclick="showTab('stats','practica')">✏️ Práctica</button>
+      <button class="tab-btn" onclick="showTab('stats','debilidades')">🎯 Debilidades</button>
+    </div>
+
+    <div id="stats-formulas" class="tab-content active">
+      <div class="formula-grid">
+
+        <div class="formula-card">
+          <div class="formula-topic">Medidas de Tendencia Central</div>
+          <div class="formula-eq">
+            Media: x̄ = Σxᵢ / n<br>
+            Agrupada: x̄ = Σ(fᵢ·mᵢ) / n<br>
+            Mediana: valor central (n impar)<br>
+            Media de 2 centrales (n par)<br>
+            Moda: valor más frecuente
+          </div>
+          <div class="formula-note">mᵢ = marca de clase (punto medio del intervalo)</div>
+        </div>
+
+        <div class="formula-card">
+          <div class="formula-topic">Mediana — Datos Agrupados</div>
+          <div class="formula-eq">
+            Me = L + [(n/2 - F) / f] · c
+          </div>
+          <div class="formula-note">
+            L = límite inferior de la clase mediana<br>
+            F = frecuencia acumulada ANTES de la clase mediana<br>
+            f = frecuencia de la clase mediana<br>
+            c = amplitud del intervalo
+          </div>
+        </div>
+
+        <div class="formula-card">
+          <div class="formula-topic">Moda — Datos Agrupados</div>
+          <div class="formula-eq">
+            Mo = L + [d₁ / (d₁ + d₂)] · c
+          </div>
+          <div class="formula-note">
+            d₁ = f_modal - f_anterior<br>
+            d₂ = f_modal - f_siguiente<br>
+            c = amplitud
+          </div>
+        </div>
+
+        <div class="formula-card">
+          <div class="formula-topic">Varianza y Desviación Estándar</div>
+          <div class="formula-eq">
+            Población: σ² = Σ(xᵢ-μ)² / N<br>
+            Muestra: s² = Σ(xᵢ-x̄)² / (n-1)<br>
+            Alternativa: s² = [Σxᵢ² - (Σxᵢ)²/n] / (n-1)<br>
+            σ o s = √(varianza)
+          </div>
+          <div class="formula-warn">⚠️ Población usa N. Muestra usa (n-1). Diferencia crítica.</div>
+        </div>
+
+        <div class="formula-card">
+          <div class="formula-topic">Coeficiente de Variación</div>
+          <div class="formula-eq">
+            CV = (s / x̄) · 100%
+          </div>
+          <div class="formula-note">Compara dispersión entre conjuntos de datos con unidades diferentes. CV &lt; 15% = homogéneo.</div>
+        </div>
+
+        <div class="formula-card">
+          <div class="formula-topic">Tabla de Frecuencias</div>
+          <div class="formula-eq">
+            k = √n (regla de Sturges: k = 1 + 3.322·log(n))<br>
+            c = (Máx - Mín) / k<br>
+            fᵣ = fᵢ / n<br>
+            F = acumulada (suma sucesiva)
+          </div>
+          <div class="formula-note">fᵢ = frecuencia absoluta, fᵣ = relativa, F = acumulada</div>
+        </div>
+
+        <div class="formula-card">
+          <div class="formula-topic">Cuartiles</div>
+          <div class="formula-eq">
+            Posición Qₖ = k·n/4<br>
+            Q1 = percentil 25<br>
+            Q2 = mediana (percentil 50)<br>
+            Q3 = percentil 75<br>
+            RIC = Q3 - Q1
+          </div>
+        </div>
+
+        <div class="formula-card">
+          <div class="formula-topic">Sesgo y Curtosis</div>
+          <div class="formula-eq">
+            Sesgo positivo: media > mediana > moda<br>
+            Sesgo negativo: media &lt; mediana &lt; moda<br>
+            Curtosis &gt; 3: leptocúrtica (pico alto)<br>
+            Curtosis = 3: mesocúrtica (normal)<br>
+            Curtosis &lt; 3: platicúrtica (achatada)
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div id="stats-flashcards" class="tab-content">
+      <div id="fc-stats-container" class="flashcard-container">
+        <!-- injected by JS -->
+      </div>
+    </div>
+
+    <div id="stats-practica" class="tab-content">
+      <div id="stats-problems-container">
+        <!-- injected by JS -->
+      </div>
+    </div>
+
+    <div id="stats-debilidades" class="tab-content">
+      <div class="weakness-grid" id="stats-weakness-grid">
+        <!-- injected by JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== ELECTRO ===== -->
+  <div id="section-electro" class="section">
+    <div class="page-header">
+      <div class="row">
+        <h2>⚡ Electromecánica — Quiz 6:00 AM</h2>
+        <span class="badge badge-danger">🔴 URGENTE</span>
+      </div>
+      <p>Análisis de mallas (KVL). Tu circuito: 3 mallas, 2 fuentes 80V, resistencias 20Ω/30Ω</p>
+    </div>
+
+    <div class="alert alert-danger">
+      📋 <strong>El profe dijo:</strong> Traer el circuito dibujado <strong>3 veces</strong> (una por malla) con <strong>colores diferentes</strong>. El quiz es guiado — él te lleva paso a paso. Solo tienes que saber plantear las ecuaciones de malla.
+    </div>
+
+    <!-- MÉTODO -->
+    <div style="font-size:16px; font-weight:600; margin-bottom:12px;">🧠 Método de Mallas — Lo que debes saber de memoria</div>
+    <div class="formula-grid" style="margin-bottom:24px;">
+
+      <div class="formula-card">
+        <div class="formula-topic">Paso 1 — Asignar mallas</div>
+        <div class="formula-eq">
+          Dibuja corrientes circulares en<br>
+          cada lazo independiente.<br><br>
+          Tu circuito: 3 mallas<br>
+          I₁ (roja), I₂ (azul), I₃ (verde)<br>
+          Todas en sentido horario ✓
+        </div>
+        <div class="formula-note">Convención: SIEMPRE todas en el mismo sentido (horario). Facilita los signos.</div>
+      </div>
+
+      <div class="formula-card">
+        <div class="formula-topic">Paso 2 — KVL por cada malla</div>
+        <div class="formula-eq">
+          ΣV = 0 en cada lazo<br><br>
+          Fuente: + si la corriente<br>
+          &nbsp;&nbsp;&nbsp;sale del terminal +<br>
+          Resistencia propia: - R·Iₙ<br>
+          Resistencia compartida: + R·Iₖ
+        </div>
+        <div class="formula-warn">⚠️ Resistencia compartida: si la otra corriente va en MISMO sentido → suma. Contrario → resta.</div>
+      </div>
+
+      <div class="formula-card">
+        <div class="formula-topic">Paso 3 — Sistema matricial</div>
+        <div class="formula-eq">
+          [R]·[I] = [V]<br><br>
+          | R₁₁  -R₁₂  -R₁₃ | |I₁|   |V₁|<br>
+          |-R₂₁   R₂₂  -R₂₃ | |I₂| = |V₂|<br>
+          |-R₃₁  -R₃₂   R₃₃ | |I₃|   |V₃|
+        </div>
+        <div class="formula-note">Rₙₙ = suma de resistencias en malla n. Rₙₖ = resistencia compartida entre n y k (siempre negativa en diagonal).</div>
+      </div>
+
+      <div class="formula-card">
+        <div class="formula-topic">Paso 4 — Resolver e interpretar</div>
+        <div class="formula-eq">
+          Resolver sistema 3×3<br>
+          (Cramer, sustitución, o Gauss)<br><br>
+          Si I &lt; 0 → la corriente real<br>
+          va en sentido contrario al asumido<br><br>
+          V_R = R · I_rama
+        </div>
+        <div class="formula-note">I_rama = I_malla propia ± I_malla compartida (+ si mismo sentido, - si contrario)</div>
+      </div>
+
+    </div>
+
+    <!-- TU CIRCUITO ESPECÍFICO -->
+    <div style="font-size:16px; font-weight:600; margin-bottom:12px;">🎯 TU Circuito — Solución Completa</div>
+
+    <div class="problem-box" style="max-width:100%; margin-bottom:16px;">
+      <div class="problem-num">DESCRIPCIÓN DEL CIRCUITO</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:12px 0;">
+        <div>
+          <div style="font-size:13px; color:var(--muted); margin-bottom:8px;">ELEMENTOS</div>
+          <div style="font-family:monospace; font-size:14px; line-height:2;">
+            R1 = 20Ω &nbsp;(rama superior, solo M1)<br>
+            Rb = 20Ω &nbsp;(compartida M1-M2)<br>
+            Ra = 30Ω &nbsp;(compartida M1-M3)<br>
+            R2 = 20Ω &nbsp;(rama inferior, solo M2)<br>
+            Rc = 30Ω &nbsp;(compartida M2-M3)<br>
+            R3 = 30Ω &nbsp;(rama derecha, solo M3)<br>
+            V₁ = 80V &nbsp;(fuente malla 1)<br>
+            V₂ = 80V &nbsp;(fuente malla 2)
+          </div>
+        </div>
+        <div>
+          <div style="font-size:13px; color:var(--muted); margin-bottom:8px;">TOPOLOGÍA</div>
+          <div style="font-family:monospace; font-size:13px; line-height:1.8; color:var(--muted);">
+            M1: 80V — R1(20) — Ra(30) — Rb(20)<br>
+            M2: 80V — Rb(20) — R2(20) — Rc(30)<br>
+            M3: Ra(30) — Rc(30) — R3(30)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;(sin fuente en M3)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ECUACIONES DE MALLA -->
+    <div class="solution-box" style="max-width:100%; margin-bottom:16px;">
+      <div class="solution-label">PASO 2 — Ecuaciones KVL (las 3 mallas)</div>
+
+      <div style="font-size:13px; color:var(--muted); margin:12px 0 6px;">Malla 1 — Suma de todas las resistencias en M1, menos las compartidas × sus corrientes:</div>
+      <div class="solution-step" style="font-size:16px;">(R1+Rb+Ra)·I₁ - Rb·I₂ - Ra·I₃ = 80V</div>
+      <div class="solution-step" style="font-size:16px;">(20+20+30)·I₁ - 20·I₂ - 30·I₃ = 80</div>
+      <div class="solution-step" style="font-size:18px; color:var(--primary);">70I₁ - 20I₂ - 30I₃ = 80 &nbsp;&nbsp;&nbsp;... (1)</div>
+
+      <div style="font-size:13px; color:var(--muted); margin:16px 0 6px;">Malla 2 — Igual proceso:</div>
+      <div class="solution-step" style="font-size:16px;">(Rb+R2+Rc)·I₂ - Rb·I₁ - Rc·I₃ = 80V</div>
+      <div class="solution-step" style="font-size:16px;">(20+20+30)·I₂ - 20·I₁ - 30·I₃ = 80</div>
+      <div class="solution-step" style="font-size:18px; color:var(--primary);">-20I₁ + 70I₂ - 30I₃ = 80 &nbsp;&nbsp;&nbsp;... (2)</div>
+
+      <div style="font-size:13px; color:var(--muted); margin:16px 0 6px;">Malla 3 — Sin fuente, lado derecho = 0:</div>
+      <div class="solution-step" style="font-size:16px;">(Ra+Rc+R3)·I₃ - Ra·I₁ - Rc·I₂ = 0</div>
+      <div class="solution-step" style="font-size:16px;">(30+30+30)·I₃ - 30·I₁ - 30·I₂ = 0</div>
+      <div class="solution-step" style="font-size:18px; color:var(--primary);">-30I₁ - 30I₂ + 90I₃ = 0 &nbsp;&nbsp;&nbsp;... (3)</div>
+    </div>
+
+    <!-- SISTEMA MATRICIAL -->
+    <div class="solution-box" style="max-width:100%; margin-bottom:16px; border-left-color:var(--primary);">
+      <div class="solution-label" style="color:var(--primary);">PASO 3 — Sistema matricial simplificado</div>
+      <div class="solution-step" style="font-size:15px;">
+        | &nbsp;70 &nbsp;-20 &nbsp;-30 | &nbsp;|I₁| &nbsp; &nbsp;|80|<br>
+        |-20 &nbsp; 70 &nbsp;-30 | · |I₂| = |80|<br>
+        |-30 &nbsp;-30 &nbsp; 90 | &nbsp;|I₃| &nbsp; &nbsp;| 0|
+      </div>
+      <div style="font-size:13px; color:var(--muted); margin-top:12px;">
+        Observa: las ecuaciones (1) y (2) son simétricas → sugiere I₁ = I₂<br>
+        De (3) dividida entre 30: &nbsp;-I₁ - I₂ + 3I₃ = 0 → I₃ = (I₁+I₂)/3
+      </div>
+    </div>
+
+    <!-- SOLUCIÓN -->
+    <div class="solution-box" style="max-width:100%; margin-bottom:16px;">
+      <div class="solution-label">PASO 4 — Solución del sistema</div>
+
+      <div style="font-size:13px; color:var(--muted); margin-bottom:8px;">Como (1) = (2) → I₁ = I₂. Sustituye en (1):</div>
+      <div class="solution-step">70I₁ - 20I₁ - 30·(2I₁/3) = 80</div>
+      <div class="solution-step">70I₁ - 20I₁ - 20I₁ = 80</div>
+      <div class="solution-step">30I₁ = 80</div>
+
+      <div style="margin-top:16px; padding:16px; background:#3fb95015; border-radius:8px; border:1px solid #3fb95044;">
+        <div style="font-size:22px; font-family:monospace; font-weight:700; color:var(--success); line-height:2;">
+          I₁ = 8/3 A ≈ 2.67 A (horario)<br>
+          I₂ = 8/3 A ≈ 2.67 A (horario)<br>
+          I₃ = 16/9 A ≈ 1.78 A (horario)
+        </div>
+        <div style="font-size:13px; color:var(--muted); margin-top:8px;">Verificación: I₃ = (I₁+I₂)/3 = (8/3 + 8/3)/3 = (16/3)/3 = 16/9 ✓</div>
+      </div>
+    </div>
+
+    <!-- VERIFICACIÓN -->
+    <div class="solution-box" style="max-width:100%; margin-bottom:16px; border-left-color:var(--success);">
+      <div class="solution-label" style="color:var(--success);">VERIFICACIÓN — Comprueba las 3 mallas</div>
+      <div class="solution-step">Malla 1: 70(8/3) - 20(8/3) - 30(16/9) = 560/3 - 160/3 - 160/3 = 240/3 = 80 ✓</div>
+      <div class="solution-step">Malla 2: -20(8/3) + 70(8/3) - 30(16/9) = -160/3 + 560/3 - 160/3 = 240/3 = 80 ✓</div>
+      <div class="solution-step">Malla 3: -30(8/3) - 30(8/3) + 90(16/9) = -80 - 80 + 160 = 0 ✓</div>
+    </div>
+
+    <!-- CORRIENTES EN RAMAS -->
+    <div style="font-size:16px; font-weight:600; margin-bottom:12px;">⚡ Corrientes y voltajes por rama</div>
+    <div class="formula-grid">
+      <div class="formula-card">
+        <div class="formula-topic">R1 = 20Ω (solo M1)</div>
+        <div class="formula-eq">I_R1 = I₁ = 8/3 A<br>V_R1 = 20 × 8/3 = 160/3 ≈ 53.3 V</div>
+      </div>
+      <div class="formula-card">
+        <div class="formula-topic">Rb = 20Ω (M1 y M2 compartida)</div>
+        <div class="formula-eq">I_Rb = I₁ - I₂ = 8/3 - 8/3 = <strong>0 A</strong><br>V_Rb = 0 V</div>
+        <div class="formula-warn">⚠️ Resultado interesante: cero corriente por Rb</div>
+      </div>
+      <div class="formula-card">
+        <div class="formula-topic">Ra = 30Ω (M1 y M3 compartida)</div>
+        <div class="formula-eq">I_Ra = I₁ - I₃ = 8/3 - 16/9 = 8/9 A<br>V_Ra = 30 × 8/9 = 80/3 ≈ 26.7 V</div>
+      </div>
+      <div class="formula-card">
+        <div class="formula-topic">R2 = 20Ω (solo M2)</div>
+        <div class="formula-eq">I_R2 = I₂ = 8/3 A<br>V_R2 = 20 × 8/3 = 160/3 ≈ 53.3 V</div>
+      </div>
+      <div class="formula-card">
+        <div class="formula-topic">Rc = 30Ω (M2 y M3 compartida)</div>
+        <div class="formula-eq">I_Rc = I₂ - I₃ = 8/3 - 16/9 = 8/9 A<br>V_Rc = 30 × 8/9 = 80/3 ≈ 26.7 V</div>
+      </div>
+      <div class="formula-card">
+        <div class="formula-topic">R3 = 30Ω (solo M3)</div>
+        <div class="formula-eq">I_R3 = I₃ = 16/9 A<br>V_R3 = 30 × 16/9 = 160/3 ≈ 53.3 V</div>
+      </div>
+      <div class="formula-card">
+        <div class="formula-topic">Balance de Potencia</div>
+        <div class="formula-eq">P_entregada = 80×(8/3) × 2 = 1280/3 W<br>P_absorbida = 1280/3 W ✓</div>
+        <div class="formula-note">La potencia se conserva. Esto verifica que la solución es correcta.</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="font-size:13px; font-weight:600; color:var(--muted); margin-bottom:12px; text-transform:uppercase; letter-spacing:1px;">📌 Lo que debes llevar mañana</div>
+    <div class="plan-card">
+      <div style="font-size:14px; line-height:2.2;">
+        ✅ <strong>3 copias del circuito dibujadas</strong> — una para cada malla (I₁, I₂, I₃)<br>
+        ✅ <strong>Colores</strong> — rojo para M1, azul para M2, verde para M3 (como en la imagen)<br>
+        ✅ <strong>Las 3 ecuaciones de malla</strong> de memoria<br>
+        ✅ Saber que I₁=I₂=8/3 A y I₃=16/9 A<br>
+        ✅ Saber que I_Rb = 0 (el resultado más llamativo que el profe puede preguntar)
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+// ===================== DATA =====================
+
+const CALC_FLASHCARDS = [
+  {
+    front: "dA en polares",
+    back: "dA = r dr dθ\n\nSiempre incluye la 'r' extra.\nOlvidarla es el error más común.",
+    tip: "Tip: Primero r, luego θ en los límites"
+  },
+  {
+    front: "x² + y² en el integrando",
+    back: "Señal: cambiar a polares\n\nx² + y² = r²\nx = r·cos(θ), y = r·sin(θ)",
+    tip: "Si ves √(x²+y²) → definitivamente polares"
+  },
+  {
+    front: "∬_R 1 dA = ?",
+    back: "= Área de la región R\n\nSi integras la función f=1 sobre R,\nobtienes el área de R",
+    tip: "Útil para verificar: el área debe ser positiva"
+  },
+  {
+    front: "Masa total M con densidad ρ",
+    back: "M = ∬_R ρ(x,y) dA",
+    tip: "Es como 'pesar' la región ponderando por densidad"
+  },
+  {
+    front: "¿Qué es M_y (momento respecto al eje y)?",
+    back: "M_y = ∬_R x·ρ(x,y) dA\n\nx̄ = M_y / M\n\nUsa x (no y) en el integrando",
+    tip: "Nemónico: M_y aleja del eje y → usa coordenada x"
+  },
+  {
+    front: "¿Cuándo cambiar el orden de integración?",
+    back: "Cuando la integral interior es difícil de resolver en ese orden.\n\nEj: ∫∫ eˣ² dx dy → cambiar: ∫∫ eˣ² dy dx",
+    tip: "Dibuja la región primero, luego elige el orden más conveniente"
+  },
+  {
+    front: "Límites en polares: semicírculo superior de radio R",
+    back: "θ: 0 → π\nr: 0 → R\n\n∬ f(x,y) dA = ∫₀^π ∫₀^R f(r,θ)·r dr dθ",
+    tip: "Superior = de 0° a 180° = de 0 a π"
+  },
+  {
+    front: "Límites en polares: primer cuadrante",
+    back: "θ: 0 → π/2\nr: 0 → R",
+    tip: "Cuarto de círculo = 0 a 90° = 0 a π/2"
+  },
+  {
+    front: "lim sin(x)/x cuando x→0",
+    back: "= 1\n\n(Límite fundamental trigonométrico)",
+    tip: "No confundir con sin(x)/x cuando x→∞ = 0"
+  },
+  {
+    front: "∫ (1/(1+r)) dr",
+    back: "= r - ln(1+r) + C\n\n(Usado en ejercicio 5a del taller)",
+    tip: "Reescribe: 1/(1+r) = (1+r-1)/(1+r) = 1 - 1/(1+r)"
+  }
+];
+
+const CALC_TOPICS = [
+  { id: "intdob-rect", name: "Integrales Dobles\nsobre Rectángulos" },
+  { id: "intdob-region", name: "Integrales Dobles\nsobre Regiones Acotadas" },
+  { id: "area-curvas", name: "Área entre\nCurvas" },
+  { id: "centro-masa", name: "Centro de Masa\ncon ρ(x,y)" },
+  { id: "polares", name: "Cambio a\nCoordenadas Polares" }
+];
+
+const CALC_PROBLEMS = [
+  {
+    num: "Ejercicio 1",
+    topic: "Integral Doble — Rectángulo",
+    statement: "∬_R (5-x) dA,   R: 0≤x≤5, 0≤y≤3",
+    hints: [
+      "Es un rectángulo: puedes integrar en cualquier orden. Intenta primero respecto a x, luego y.",
+      "∫_0^3 [∫_0^5 (5-x) dx] dy — Resuelve la integral interior: ∫_0^5 (5-x) dx"
+    ],
+    steps: [
+      "∫_0^3 ∫_0^5 (5-x) dx dy",
+      "= ∫_0^3 [5x - x²/2]₀⁵ dy",
+      "= ∫_0^3 [25 - 25/2] dy",
+      "= ∫_0^3 [12.5] dy",
+      "= 12.5 · [y]₀³",
+      "= 12.5 · 3"
+    ],
+    answer: "= 37.5"
+  },
+  {
+    num: "Ejercicio 2",
+    topic: "Área entre Curvas",
+    statement: "Área entre y = -x   y   y = 2x - x²",
+    hints: [
+      "Paso 1: Iguala -x = 2x - x² para encontrar intersecciones.",
+      "Intersecciones: x=0 y x=3. Verifica cuál curva está arriba en ese intervalo (prueba x=1)."
+    ],
+    steps: [
+      "Intersecciones: -x = 2x - x²  →  x² - 3x = 0  →  x(x-3) = 0",
+      "x = 0  y  x = 3",
+      "En x=1: y₁=-1 (abajo), y₂=2-1=1 (arriba). La curva y=2x-x² está arriba.",
+      "A = ∫_0^3 [(2x-x²) - (-x)] dx = ∫_0^3 (3x - x²) dx",
+      "= [3x²/2 - x³/3]₀³",
+      "= [3(9)/2 - 27/3]",
+      "= [13.5 - 9]"
+    ],
+    answer: "= 4.5 unidades²"
+  },
+  {
+    num: "Ejercicio 3",
+    topic: "Centro de Masa con ρ(x,y) = x²",
+    statement: "Triángulo: x=0, y=0, 2x+y=4  con  ρ(x,y) = x²",
+    hints: [
+      "El triángulo tiene vértices en (0,0), (2,0), (0,4). Para x fijo de 0 a 2, y va de 0 a (4-2x).",
+      "Calcula primero M = ∫_0^2 ∫_0^{4-2x} x² dy dx. La integral interior es solo respecto a y."
+    ],
+    steps: [
+      "M = ∫_0^2 ∫_0^{4-2x} x² dy dx = ∫_0^2 x²(4-2x) dx",
+      "= ∫_0^2 (4x² - 2x³) dx = [4x³/3 - x⁴/2]₀²",
+      "= [32/3 - 8] = 32/3 - 24/3 = 8/3",
+      "",
+      "M_y = ∫_0^2 ∫_0^{4-2x} x·x² dy dx = ∫_0^2 x³(4-2x) dx",
+      "= ∫_0^2 (4x³ - 2x⁴) dx = [x⁴ - 2x⁵/5]₀² = [16 - 64/5] = 16/5",
+      "",
+      "M_x = ∫_0^2 ∫_0^{4-2x} y·x² dy dx = ∫_0^2 x²·[(4-2x)²/2] dx",
+      "= (1/2)∫_0^2 x²(16-16x+4x²) dx = (1/2)[128/3 - 32 + 32/5] = 32/15",
+      "",
+      "x̄ = M_y/M = (16/5)/(8/3) = (16/5)·(3/8) = 6/5",
+      "ȳ = M_x/M = (32/15)/(8/3) = (32/15)·(3/8) = 4/5"
+    ],
+    answer: "Centro de masa: (6/5, 4/5)"
+  },
+  {
+    num: "Ejercicio 4",
+    topic: "Integral Doble — Región Triangular",
+    statement: "∬_R (x+1) dA,   R: y=x, x+y=4, x=0",
+    hints: [
+      "Dibuja la región: x=0 (eje y), y=x (diagonal), x+y=4 (línea). Intersecciones: y=x y x+y=4 → x=2.",
+      "Para 0≤x≤2, y va de x (abajo) hasta 4-x (arriba). Escribe ∫_0^2 ∫_x^{4-x} (x+1) dy dx"
+    ],
+    steps: [
+      "Intersecciones: y=x y x+y=4 → 2x=4 → x=2, y=2",
+      "Región: 0≤x≤2, x≤y≤4-x",
+      "",
+      "∫_0^2 ∫_x^{4-x} (x+1) dy dx",
+      "= ∫_0^2 (x+1)[(4-x)-x] dx",
+      "= ∫_0^2 (x+1)(4-2x) dx",
+      "= ∫_0^2 (4x - 2x² + 4 - 2x) dx",
+      "= ∫_0^2 (-2x² + 2x + 4) dx",
+      "= [-2x³/3 + x² + 4x]₀²",
+      "= [-16/3 + 4 + 8]"
+    ],
+    answer: "= 20/3 ≈ 6.67"
+  },
+  {
+    num: "Ejercicio 5a",
+    topic: "Coordenadas Polares — Cuarto de Círculo",
+    statement: "∫_0^1 ∫_0^{√(1-y²)} 1/(1+√(x²+y²)) dx dy",
+    hints: [
+      "¿Ves √(x²+y²)? Señal de polares. La región: x de 0 a √(1-y²) es el primer cuadrante del círculo unitario.",
+      "En polares: r va de 0 a 1, θ de 0 a π/2. Sustituye √(x²+y²)=r y dA=r dr dθ."
+    ],
+    steps: [
+      "Región: x²+y²≤1, primer cuadrante → polares: r:0→1, θ:0→π/2",
+      "√(x²+y²) = r,  dA = r dr dθ",
+      "",
+      "∫_0^{π/2} ∫_0^1 [1/(1+r)]·r dr dθ",
+      "",
+      "Integral interior: ∫_0^1 r/(1+r) dr",
+      "= ∫_0^1 [1 - 1/(1+r)] dr",
+      "= [r - ln(1+r)]₀¹",
+      "= 1 - ln(2)",
+      "",
+      "Integral exterior: ∫_0^{π/2} (1-ln2) dθ = (π/2)(1-ln2)"
+    ],
+    answer: "= (π/2)(1 - ln 2) ≈ 0.483"
+  },
+  {
+    num: "Ejercicio 5b",
+    topic: "Coordenadas Polares — Semicírculo de Radio 5",
+    statement: "∫_{-5}^{5} ∫_0^{√(25-x²)} (4x+3y) dy dx",
+    hints: [
+      "La región: y de 0 a √(25-x²), x de -5 a 5 = semicírculo superior de radio 5.",
+      "En polares: r:0→5, θ:0→π. Sustituye x=r·cosθ, y=r·sinθ, dA=r dr dθ."
+    ],
+    steps: [
+      "Región: semicírculo superior x²+y²≤25",
+      "Polares: r:0→5, θ:0→π",
+      "x=r·cosθ, y=r·sinθ",
+      "",
+      "∫_0^π ∫_0^5 (4r·cosθ + 3r·sinθ)·r dr dθ",
+      "= ∫_0^π ∫_0^5 (4r²·cosθ + 3r²·sinθ) dr dθ",
+      "",
+      "Integral interior: ∫_0^5 r²(4cosθ+3sinθ) dr = [r³/3]₀^5 · (4cosθ+3sinθ)",
+      "= (125/3)(4cosθ + 3sinθ)",
+      "",
+      "Integral exterior: (125/3)∫_0^π (4cosθ+3sinθ) dθ",
+      "= (125/3) · [4sinθ - 3cosθ]₀^π",
+      "= (125/3) · [(0-(-3)) - (0-3)]",
+      "= (125/3) · [3+3] = (125/3)·6"
+    ],
+    answer: "= 250"
+  }
+];
+
+const STATS_FLASHCARDS = [
+  {
+    front: "Media para datos agrupados",
+    back: "x̄ = Σ(fᵢ · mᵢ) / n\n\nmᵢ = marca de clase (punto medio)\nfᵢ = frecuencia absoluta de la clase",
+    tip: "mᵢ = (límite inferior + límite superior) / 2"
+  },
+  {
+    front: "Mediana para datos agrupados",
+    back: "Me = L + [(n/2 - F) / f] · c\n\nL = límite inferior de clase mediana\nF = frecuencia acumulada ANTERIOR\nf = frecuencia de clase mediana\nc = amplitud",
+    tip: "La clase mediana es donde F acumulada cruza n/2"
+  },
+  {
+    front: "Varianza muestral vs poblacional",
+    back: "Poblacional: σ² = Σ(xᵢ-μ)² / N\nMuestral:   s² = Σ(xᵢ-x̄)² / (n-1)\n\n¡DIFERENCIA! N vs (n-1)",
+    tip: "Muestra siempre usa n-1 (corrección de Bessel)"
+  },
+  {
+    front: "Amplitud de clase",
+    back: "c = (Máximo - Mínimo) / k\nk = número de clases\nk ≈ √n  o  k = 1 + 3.322·log(n)",
+    tip: "Redondear c siempre hacia ARRIBA para cubrir todos los datos"
+  },
+  {
+    front: "Coeficiente de variación",
+    back: "CV = (s / x̄) · 100%\n\nCV < 15%: homogéneo\nCV 15-30%: moderado\nCV > 30%: heterogéneo",
+    tip: "Útil para comparar grupos con diferentes unidades"
+  },
+  {
+    front: "¿Cuándo la media = mediana = moda?",
+    back: "Cuando la distribución es SIMÉTRICA\n(distribución normal/campana de Gauss)\n\nMean = Median = Mode",
+    tip: "Si son distintos → hay sesgo"
+  }
+];
+
+const STATS_TOPICS = [
+  { id: "tc-media", name: "Media aritmética" },
+  { id: "tc-mediana", name: "Mediana" },
+  { id: "tc-moda", name: "Moda" },
+  { id: "disp-varianza", name: "Varianza y Desv. Estándar" },
+  { id: "disp-cv", name: "Coef. de Variación" },
+  { id: "tabla-frec", name: "Tablas de Frecuencia" },
+  { id: "datos-agrup", name: "Datos Agrupados" },
+  { id: "cuartiles", name: "Cuartiles y Percentiles" }
+];
+
+const STATS_PROBLEMS = [
+  {
+    num: "Práctica 1",
+    topic: "Media, Mediana, Moda",
+    statement: "Datos: {3, 7, 5, 9, 1, 7, 4}\nCalcula: media, mediana y moda",
+    hints: [
+      "Para la mediana: ordena primero de menor a mayor.",
+      "La media es la suma dividida entre el número de datos (n=7)."
+    ],
+    steps: [
+      "n = 7 datos",
+      "Media: x̄ = (3+7+5+9+1+7+4)/7 = 36/7 ≈ 5.14",
+      "Mediana: ordenar → {1,3,4,5,7,7,9}",
+      "         n=7 (impar) → posición (7+1)/2 = 4 → Me = 5",
+      "Moda: 7 (aparece 2 veces, el único que se repite)"
+    ],
+    answer: "x̄≈5.14, Me=5, Mo=7"
+  },
+  {
+    num: "Práctica 2",
+    topic: "Varianza y Desviación Estándar",
+    statement: "Datos: {2, 4, 4, 4, 5, 5, 7, 9}  (muestra)\nCalcula s² y s",
+    hints: [
+      "Primero calcula la media. Luego calcula (xᵢ - x̄)² para cada dato.",
+      "Para muestra, divide por (n-1) = 7, no por n = 8."
+    ],
+    steps: [
+      "n=8, x̄ = (2+4+4+4+5+5+7+9)/8 = 40/8 = 5",
+      "Desviaciones²: (2-5)²=9, (4-5)²=1, (4-5)²=1, (4-5)²=1,",
+      "               (5-5)²=0, (5-5)²=0, (7-5)²=4, (9-5)²=16",
+      "Suma = 9+1+1+1+0+0+4+16 = 32",
+      "s² = 32/(8-1) = 32/7 ≈ 4.57",
+      "s = √4.57 ≈ 2.14"
+    ],
+    answer: "s² ≈ 4.57, s ≈ 2.14"
+  },
+  {
+    num: "Práctica 3",
+    topic: "Coeficiente de Variación",
+    statement: "Grupo A: x̄=80, s=8\nGrupo B: x̄=30, s=6\n¿Cuál es más homogéneo?",
+    hints: [
+      "Usa CV = (s/x̄)·100% para cada grupo.",
+      "Menor CV = más homogéneo."
+    ],
+    steps: [
+      "CV_A = (8/80)·100% = 10%",
+      "CV_B = (6/30)·100% = 20%",
+      "CV_A < CV_B"
+    ],
+    answer: "Grupo A es más homogéneo (CV=10% vs 20%)"
+  }
+];
+
+// ===================== STATE =====================
+const STATE_KEY = 'parciales5_state';
+let state = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
+// Tiempos exactos de examen — Abril 29, 2026
+const ELECTRO_TIME = new Date('2026-04-29T06:00:00').getTime();
+const CALC_TIME    = new Date('2026-04-29T16:00:00').getTime();
+const STATS_TIME   = new Date('2026-04-30T08:00:00').getTime();
+
+if (!state.examTimes) {
+  state.examTimes = { calc: CALC_TIME, stats: STATS_TIME, electro: ELECTRO_TIME };
+  saveState();
+} else {
+  // forzar tiempos correctos siempre
+  state.examTimes = { calc: CALC_TIME, stats: STATS_TIME, electro: ELECTRO_TIME };
+}
+if (!state.weakness) state.weakness = {};
+
+function saveState() {
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+}
+
+// ===================== TIMERS =====================
+function formatTime(ms) {
+  if (ms <= 0) return "¡AHORA!";
+  const h = Math.floor(ms/3600000);
+  const m = Math.floor((ms%3600000)/60000);
+  const s = Math.floor((ms%60000)/1000);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function updateTimers() {
+  const now = Date.now();
+  document.getElementById('timer-calc').textContent    = formatTime(state.examTimes.calc - now);
+  document.getElementById('timer-stats').textContent   = formatTime(state.examTimes.stats - now);
+  document.getElementById('timer-electro').textContent = formatTime(state.examTimes.electro - now);
+}
+setInterval(updateTimers, 1000);
+updateTimers();
+
+// ===================== NAV =====================
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function showTab(subject, tabId) {
+  const parent = document.getElementById('section-' + subject);
+  parent.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(subject + '-' + tabId).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+// ===================== WEAKNESS PANELS =====================
+function statusEmoji(s) {
+  return { 'no-idea':'❌', 'weak':'⚠️', 'ok':'🟡', 'strong':'✅' }[s] || '⬜';
+}
+function statusLabel(s) {
+  return { 'no-idea':'No sé nada', 'weak':'Débil', 'ok':'Regular', 'strong':'Dominado' }[s] || 'Sin evaluar';
+}
+
+function renderWeaknessGrid(topics, subject, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = topics.map(t => {
+    const s = state.weakness[subject + '_' + t.id] || '';
+    return `
+    <div class="topic-card ${s}" id="twrap-${subject}-${t.id}">
+      <div class="topic-status">${statusEmoji(s)}</div>
+      <div class="topic-name">${t.name}</div>
+      <div class="status-bar">
+        <button class="status-opt" onclick="setWeakness('${subject}','${t.id}','no-idea')">❌ Nada</button>
+        <button class="status-opt" onclick="setWeakness('${subject}','${t.id}','weak')">⚠️ Débil</button>
+        <button class="status-opt" onclick="setWeakness('${subject}','${t.id}','ok')">🟡 Regular</button>
+        <button class="status-opt" onclick="setWeakness('${subject}','${t.id}','strong')">✅ Listo</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setWeakness(subject, topicId, status) {
+  state.weakness[subject + '_' + topicId] = status;
+  saveState();
+  const wrap = document.getElementById(`twrap-${subject}-${topicId}`);
+  if (wrap) {
+    wrap.className = 'topic-card ' + status;
+    wrap.querySelector('.topic-status').textContent = statusEmoji(status);
+  }
+  updateWeaknessPlan(subject);
+}
+
+function updateWeaknessPlan(subject) {
+  const planDiv = document.getElementById(subject + '-weakness-plan');
+  if (!planDiv) return;
+  const topics = subject === 'calc' ? CALC_TOPICS : STATS_TOPICS;
+  const weak = topics.filter(t => ['no-idea','weak'].includes(state.weakness[subject+'_'+t.id]));
+  if (weak.length === 0) {
+    planDiv.innerHTML = '<div class="alert alert-info">✅ ¡Todo marcado como dominado! Refuerza con problemas.</div>';
+    return;
+  }
+  planDiv.innerHTML = `
+    <div style="font-size:14px; font-weight:600; margin-bottom:12px;">🎯 Plan generado — Enfócate en esto primero:</div>
+    ${weak.map((t,i) => `
+      <div style="display:flex; align-items:center; gap:10px; padding:10px; border-left:3px solid var(--danger); margin-bottom:8px; background:#f8514908; border-radius:0 8px 8px 0;">
+        <span style="font-size:20px; font-weight:700; color:var(--danger);">${i+1}</span>
+        <div>
+          <div style="font-size:14px; font-weight:500;">${t.name}</div>
+          <div style="font-size:12px; color:var(--muted);">${state.weakness[subject+'_'+t.id] === 'no-idea' ? '❌ Sin base — empieza por fórmulas' : '⚠️ Base parcial — practica más ejercicios'}</div>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+// ===================== FLASHCARDS =====================
+function initFlashcards(cards, containerId) {
+  let idx = 0;
+  let known = new Set();
+  let unknown = new Set();
+
+  function render() {
+    const card = cards[idx];
+    const container = document.getElementById(containerId);
+    container.innerHTML = `
+      <div style="width:100%; max-width:560px; text-align:center;">
+        <div style="font-size:13px; color:var(--muted); margin-bottom:8px;">
+          ${idx+1} / ${cards.length}  ·  ✅ ${known.size}  ·  ❌ ${unknown.size}
+        </div>
+        <div class="fc-progress">
+          ${cards.map((_,i) => `<div class="fc-dot ${known.has(i)?'known':''} ${unknown.has(i)?'unknown':''}"></div>`).join('')}
+        </div>
+      </div>
+      <div class="flashcard-wrap" onclick="flipCard(this)">
+        <div class="flashcard" id="fc-card-${idx}">
+          <div class="fc-face fc-front">
+            <div class="fc-label">Pregunta — Haz clic para ver</div>
+            <div class="fc-formula">${card.front}</div>
+          </div>
+          <div class="fc-face fc-back">
+            <div class="fc-label">Respuesta</div>
+            <div class="fc-explanation" style="white-space:pre-line">${card.back}</div>
+            ${card.tip ? `<div class="fc-tip">💡 ${card.tip}</div>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="flashcard-controls">
+        <button class="btn btn-ghost" onclick="fcNav(-1)">← Anterior</button>
+        <button class="btn btn-danger" onclick="fcMark('unknown')">❌ No sabía</button>
+        <button class="btn btn-success" onclick="fcMark('known')">✅ Lo sabía</button>
+        <button class="btn btn-ghost" onclick="fcNav(1)">Siguiente →</button>
+      </div>
+    `;
+    window._fcCards = cards;
+    window._fcIdx = idx;
+    window._fcKnown = known;
+    window._fcUnknown = unknown;
+    window._fcContainerId = containerId;
+  }
+
+  window.flipCard = function(wrap) {
+    wrap.querySelector('.flashcard').classList.toggle('flipped');
+  };
+  window.fcNav = function(dir) {
+    idx = (idx + dir + cards.length) % cards.length;
+    render();
+  };
+  window.fcMark = function(type) {
+    if (type === 'known') { known.add(idx); unknown.delete(idx); }
+    else { unknown.add(idx); known.delete(idx); }
+    idx = (idx + 1) % cards.length;
+    render();
+  };
+
+  render();
+}
+
+// ===================== PROBLEMS =====================
+function renderProblems(problems, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = problems.map((p, pi) => `
+    <div class="problem-box" style="margin-bottom:20px;">
+      <div class="problem-num">${p.num}</div>
+      <div class="row">
+        <span class="tag tag-tema">${p.topic}</span>
+      </div>
+      <div class="problem-statement">${p.statement}</div>
+      <div id="hints-${pi}" style="display:none;">
+        ${p.hints.map((h,hi) => `
+          <div class="hint-box" id="hint-${pi}-${hi}" style="${hi>0?'display:none':''}">
+            <div class="hint-label">Pista ${hi+1}</div>
+            <div class="hint-text">${h}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div id="solution-${pi}" class="solution-box" style="display:none;">
+        <div class="solution-label">✅ Solución paso a paso</div>
+        ${p.steps.map(s => s ? `<div class="solution-step">${s}</div>` : '<br>').join('')}
+        <div class="solution-answer">${p.answer}</div>
+      </div>
+      <div class="problem-controls">
+        <button class="btn btn-warning" onclick="showHint(${pi}, 0)">💡 Pista 1</button>
+        <button class="btn btn-ghost" onclick="showHint(${pi}, 1)">💡 Pista 2</button>
+        <button class="btn btn-success" onclick="toggleSolution(${pi})">👁️ Ver Solución</button>
+        <button class="btn btn-ghost" onclick="hideProblem(${pi})">🙈 Ocultar todo</button>
+      </div>
+    </div>
+  `).join('');
+
+  window.showHint = function(pi, hi) {
+    document.getElementById(`hints-${pi}`).style.display = 'block';
+    document.getElementById(`hint-${pi}-${hi}`).style.display = 'block';
+  };
+  window.toggleSolution = function(pi) {
+    const sol = document.getElementById(`solution-${pi}`);
+    sol.style.display = sol.style.display === 'none' ? 'block' : 'none';
+  };
+  window.hideProblem = function(pi) {
+    document.getElementById(`hints-${pi}`).style.display = 'none';
+    document.getElementById(`solution-${pi}`).style.display = 'none';
+  };
+}
+
+// ===================== POMODORO =====================
+let pomState = { running:false, isWork:true, seconds:25*60, count:1, timer:null };
+
+function updatePomDisplay() {
+  const m = Math.floor(pomState.seconds/60);
+  const s = pomState.seconds % 60;
+  document.getElementById('pom-display').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('pom-display').className = 'pom-timer ' + (pomState.isWork ? 'work' : 'rest');
+  document.getElementById('pom-mode-label').textContent = pomState.isWork ? '🧠 TRABAJANDO' : '☕ DESCANSO';
+  document.getElementById('pom-count').textContent = `Pomodoro ${pomState.count} / 8`;
+}
+
+function togglePomodoro() {
+  if (pomState.running) {
+    clearInterval(pomState.timer);
+    pomState.running = false;
+    document.getElementById('pom-btn').textContent = '▶ Continuar';
+  } else {
+    pomState.running = true;
+    document.getElementById('pom-btn').textContent = '⏸ Pausar';
+    pomState.timer = setInterval(() => {
+      pomState.seconds--;
+      if (pomState.seconds <= 0) {
+        if (pomState.isWork) {
+          pomState.isWork = false;
+          pomState.seconds = 5*60;
+          if ('Notification' in window) new Notification('⏰ Descanso 5 min', { body: '¡Respira! Vuelves en 5 minutos.' });
+        } else {
+          pomState.isWork = true;
+          pomState.seconds = 25*60;
+          pomState.count++;
+          if ('Notification' in window) new Notification('🧠 A trabajar', { body: '25 minutos de enfoque.' });
+        }
+      }
+      updatePomDisplay();
+    }, 1000);
+  }
+}
+
+function resetPomodoro() {
+  clearInterval(pomState.timer);
+  pomState = { running:false, isWork:true, seconds:25*60, count:1, timer:null };
+  document.getElementById('pom-btn').textContent = '▶ Iniciar';
+  updatePomDisplay();
+}
+
+updatePomDisplay();
+if ('Notification' in window) Notification.requestPermission();
+
+// ===================== INIT =====================
+renderWeaknessGrid(CALC_TOPICS, 'calc', 'calc-weakness-grid');
+renderWeaknessGrid(STATS_TOPICS, 'stats', 'stats-weakness-grid');
+initFlashcards(CALC_FLASHCARDS, 'fc-calc-container');
+renderProblems(CALC_PROBLEMS, 'problems-container');
+renderProblems(STATS_PROBLEMS, 'stats-problems-container');
+
+// Init stats flashcards on tab click
+document.querySelector('[onclick="showTab(\'stats\',\'flashcards\')"]').addEventListener('click', () => {
+  setTimeout(() => initFlashcards(STATS_FLASHCARDS, 'fc-stats-container'), 50);
+});
+
+// Restore weakness states visually
+Object.entries(state.weakness).forEach(([key, val]) => {
+  const [sub, ...rest] = key.split('_');
+  const topicId = rest.join('_');
+  const wrap = document.getElementById(`twrap-${sub}-${topicId}`);
+  if (wrap) {
+    wrap.className = 'topic-card ' + val;
+    wrap.querySelector('.topic-status').textContent = statusEmoji(val);
+  }
+});
+</script>
+</body>
+</html>
