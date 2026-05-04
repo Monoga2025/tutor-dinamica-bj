@@ -251,7 +251,11 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .board-msg .msg-img { max-width: 100%; max-height: 160px; border-color: #334155; }
 #board-ai-input-row { display: flex; flex-wrap: wrap; gap: 7px; padding: 9px; border-top: 1px solid #334155; }
 #board-ai-input { flex: 1 1 160px; resize: none; min-height: 36px; max-height: 90px; background: #020617; color: #e2e8f0; border: 1px solid #334155; border-radius: 7px; padding: 7px; font-family: inherit; font-size: 12px; }
-.board-btn.listening { border-color:#ef4444; color:#fecaca; background:#3b0d14; }
+.board-btn.voice-dot { width:32px; height:32px; border-radius:50%; padding:0; display:inline-flex; align-items:center; justify-content:center; border-color:#7f1d1d; color:#fecaca; }
+.board-btn.voice-dot::before { content:''; width:11px; height:11px; border-radius:50%; background:#ef4444; box-shadow:0 0 0 3px rgba(239,68,68,.16); }
+.board-btn.voice-dot.listening { border-color:#ef4444; background:#3b0d14; }
+.board-btn.voice-dot.listening::before { animation:voice-pulse 1s ease-in-out infinite; }
+@keyframes voice-pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.45);opacity:.65} }
 #board-voice-status { flex-basis:100%; display:none; color:#94a3b8; font-size:11px; }
 #board-voice-status.active { display:block; }
 .board-attach-preview { margin: 7px 9px 0; border-color: #334155; background: #020617; color: #94a3b8; }
@@ -605,7 +609,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
             <button class="board-btn" onclick="toggleBoardAI()">Tutor</button>
             <button class="board-btn" style="border-color:#f59e0b;color:#fbbf24" onclick="boardVerifyData()">📋 Verificar datos</button>
             <input type="file" id="board-canvas-image-input" accept="image/*" style="display:none" onchange="handleBoardCanvasImage(event)">
-            <button class="board-btn" onclick="triggerBoardCanvasImageUpload()" title="Agregar imagen movible a la pizarra">Imagen</button>
+            <button class="board-btn" onclick="triggerBoardCanvasImageUpload()" title="Agregar imagen movible a la pizarra">+ Imagen</button>
             <button class="board-btn danger" onclick="completeExercise()">Terminé</button>
             <button class="board-btn" onclick="backToBases()">Volver</button>
             <button class="board-btn danger" onclick="clearBoard()">Limpiar</button>
@@ -640,7 +644,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
                 <input type="file" id="board-image-input" accept="image/*" style="display:none" onchange="handleBoardChatImage(event)">
                 <button class="board-btn" onclick="attachBoardSnapshot()" title="Adjuntar captura actual de la pizarra">📷 Pizarra</button>
                 <button class="board-btn" onclick="triggerBoardImageUpload()" title="Subir imagen al tutor de pizarra">📎</button>
-                <button class="board-btn" id="board-voice-btn" onclick="toggleBoardVoice()" title="Hablar con el tutor de la pizarra">Mic</button>
+                <button class="board-btn voice-dot" id="board-voice-btn" onclick="toggleBoardVoice()" title="Hablar con el tutor de la pizarra" aria-label="Hablar con el tutor"></button>
                 <textarea id="board-ai-input" placeholder="Pregunta al tutor sobre tu pizarra..." onkeydown="handleBoardAIKey(event)"></textarea>
                 <button class="board-btn" onclick="quickSendBoardImage()" title="Enviar captura de pizarra sin texto">Rápida</button>
                 <button class="board-btn" onclick="sendBoardQuestion()">Enviar</button>
@@ -1590,6 +1594,8 @@ let boardVoiceBaseText = '';
 let boardVoiceSilenceTimer = null;
 let boardVoiceNoTextTimer = null;
 let boardVoiceGotText = false;
+let boardVoiceCommittedText = '';
+let boardImgSelected = false;
 
 // ─── SESSION / LOGIN ─────────────────────────────────────────────────────────
 const PROFILES = {
@@ -2438,10 +2444,17 @@ function syncImgControls() {
   const btn = document.getElementById('img-lock-btn');
   const slider = document.getElementById('img-opacity');
   if(!el) return;
-  if(!boardImg.el) { el.classList.remove('visible'); return; }
+  if(!boardImg.el || !boardImgSelected) { el.classList.remove('visible'); return; }
   el.classList.add('visible');
   if(btn) { btn.textContent = boardImg.locked ? '🔒 Bloqueado' : '🔓 Mover'; btn.classList.toggle('locked', boardImg.locked); }
   if(slider) slider.value = Math.round(boardImg.opacity * 100);
+}
+
+function boardImageHit(screenPoint) {
+  if(!boardImg.el) return false;
+  const tl = boardWorldToScreen({x: boardImg.wx, y: boardImg.wy});
+  const br = boardWorldToScreen({x: boardImg.wx + boardImg.ww, y: boardImg.wy + boardImg.wh});
+  return screenPoint.x >= tl.x && screenPoint.x <= br.x && screenPoint.y >= tl.y && screenPoint.y <= br.y;
 }
 
 function boardImageState() {
@@ -2498,6 +2511,7 @@ function loadBoardImage(dataUrl, options = {}) {
     const base = normalizeBoardImageOptions(dataUrl, bimg, options);
     boardImg = {...base, ...options, el: bimg, src: dataUrl, _dragOff: null, _resizing: false};
     delete boardImg.noSave;
+    boardImgSelected = !boardImg.locked;
     syncImgControls();
     renderBoard();
     if(!options.noSave) saveBoardImage();
@@ -2520,6 +2534,12 @@ function handleBoardCanvasImage(event) {
     .catch(() => showToast('No pude cargar la imagen'));
 }
 
+function selectBoardImage(selected = true) {
+  boardImgSelected = Boolean(selected && boardImg.el);
+  syncImgControls();
+  renderBoard();
+}
+
 function toggleImgLock() {
   boardImg.locked = !boardImg.locked;
   syncImgControls();
@@ -2535,6 +2555,7 @@ function setImgOpacity(val) {
 
 function removeImg() {
   boardImg = { el:null, src:null, wx:0, wy:0, ww:400, wh:300, opacity:0.82, locked:true, _dragOff:null, _resizing:false };
+  boardImgSelected = false;
   currentImage = null;
   if(currentProbId) SRS.setProblemImage(currentProbId, null);
   if(currentProbId) SRS.setBoardImage(currentProbId, null);
@@ -2838,10 +2859,13 @@ function initBoardEvents() {
         const tl = boardWorldToScreen({x: boardImg.wx, y: boardImg.wy});
         const br = boardWorldToScreen({x: boardImg.wx + boardImg.ww, y: boardImg.wy + boardImg.wh});
         if(sp.x >= tl.x && sp.x <= br.x && sp.y >= tl.y && sp.y <= br.y) {
+          selectBoardImage(true);
           boardImg._dragOff = {x: sp.x - tl.x, y: sp.y - tl.y};
           boardPanActive = false;
           return;
         }
+      } else if(boardTouchPtrs.size === 1 && boardImg.el) {
+        selectBoardImage(boardImageHit(boardPoint(e)));
       }
       if(boardTouchPtrs.size === 1) {
         boardPanActive = true;
@@ -2866,10 +2890,13 @@ function initBoardEvents() {
       clearTimeout(boardPenTimer);
     }
     // Check image interaction (mouse only when not locked)
-    if(e.pointerType === 'mouse' && boardImg.el && !boardImg.locked) {
+    if(e.pointerType === 'mouse' && boardImg.el) {
       const sp = boardPoint(e);
       const tl = boardWorldToScreen({x: boardImg.wx, y: boardImg.wy});
       const br = boardWorldToScreen({x: boardImg.wx + boardImg.ww, y: boardImg.wy + boardImg.wh});
+      if(boardImageHit(sp)) selectBoardImage(true);
+      else selectBoardImage(false);
+      if(boardImg.locked) return;
       if(sp.x >= br.x-14 && sp.x <= br.x+2 && sp.y >= br.y-14 && sp.y <= br.y+2) {
         boardImg._resizing = {ww: boardImg.ww, wh: boardImg.wh, sx: sp.x, sy: sp.y};
         return;
@@ -3019,6 +3046,7 @@ function clearBoard() {
   boardStrokes = [];
   boardRedo = [];
   boardImg = { el:null, src:null, wx:0, wy:0, ww:400, wh:300, opacity:0.82, locked:true, _dragOff:null, _resizing:false };
+  boardImgSelected = false;
   syncImgControls();
   renderBoard();
   if(currentProbId) SRS.setBoardStrokes(currentProbId, []);
@@ -3289,7 +3317,6 @@ function updateBoardVoiceUi(status) {
   const label = document.getElementById('board-voice-status');
   if(btn) {
     btn.classList.toggle('listening', boardVoiceListening);
-    btn.textContent = boardVoiceListening ? 'Grabando' : 'Mic';
   }
   if(label) {
     label.textContent = status || (boardVoiceListening ? 'Escuchando...' : 'Micrófono listo.');
@@ -3338,16 +3365,19 @@ function ensureBoardRecognition() {
       else interimText += `${part} `;
     }
     const input = document.getElementById('board-ai-input');
-    if(input) {
+  if(input) {
       if(finalText.trim()) {
-        boardVoiceBaseText = `${input.value.trim()} ${finalText.trim()}`.trim();
-        input.value = boardVoiceBaseText;
+        boardVoiceCommittedText = [boardVoiceCommittedText, finalText.trim()].filter(Boolean).join(' ');
+        input.value = boardVoiceCommittedText;
         clearTimeout(boardVoiceSilenceTimer);
         boardVoiceSilenceTimer = setTimeout(() => {
-          if(boardVoiceListening && input.value.trim()) sendBoardQuestion();
-        }, 1200);
+          if(boardVoiceListening && input.value.trim()) {
+            stopBoardVoice('Enviando al tutor...');
+            sendBoardQuestion();
+          }
+        }, 3000);
       } else {
-        input.value = [boardVoiceBaseText, interimText.trim()].filter(Boolean).join(' ');
+        input.value = [boardVoiceCommittedText, interimText.trim()].filter(Boolean).join(' ');
       }
     }
     updateBoardVoiceUi(interimText.trim() ? `Escuchando: ${interimText.trim()}` : 'Escuchando...');
@@ -3385,6 +3415,7 @@ function toggleBoardVoice() {
     return;
   }
   boardVoiceBaseText = input ? input.value.trim() : '';
+  boardVoiceCommittedText = boardVoiceBaseText;
   boardVoiceListening = true;
   boardVoiceGotText = false;
   updateBoardVoiceUi('Escuchando... habla y el tutor enviará tu frase al pausar.');
@@ -3417,6 +3448,7 @@ async function analyzeBoard() {
 function handleBoardAIKey(e) {
   if(e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
+    stopBoardVoice();
     sendBoardQuestion();
   }
 }
@@ -3429,6 +3461,7 @@ async function sendBoardQuestion() {
   if(!text && !attachedImage) return;
   input.value = '';
   boardVoiceBaseText = '';
+  boardVoiceCommittedText = '';
   const visibleText = text || '[Imagen enviada al tutor de pizarra]';
   addBoardMsg('user', attachedImage ? `${visibleText}\n\n[Imagen adjunta]` : visibleText, attachedImage);
   SRS.addBoardChat(currentProbId, 'user', attachedImage ? `${visibleText}\n[Imagen adjunta]` : visibleText);
