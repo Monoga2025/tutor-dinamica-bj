@@ -178,6 +178,11 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .msg-bubble { padding: 9px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; }
 .msg.ai .msg-bubble { background: var(--chat-ai); border: 1px solid var(--border); }
 .msg.user .msg-bubble { background: var(--chat-user); }
+.msg.ai .msg-bubble strong, .board-msg.ai strong { color: #4ade80; font-weight: 800; }
+.tutor-title { display: block; margin: 2px 0 7px; color: #93c5fd; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.tutor-bullet { color: #4ade80; font-weight: 900; margin-right: 5px; }
+.tutor-key { color: #4ade80; font-weight: 800; }
+.msg.ai .msg-bubble br + .tutor-title, .board-msg.ai br + .tutor-title { margin-top: 9px; }
 .msg-bubble code { background: #1a2030; padding: 1px 5px; border-radius: 3px; font-family: 'Consolas', monospace; font-size: 12px; }
 .msg-bubble pre { background: #0d1520; border: 1px solid var(--border); padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px; margin: 4px 0; }
 .msg-bubble .katex { color: inherit; font-size: 1.02em; }
@@ -1327,15 +1332,28 @@ const ErrorTracker = {
 // ─── AI TUTOR ───────────────────────────────────────────────────────────────
 
 const AI = {
-  SYSTEM: `Eres un tutor socrático de élite para Dinámica de Ingeniería (Beer & Johnston Cap. 14: Sistemas de Partículas). El estudiante tiene examen el 5 de mayo de 2026.
+  SYSTEM: `Eres un tutor de alto rendimiento para Dinámica de Ingeniería (Beer & Johnston Cap. 14: Sistemas de Partículas). El estudiante quiere sacar 5.0, no solo pasar. Tu trabajo es hacerlo pensar claro, escribir limpio y no cometer errores tontos de examen.
 
-REGLA ABSOLUTA: NUNCA das la respuesta directa. Guías al estudiante a descubrirla.
+REGLA ABSOLUTA: NO regales la respuesta final antes de que el estudiante plantee. Sí puedes dar micro-pistas, revisar una línea y decir el siguiente paso mínimo.
 
-MÉTODO:
-1. Si el estudiante no ha intentado nada: pídele que identifique la fórmula/ley que aplica
-2. Si identificó la ley pero no sabe cómo aplicar: dile qué variables definir
-3. Si plantea las ecuaciones pero se equivoca: señala exactamente en qué línea está el error
-4. Si comete el mismo error 2+ veces: explica el concepto con una analogía
+ESTILO 5.0:
+- Frases cortas. Cero párrafos largos.
+- Primero orienta: qué mirar, qué ley, qué sistema.
+- Una sola tarea por mensaje.
+- Si hay error, di: línea/idea equivocada -> por qué -> corrección mínima.
+- Si va bien, confirma y sube dificultad un poco.
+- Nunca inventes datos del diagrama/PDF; pide foto o página si falta algo.
+
+PLANTILLA NORMAL:
+### Idea clave
+- **Nombre verde:** explicación en 1 línea.
+### Tu siguiente paso
+- Haz solo esto: ...
+### Revisa
+- Pregunta corta para verificar comprensión.
+
+Usa **negrilla** para palabras clave. La app las pinta verdes.
+También puedes usar [[palabra clave]] para resaltar algo muy importante en verde.
 
 COMPUERTA DE ACCESO:
 - El estudiante solo puede "entrar al ejercicio" cuando demuestra que puede plantearlo.
@@ -1363,16 +1381,18 @@ CUANDO EL ESTUDIANTE DICE "no sé nada": empieza con "¿Qué conserva el sistema
 FORMATO:
 - Usa LaTeX valido con delimitadores \(...\) o \[...\].
 - No escribas LaTeX crudo sin delimitadores, no uses Markdown raro y no mezcles $ con texto normal.
-- Responde en español, directo, máximo 120 palabras visibles.
+- Responde en español, directo, máximo 90 palabras visibles.
+- Usa títulos con ### y bullets con -. Máximo 3 bullets.
 - Las líneas @@ son para la app, no las expliques.`,
 
   async chat(probId, userMsg, imageBase64 = null) {
     const prob = PROB_MAP[probId];
     const state = DB.get(probId);
     const history = state.chatHistory || [];
+    const hasConcreteAnswer = prob.answer && !/ver soluci[oó]n|ver solucionario/i.test(prob.answer);
 
     const systemText = this.SYSTEM +
-      `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado: ${prob.text}\nRespuesta/solución esperada para verificar sin revelar: ${prob.answer || 'no disponible'}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`;
+      `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado: ${prob.text}\nRespuesta/solución esperada para verificar sin revelar: ${prob.answer || 'no disponible'}\nSolución concreta en app: ${hasConcreteAnswer ? 'sí' : 'no completa; guía por método y pide PDF/foto si necesitas datos exactos'}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`;
 
     // Build OpenAI-compatible messages array
     const messages = [{role: 'system', content: systemText}];
@@ -1697,6 +1717,9 @@ function renderMath(el) {
 function formatText(t) {
   return normalizeTutorText(t)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^###\s+(.+)$/gm,'<span class="tutor-title">$1</span>')
+    .replace(/^-\s+(.+)$/gm,'<span class="tutor-bullet">•</span>$1')
+    .replace(/\[\[([^[\]]+)\]\]/g,'<span class="tutor-key">$1</span>')
     .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
     .replace(/`([^`]+)`/g,'<code>$1</code>')
     .replace(/\n/g,'<br>');
