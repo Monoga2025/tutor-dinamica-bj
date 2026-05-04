@@ -1,4 +1,4 @@
-import solutions from './solutions-data.js';
+import solutions from '../solutions-data.js';
 
 export default function handler(req, res) {
   res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
