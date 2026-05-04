@@ -465,6 +465,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
         <button class="action-btn" onclick="showBoardLayer()" style="border-color:#4ade80;color:#4ade80">🎨 Pizarra</button>
         <button class="action-btn" onclick="markCorrect()">✓ Correcto</button>
         <button class="action-btn danger" onclick="markError()">✕ Error</button>
+        <button class="action-btn" onclick="clearProblemErrors()" title="Borrar errores incorrectos del log" style="border-color:#6b7280;color:#9ca3af">🗑 Errores</button>
         <button class="action-btn" onclick="resetChat()">🗑 Chat</button>
       </div>
       <div id="prob-body">
@@ -1967,6 +1968,12 @@ function checkPhysicalState(choice) {
   else gateBad('sequence_events', 'Orden malo: no metas números sin separar estados.', 'state-feedback');
 }
 
+function stripMarkersOnly(rawText) {
+  return String(rawText || '').split(/\r?\n/)
+    .filter(line => !line.trim().startsWith('@@'))
+    .join('\n').trim();
+}
+
 function processTutorMarkers(rawText) {
   let text = String(rawText || '');
   const lines = text.split(/\r?\n/);
@@ -2116,6 +2123,20 @@ function verifyProblemData() {
   const input = document.getElementById('chat-input');
   input.value = `Tengo la imagen del diagrama del problema ${currentProbId}. Los datos que tenemos registrados son:\n\n${prob.text}\n\nRespuesta registrada: ${prob.answer}\n\nPor favor compara la imagen con estos datos. ¿Los ángulos, velocidades y configuración son correctos? Si hay errores, dime exactamente qué valores son incorrectos y cuáles deberían ser.`;
   sendMessage();
+}
+
+function clearProblemErrors() {
+  if(!currentProbId) return;
+  if(!confirm(`¿Borrar todos los errores registrados del ${currentProbId}?`)) return;
+  const s = DB.get(currentProbId);
+  s.errors = [];
+  DB.set(currentProbId, s);
+  renderErrorLog(currentProbId);
+  renderGate(currentProbId);
+  updateStats();
+  updateWeaknessPanel();
+  renderProblemList();
+  showToast('Errores borrados');
 }
 
 function resetChat() {
@@ -2741,7 +2762,7 @@ async function analyzeBoard() {
     const box = document.getElementById('board-ai-msgs');
     const last = box?.lastElementChild;
     if(last && last.textContent.includes('Revisando pizarra')) last.remove();
-    const visible = processTutorMarkers(response) || 'Vas bien. Sigue.';
+    const visible = stripMarkersOnly(response) || 'Vas bien. Sigue.';
     addBoardMsg('ai', visible);
     SRS.addBoardChat(currentProbId, 'assistant', visible);
     SRS.addChat(currentProbId, 'assistant', `[Revision pizarra] ${visible}`);
@@ -2773,7 +2794,7 @@ async function sendBoardQuestion() {
     const box = document.getElementById('board-ai-msgs');
     const last = box?.lastElementChild;
     if(last && last.textContent.includes('Pensando')) last.remove();
-    const visible = processTutorMarkers(response) || 'Sigue con el siguiente paso.';
+    const visible = stripMarkersOnly(response) || 'Sigue con el siguiente paso.';
     addBoardMsg('ai', visible);
     SRS.addBoardChat(currentProbId, 'assistant', visible);
     SRS.addChat(currentProbId, 'user', `[Pizarra] ${text}`);
