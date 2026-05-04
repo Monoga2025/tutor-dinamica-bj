@@ -524,6 +524,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
             </div>
             <button class="board-btn" onclick="analyzeBoard()">🔍 Revisar</button>
             <button class="board-btn" onclick="toggleBoardAI()">Tutor</button>
+            <button class="board-btn" style="border-color:#f59e0b;color:#fbbf24" onclick="boardVerifyData()">📋 Verificar datos</button>
             <button class="board-btn danger" onclick="completeExercise()">Terminé</button>
             <button class="board-btn" onclick="backToBases()">Volver</button>
             <button class="board-btn danger" onclick="clearBoard()">Limpiar</button>
@@ -2709,15 +2710,24 @@ function toggleBoardAI() {
   document.getElementById('show-board-ai').style.display = boardAiMin ? 'block' : 'none';
 }
 
+function boardVerifyData() {
+  // Verify problem data against uploaded image, routes to MAIN chat tutor
+  if(!currentImage) { showToast('Sube primero la imagen del diagrama'); return; }
+  backToBases();
+  verifyProblemData();
+}
+
 async function analyzeBoard() {
   if(!currentProbId) return;
   if(boardAiMin) toggleBoardAI();
-  const dataUrl = captureBoardDataUrl();
-  addBoardMsg('user', '[Pizarra enviada para revision]');
-  SRS.addBoardChat(currentProbId, 'user', '[Pizarra enviada para revision]');
-  addBoardMsg('ai', 'Revisando pizarra...');
+  // Use uploaded original image if available, fallback to canvas capture
+  const dataUrl = currentImage || captureBoardDataUrl();
+  if(!dataUrl) { showToast('Dibuja algo en la pizarra primero'); return; }
+  addBoardMsg('user', '[Imagen enviada para revisión]');
+  SRS.addBoardChat(currentProbId, 'user', '[Imagen enviada para revisión]');
+  addBoardMsg('ai', 'Revisando...');
   try {
-    const response = await AI.chat(currentProbId, `[REVISION DE PIZARRA]\n${boardFullContext(currentProbId)}\n\nMira mi desarrollo. Actua como corrector de parcial: revisa ruta, ecuacion, despeje, unidades y numero final. Dime el primer error exacto si existe; si voy bien, dime el siguiente paso minimo. No resuelvas por mi.`, dataUrl);
+    const response = await AI.chat(currentProbId, `[REVISION]\n${boardFullContext(currentProbId)}\n\nMira mi desarrollo. Actua como corrector de parcial: revisa ruta, ecuacion, despeje, unidades y numero final. Dime el primer error exacto si existe; si voy bien, dime el siguiente paso minimo. No resuelvas por mi.`, dataUrl);
     const box = document.getElementById('board-ai-msgs');
     const last = box?.lastElementChild;
     if(last && last.textContent.includes('Revisando pizarra')) last.remove();
@@ -2747,7 +2757,9 @@ async function sendBoardQuestion() {
   SRS.addBoardChat(currentProbId, 'user', text);
   addBoardMsg('ai', 'Pensando...');
   try {
-    const response = await AI.chat(currentProbId, `[PREGUNTA SOBRE MI PIZARRA]\n${boardFullContext(currentProbId)}\n\nPregunta: ${text}`, captureBoardDataUrl());
+    // Use uploaded original image if available, fallback to canvas capture
+    const imgForBoard = currentImage || captureBoardDataUrl();
+    const response = await AI.chat(currentProbId, `[PREGUNTA SOBRE MI PIZARRA]\n${boardFullContext(currentProbId)}\n\nPregunta: ${text}`, imgForBoard);
     const box = document.getElementById('board-ai-msgs');
     const last = box?.lastElementChild;
     if(last && last.textContent.includes('Pensando')) last.remove();
