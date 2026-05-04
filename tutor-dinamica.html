@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dinámica Cap.14 — Beer & Johnston</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 <style>
 :root {
   --bg: #0d0d0f;
@@ -31,8 +34,22 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 #top-stats span b { color: var(--text); }
 #btn-review { background: linear-gradient(135deg, var(--accent2), var(--accent)); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 #btn-review:hover { opacity: 0.85; }
+#btn-harvard { background: linear-gradient(135deg, #f59e0b, #ef4444); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+#btn-guide { background: none; border: 1px solid #f59e0b; color: #fbbf24; padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
 #btn-config { background: none; border: 1px solid var(--border); color: var(--muted); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
 #btn-config:hover { border-color: var(--accent); color: var(--accent); }
+#btn-pdf { background: none; border: 1px solid #16a34a; color: #4ade80; padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600; }
+#btn-pdf:hover, #btn-pdf.active { background: #16a34a; color: #fff; }
+
+/* PDF PANEL */
+#pdf-panel { width: 0; flex-shrink: 0; overflow: hidden; border-left: 1px solid var(--border); background: var(--panel); display: flex; flex-direction: column; transition: width 0.2s ease; }
+#pdf-panel.open { width: 420px; }
+#pdf-toolbar { padding: 6px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+#pdf-toolbar span { font-size: 11px; color: var(--muted); }
+#pdf-page-input { width: 44px; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 2px 6px; border-radius: 4px; font-size: 12px; text-align: center; }
+#pdf-toolbar button { font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--border); background: none; color: var(--text); cursor: pointer; }
+#pdf-toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+#pdf-iframe { flex: 1; width: 100%; border: none; }
 
 /* MAIN LAYOUT */
 #layout { display: flex; flex: 1; overflow: hidden; }
@@ -101,6 +118,40 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 #answer-hint h4 { font-size: 10px; font-weight: 700; color: var(--ok); text-transform: uppercase; margin-bottom: 4px; }
 #answer-val { font-size: 12px; color: #a0d4b8; font-family: monospace; display: none; }
 #btn-show-answer { font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; text-decoration: underline; }
+#gate-card { margin-top: 12px; background: #111827; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+#gate-card.unlocked { background: #0d1a14; border-color: #1f6b45; }
+#gate-title { font-size: 10px; font-weight: 800; color: var(--muted); text-transform: uppercase; margin-bottom: 5px; }
+#gate-card.unlocked #gate-title { color: var(--ok); }
+#gate-status { font-size: 12px; line-height: 1.45; color: var(--text); margin-bottom: 8px; }
+#btn-enter-exercise { font-size: 11px; padding: 5px 10px; border-radius: 5px; border: 1px solid var(--border); background: none; color: var(--muted); cursor: not-allowed; }
+#btn-enter-exercise.enabled { border-color: var(--ok); color: var(--ok); cursor: pointer; }
+#btn-enter-exercise.enabled:hover { background: var(--ok); color: #06110c; }
+#gate-progress { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+
+/* QUICK GATE TRAINER */
+#gate-trainer { flex: 1; overflow-y: auto; padding: 14px 16px; }
+.gate-help-toggle { font-size: 11px; color: var(--accent); background: none; border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; cursor: pointer; margin-bottom: 10px; }
+.gate-round { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+.gate-round h3 { font-size: 13px; color: var(--accent); margin-bottom: 6px; }
+.gate-round p { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+.choice-card, .token-card { text-align: left; background: #111827; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 9px 10px; font-size: 12px; cursor: pointer; min-height: 42px; }
+.choice-card .katex, .token-card .katex, .drop-slot .katex { color: inherit; }
+.choice-card:hover, .token-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.choice-card.correct { border-color: var(--ok); background: #0d1a14; }
+.choice-card.wrong { border-color: var(--danger); background: #1a0e14; }
+.token-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 10px; }
+.token-card { width: auto; min-height: 0; }
+.drop-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 10px; }
+.drop-slot { min-height: 42px; border: 1px dashed var(--muted); border-radius: 8px; padding: 8px; font-size: 12px; color: var(--muted); background: #0f1117; }
+.drop-slot.filled { color: var(--text); border-style: solid; border-color: var(--accent); }
+.gate-feedback { font-size: 12px; padding: 8px 10px; border-radius: 8px; display: none; margin-top: 8px; }
+.gate-feedback.ok { display: block; background: #0d1a14; color: #9be7c0; border: 1px solid #1f6b45; }
+.gate-feedback.bad { display: block; background: #1a0e14; color: #ff9aa9; border: 1px solid var(--danger); }
+.coach-card { margin-top: 10px; background: #101522; border: 1px solid #26324a; border-left: 4px solid var(--warn); border-radius: 9px; padding: 10px 12px; font-size: 12px; line-height: 1.55; color: var(--text); }
+.coach-card b { color: #f8d36b; }
+.coach-card .micro-btn { margin-top: 8px; font-size: 11px; border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 6px; padding: 5px 9px; cursor: pointer; }
+.coach-card .micro-btn:hover { background: var(--accent); color: #fff; }
 
 /* ERROR LOG */
 #error-log-section { margin-top: 16px; }
@@ -110,8 +161,10 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .error-entry.high { background: #2a0a14; border-left-color: #ff0033; color: #ff4466; font-weight: 600; }
 
 /* CHAT */
-#chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-#chat-messages { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+#chat-area { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+#chat-helper { display: none; flex: 1; min-height: 220px; flex-direction: column; overflow: hidden; border-top: 1px solid var(--border); }
+#chat-helper.open { display: flex; }
+#chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px 28px; scroll-padding-bottom: 28px; display: flex; flex-direction: column; gap: 10px; }
 .msg { display: flex; gap: 8px; max-width: 92%; }
 .msg.user { align-self: flex-end; flex-direction: row-reverse; }
 .msg-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
@@ -122,6 +175,8 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .msg.user .msg-bubble { background: var(--chat-user); }
 .msg-bubble code { background: #1a2030; padding: 1px 5px; border-radius: 3px; font-family: 'Consolas', monospace; font-size: 12px; }
 .msg-bubble pre { background: #0d1520; border: 1px solid var(--border); padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px; margin: 4px 0; }
+.msg-bubble .katex { color: inherit; font-size: 1.02em; }
+.msg-bubble .katex-display { overflow-x: auto; overflow-y: hidden; margin: 6px 0; }
 #chat-thinking { align-self: flex-start; padding: 8px 12px; font-size: 12px; color: var(--muted); display: none; }
 #chat-input-row { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: var(--panel); }
 #chat-input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; resize: none; height: 42px; max-height: 120px; overflow-y: auto; font-family: inherit; }
@@ -129,6 +184,57 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 #btn-send { background: var(--accent); border: none; color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
 #btn-send:hover { opacity: 0.85; }
 #btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* FULL SCREEN BOARD */
+#board-area { position: fixed; inset: 0; z-index: 500; display: none; flex-direction: column; overflow: hidden; background: #07090d; color: #e2e8f0; }
+#board-toolbar { height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid #1e293b; background: rgba(15,23,42,0.96); }
+#board-toolbar b { font-size: 12px; color: #93c5fd; margin-right: auto; }
+.board-btn { font-size: 12px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; border-radius: 6px; padding: 5px 9px; cursor: pointer; }
+.board-btn:hover, .board-btn.active { border-color: var(--accent); color: #93c5fd; }
+.board-btn.danger { border-color: var(--danger); color: #ff9aa9; }
+#board-wrap { flex: 1; position: relative; overflow: hidden; background: #07090d; }
+#exercise-board { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+#board-prompt { position: absolute; top: 12px; left: 12px; max-width: min(460px, 48vw); background: rgba(15,23,42,0.88); color: #f8fafc; border: 1px solid #334155; border-radius: 9px; padding: 10px 12px; font-size: 12px; line-height: 1.45; pointer-events: none; }
+#board-problem { position: absolute; top: 12px; left: 12px; width: min(540px, 48vw); max-height: calc(100vh - 150px); overflow-y: auto; background: rgba(2,6,23,.93); border: 1px solid #334155; border-radius: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.42); color: #e2e8f0; z-index: 6; }
+#board-problem.min { width: auto; max-height: none; overflow: visible; }
+#board-problem.min .bp-body { display: none; }
+.bp-head { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border-bottom: 1px solid #334155; }
+.bp-head b { color: #93c5fd; font-size: 12px; margin-right: auto; }
+.bp-body { padding: 10px 12px; font-size: 12px; line-height: 1.55; }
+.bp-section { margin-bottom: 10px; }
+.bp-section h5 { color: #86efac; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px; }
+.data-chip { display: inline-block; margin: 2px 4px 2px 0; padding: 3px 7px; border-radius: 999px; background: #0f172a; border: 1px solid #334155; color: #dbeafe; font-size: 11px; }
+.exam-step { display: flex; gap: 7px; align-items: flex-start; margin: 5px 0; color: #cbd5e1; }
+.exam-step span:first-child { color: #60a5fa; font-weight: 800; }
+#board-brief { position: absolute; left: 12px; bottom: 76px; width: min(520px, 55vw); max-height: 230px; overflow-y: auto; background: rgba(2,6,23,.9); color: #e2e8f0; border: 1px solid #334155; border-left: 4px solid #22c55e; border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.55; box-shadow: 0 12px 38px rgba(0,0,0,.38); }
+#board-brief h4 { color: #86efac; font-size: 12px; margin-bottom: 6px; }
+#board-brief .step { display: block; color: #cbd5e1; margin-top: 3px; }
+#board-brief.min { display: none; }
+#board-tools { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 520; display: flex; align-items: center; gap: 7px; background: rgba(15,23,42,.92); border: 1px solid #334155; border-radius: 18px; padding: 7px 11px; box-shadow: 0 10px 34px rgba(0,0,0,.45); backdrop-filter: blur(10px); }
+.color-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #334155; cursor: pointer; }
+.color-dot.active { outline: 2px solid #fff; border-color: #fff; }
+#board-size { width: 90px; }
+#board-zoom-ind { color: #94a3b8; font-size: 11px; min-width: 36px; text-align: right; }
+#size-preview { width: 34px; height: 34px; border: 1px solid #334155; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: #020617; }
+#size-preview-dot { border-radius: 50%; background: #e2e8f0; opacity: .9; width: 3px; height: 3px; }
+#board-cursor-preview { position: absolute; z-index: 4; pointer-events: none; border: 1.5px solid rgba(255,255,255,.85); border-radius: 50%; transform: translate(-50%,-50%); display: none; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
+#board-cursor-preview.eraser { border-color: #fb7185; background: rgba(251,113,133,.12); }
+#board-ai { position: absolute; right: 14px; top: 62px; width: min(380px, 34vw); max-height: calc(100vh - 90px); background: rgba(15,23,42,0.94); border: 1px solid #334155; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 16px 50px rgba(0,0,0,.45); }
+#board-ai.min { transform: translateX(calc(100% + 18px)); }
+#board-ai-head { padding: 9px 11px; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 8px; }
+#board-ai-head b { color: #93c5fd; font-size: 12px; margin-right: auto; }
+#board-ai-msgs { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 10px 24px; scroll-padding-bottom: 24px; display: flex; flex-direction: column; gap: 8px; }
+.board-msg { font-size: 12px; line-height: 1.45; padding: 8px 10px; border-radius: 9px; border: 1px solid #334155; background: #111827; }
+.board-msg.user { align-self: flex-end; background: #1e3a8a; border-color: #2563eb; }
+.board-msg.ai { align-self: flex-start; }
+.board-msg code { background: #0b1220; padding: 1px 5px; border-radius: 3px; font-family: 'Consolas', monospace; font-size: 11px; }
+.board-msg pre { background: #020617; border: 1px solid #334155; padding: 8px; border-radius: 5px; overflow-x: auto; margin: 5px 0; }
+.board-msg .katex { color: inherit; font-size: 1.02em; }
+.board-msg .katex-display { overflow-x: auto; overflow-y: hidden; margin: 6px 0; }
+#board-ai-input-row { display: flex; gap: 7px; padding: 9px; border-top: 1px solid #334155; }
+#board-ai-input { flex: 1; resize: none; min-height: 36px; max-height: 90px; background: #020617; color: #e2e8f0; border: 1px solid #334155; border-radius: 7px; padding: 7px; font-family: inherit; font-size: 12px; }
+#show-board-ai { position: absolute; right: 0; top: 50%; z-index: 5; display: none; writing-mode: vertical-rl; background: var(--accent); color: #fff; border: none; border-radius: 8px 0 0 8px; padding: 12px 5px; cursor: pointer; }
+#toggle-brief { position:absolute; left:12px; bottom:18px; z-index:521; }
 
 /* WELCOME SCREEN */
 #welcome-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; }
@@ -148,6 +254,39 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .review-card .rc-error { font-size: 12px; color: #e88; margin-bottom: 8px; }
 .review-card .rc-btn { font-size: 12px; padding: 5px 12px; border-radius: 5px; border: 1px solid var(--accent); background: none; color: var(--accent); cursor: pointer; }
 .review-card .rc-btn:hover { background: var(--accent); color: #fff; }
+
+/* HARVARD MODE */
+#harvard-panel { display:none; position:fixed; inset:0; background:rgba(0,0,0,.86); z-index:250; }
+#harvard-inner { position:absolute; inset:24px; background:#0b1020; border:1px solid #26324a; border-radius:16px; display:grid; grid-template-columns: 360px 1fr; overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,.55); }
+#harvard-left { padding:18px; border-right:1px solid #26324a; overflow-y:auto; }
+#harvard-main { padding:18px; overflow-y:auto; }
+#harvard-panel h2 { font-size:18px; color:#f8fafc; margin-bottom:8px; }
+#harvard-panel h3 { font-size:13px; color:#93c5fd; margin:14px 0 8px; text-transform:uppercase; letter-spacing:.04em; }
+.hv-sub { color:#94a3b8; font-size:12px; line-height:1.55; margin-bottom:12px; }
+.hv-card { background:#111827; border:1px solid #26324a; border-radius:12px; padding:12px; margin-bottom:10px; }
+.hv-card.hot { border-color:#ef4444; background:#1f1117; }
+.hv-metric { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12px; margin:7px 0; }
+.hv-bar { height:8px; flex:1; background:#1e293b; border-radius:999px; overflow:hidden; }
+.hv-fill { height:100%; background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e); width:0%; }
+.hv-path { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; }
+.hv-stage { background:#0f172a; border:1px solid #26324a; border-radius:12px; padding:12px; min-height:130px; }
+.hv-stage.active { border-color:#f59e0b; box-shadow:0 0 0 1px rgba(245,158,11,.25); }
+.hv-stage b { color:#fbbf24; font-size:13px; }
+.hv-stage p { color:#cbd5e1; font-size:12px; line-height:1.5; margin-top:7px; }
+.hv-btn { border:1px solid #3b82f6; background:#10213f; color:#bfdbfe; border-radius:7px; padding:7px 10px; cursor:pointer; font-size:12px; font-weight:700; }
+.hv-btn:hover { background:#1d4ed8; color:#fff; }
+.hv-close { position:absolute; right:16px; top:14px; border:none; background:transparent; color:#94a3b8; font-size:22px; cursor:pointer; }
+.hv-pill { display:inline-block; padding:2px 7px; border-radius:999px; background:#1e293b; color:#cbd5e1; font-size:11px; margin:2px 4px 2px 0; }
+.reflection-box { width:100%; min-height:70px; background:#020617; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:8px; resize:vertical; font-family:inherit; font-size:12px; }
+
+/* GUIDE */
+#guide-panel { display:none; position:fixed; inset:0; z-index:280; background:rgba(0,0,0,.82); }
+#guide-inner { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(820px,94vw); max-height:88vh; overflow-y:auto; background:#0b1020; border:1px solid #26324a; border-radius:16px; padding:22px; box-shadow:0 24px 80px rgba(0,0,0,.55); }
+#guide-inner h2 { font-size:20px; color:#fbbf24; margin-bottom:10px; }
+#guide-inner h3 { font-size:13px; color:#93c5fd; margin:16px 0 8px; text-transform:uppercase; letter-spacing:.04em; }
+.guide-step { background:#111827; border:1px solid #26324a; border-radius:12px; padding:12px 14px; margin:10px 0; font-size:13px; line-height:1.6; }
+.guide-step b { color:#86efac; }
+.guide-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
 
 /* CONFIG MODAL */
 #config-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; }
@@ -198,6 +337,37 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   </div>
 </div>
 
+<!-- HARVARD PANEL -->
+<div id="harvard-panel">
+  <div id="harvard-inner">
+    <button class="hv-close" onclick="closeHarvard()">×</button>
+    <div id="harvard-left"></div>
+    <div id="harvard-main"></div>
+  </div>
+</div>
+
+<!-- GUIDE PANEL -->
+<div id="guide-panel">
+  <div id="guide-inner">
+    <button class="hv-close" onclick="closeGuide()">×</button>
+    <h2>Cómo sacarle el jugo</h2>
+    <div class="hv-sub">No uses esto como chat. Úsalo como gimnasio: predicción, respuesta activa, pizarra, revisión, reflexión y repetición.</div>
+    <div class="guide-grid">
+      <div class="guide-step"><b>1. Modo Harvard</b><br>Empieza por el ejercicio recomendado. El sistema escoge según errores y habilidad débil.</div>
+      <div class="guide-step"><b>2. Predice</b><br>Antes de cartas: di mentalmente qué se conserva y qué no. Si no puedes, abre chat.</div>
+      <div class="guide-step"><b>3. Cartas 3/3</b><br>Fórmula, variables y estado físico. Sin números. La meta es entender la estructura.</div>
+      <div class="guide-step"><b>4. Pizarra</b><br>Usa enunciado/datos/incógnita. Escribe ecuación simbólica, despeja, luego números.</div>
+      <div class="guide-step"><b>5. Revisión IA</b><br>No esperes al final. Envía pizarra cuando tengas ecuación y despeje para detectar el primer error.</div>
+      <div class="guide-step"><b>6. Reflexión</b><br>Al terminar escribe la regla que aprendiste. Eso convierte error en memoria utilizable.</div>
+    </div>
+    <h3>Regla de oro</h3>
+    <div class="guide-step">Si puedes explicar sistema + conservación + ecuación simbólica, los números son trámite. Si fallas, no avances: repite esa debilidad.</div>
+    <h3>Machine learning adaptativo</h3>
+    <div class="guide-step">El sistema estima probabilidad de éxito por ejercicio usando score, errores, cartas, habilidad y recencia. Te recomienda ejercicios en zona óptima: ni fáciles ni imposibles.</div>
+    <button class="hv-btn" onclick="closeGuide(); openHarvard();">Abrir Modo Harvard</button>
+  </div>
+</div>
+
 <!-- TOP BAR -->
 <div id="topbar">
   <h1>📐 Dinámica Cap. 14</h1>
@@ -209,6 +379,9 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
     <span>Alta prioridad: <b id="stat-high" style="color:var(--danger)">0</b></span>
   </div>
   <button id="btn-review" onclick="openReview()">🔁 Repasar Débiles</button>
+  <button id="btn-harvard" onclick="openHarvard()">Modo Harvard</button>
+  <button id="btn-guide" onclick="openGuide()">Cómo usar</button>
+  <button id="btn-pdf" onclick="togglePdf()">📖 Libro</button>
   <button id="btn-config" onclick="openConfig()">⚙️ Config</button>
 </div>
 
@@ -273,26 +446,147 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
             <button id="btn-show-answer" onclick="toggleAnswer()">Mostrar respuesta</button>
             <div id="answer-val"></div>
           </div>
+          <div id="gate-card">
+            <div id="gate-title">Acceso al ejercicio</div>
+            <div id="gate-progress">Aciertos: 0/3</div>
+            <div id="gate-status">Bloqueado: primero demuestra ley, sistema y ecuación base.</div>
+            <button id="btn-enter-exercise" onclick="enterExercise()" disabled>Entrar al ejercicio</button>
+          </div>
           <div id="error-log-section">
             <h3>Errores Registrados</h3>
             <div id="error-log-list"></div>
           </div>
         </div>
         <div id="chat-area">
-          <div id="chat-messages"></div>
-          <div id="chat-thinking">El tutor está pensando...</div>
-          <div id="chat-input-row">
-            <textarea id="chat-input" placeholder="Escribe tu respuesta o pregunta..." onkeydown="handleKey(event)"></textarea>
-            <button id="btn-send" onclick="sendMessage()">Enviar</button>
+          <div id="gate-trainer"></div>
+          <button class="gate-help-toggle" onclick="toggleChatHelp()">No entiendo: abrir chat tutor</button>
+          <div id="chat-helper">
+            <div id="chat-messages"></div>
+            <div id="chat-thinking">El tutor está pensando...</div>
+            <div id="chat-input-row">
+              <textarea id="chat-input" placeholder="Escribe tu respuesta o pregunta..." onkeydown="handleKey(event)"></textarea>
+              <button id="btn-send" onclick="sendMessage()">Enviar</button>
+            </div>
+          </div>
+        </div>
+        <div id="board-area">
+          <div id="board-toolbar">
+            <b>Pizarra del ejercicio</b>
+            <div id="board-tools">
+              <button class="board-btn active" id="tool-pen" onclick="setBoardTool('pen')">Pluma</button>
+              <button class="board-btn" id="tool-eraser" onclick="setBoardTool('eraser')">Borrador</button>
+              <button class="board-btn" onclick="undoBoard()">↶</button>
+              <button class="board-btn" onclick="redoBoard()">↷</button>
+              <span class="color-dot active" style="background:#e2e8f0" data-color="#e2e8f0" onclick="setBoardColor(this)"></span>
+              <span class="color-dot" style="background:#ef4444" data-color="#ef4444" onclick="setBoardColor(this)"></span>
+              <span class="color-dot" style="background:#22c55e" data-color="#22c55e" onclick="setBoardColor(this)"></span>
+              <span class="color-dot" style="background:#3b82f6" data-color="#3b82f6" onclick="setBoardColor(this)"></span>
+              <span class="color-dot" style="background:#facc15" data-color="#facc15" onclick="setBoardColor(this)"></span>
+              <span class="color-dot" style="background:#a855f7" data-color="#a855f7" onclick="setBoardColor(this)"></span>
+              <input id="board-size" type="range" min="1" max="32" value="3" oninput="updateBoardSize(+this.value)">
+              <span id="size-preview"><span id="size-preview-dot"></span></span>
+              <span id="board-zoom-ind">×1.0</span>
+            </div>
+            <button class="board-btn" onclick="analyzeBoard()">🔍 Revisar</button>
+            <button class="board-btn" onclick="toggleBoardAI()">Tutor</button>
+            <button class="board-btn danger" onclick="completeExercise()">Terminé</button>
+            <button class="board-btn" onclick="backToBases()">Volver</button>
+            <button class="board-btn danger" onclick="clearBoard()">Limpiar</button>
+          </div>
+          <div id="board-wrap">
+            <canvas id="exercise-board"></canvas>
+            <div id="board-cursor-preview"></div>
+            <div id="board-prompt"></div>
+            <div id="board-problem"></div>
+            <div id="board-brief"></div>
+            <button id="toggle-brief" class="board-btn" onclick="toggleBoardBrief()">Brief teoría</button>
+            <div id="board-ai">
+              <div id="board-ai-head">
+                <b>Tutor flotante</b>
+                <button class="board-btn" onclick="analyzeBoard()">Revisar pizarra</button>
+                <button class="board-btn" onclick="toggleBoardAI()">Ocultar</button>
+              </div>
+              <div id="board-ai-msgs"></div>
+              <div id="board-ai-input-row">
+                <textarea id="board-ai-input" placeholder="Pregunta al tutor sobre tu pizarra..." onkeydown="handleBoardAIKey(event)"></textarea>
+                <button class="board-btn" onclick="sendBoardQuestion()">Enviar</button>
+              </div>
+            </div>
+            <button id="show-board-ai" onclick="toggleBoardAI()">Tutor</button>
           </div>
         </div>
       </div>
+        <!-- PDF PANEL -->
+        <div id="pdf-panel">
+          <div id="pdf-toolbar">
+            <span id="pdf-prob-label">—</span>
+            <span style="flex:1"></span>
+            <button onclick="pdfPrev()">◀</button>
+            <input type="number" id="pdf-page-input" min="1" max="46" value="1" onchange="pdfGoToPage(+this.value)">
+            <span style="font-size:11px;color:var(--muted)">/46</span>
+            <button onclick="pdfNext()">▶</button>
+          </div>
+          <iframe id="pdf-iframe" src="" title="Libro Dinámica Cap.14"></iframe>
+        </div>
     </div>
   </div>
 </div>
 
 <script>
 'use strict';
+
+// ─── PDF VIEWER ──────────────────────────────────────────────────────────────
+const PDF_PAGES = {
+  "14.1":10,"14.2":8,"14.3":10,"14.4":1,"14.5":1,"14.6":1,
+  "14.7":2,"14.8":2,"14.9":2,"14.10":2,"14.11":2,"14.12":2,"14.13":2,"14.14":2,
+  "14.15":3,"14.16":3,"14.17":3,"14.18":3,"14.19":3,"14.20":3,
+  "14.21":4,"14.22":4,"14.23":4,"14.24":4,
+  "14.25":5,"14.26":5,"14.27":2,"14.28":6,"14.29":6,"14.30":6,
+  "14.31":8,"14.32":8,"14.33":8,"14.34":9,"14.35":9,"14.36":9,"14.37":9,
+  "14.38":15,"14.39":15,"14.40":15,"14.41":15,
+  "14.42":16,"14.43":16,"14.44":16,"14.45":16,"14.46":16,"14.47":16,"14.48":16,
+  "14.49":17,"14.50":17,"14.51":17,"14.52":17,
+  "14.53":18,"14.54":18,"14.55":18,"14.56":18,
+  "14.57":29,"14.58":29,"14.59":29,"14.60":29,"14.61":29,"14.62":29,
+  "14.63":30,"14.64":30,"14.65":30,"14.66":30,
+  "14.67":31,"14.68":31,"14.69":31,"14.70":31,
+  "14.71":32,"14.72":32,"14.73":32,"14.74":32,"14.75":32,
+  "14.76":33,"14.77":33,"14.78":33,"14.79":33,"14.80":33,"14.81":25,"14.82":33,
+  "14.83":34,"14.84":34,"14.85":34,"14.86":34,"14.87":34,
+  "14.88":35,"14.89":35,"14.90":35,"14.91":35,"14.92":35,"14.93":35,"14.94":35,"14.95":35,"14.96":35,
+  "14.97":36,"14.98":36,"14.99":36,"14.100":36,"14.101":36,"14.102":36,"14.103":36,"14.104":36,
+  "14.105":41,"14.106":41,"14.107":41,
+  "14.108":42,"14.109":42,"14.110":42,"14.111":42,
+  "14.112":43,"14.113":43,"14.114":44,"14.115":44,"14.116":44
+};
+let pdfOpen = false;
+let pdfCurrentPage = 1;
+
+function togglePdf() {
+  pdfOpen = !pdfOpen;
+  document.getElementById('pdf-panel').classList.toggle('open', pdfOpen);
+  document.getElementById('btn-pdf').classList.toggle('active', pdfOpen);
+  if (pdfOpen && pdfCurrentPage) pdfSetPage(pdfCurrentPage);
+}
+
+function pdfSetPage(page) {
+  page = Math.max(1, Math.min(46, page));
+  pdfCurrentPage = page;
+  document.getElementById('pdf-page-input').value = page;
+  document.getElementById('pdf-iframe').src = '/ch14.pdf#page=' + page;
+}
+
+function pdfGoToPage(page) { pdfSetPage(page); }
+function pdfPrev() { pdfSetPage(pdfCurrentPage - 1); }
+function pdfNext() { pdfSetPage(pdfCurrentPage + 1); }
+
+function updatePdfPage(probId) {
+  const page = PDF_PAGES[probId] || 1;
+  pdfCurrentPage = page;
+  document.getElementById('pdf-page-input').value = page;
+  document.getElementById('pdf-prob-label').textContent = probId;
+  if (pdfOpen) document.getElementById('pdf-iframe').src = '/ch14.pdf#page=' + page;
+}
 
 // ─── PROBLEM DATABASE ───────────────────────────────────────────────────────
 
@@ -620,9 +914,114 @@ Determina v_A, v_B, v_C.`,
   });
 })();
 
+// Solucionario estructurado por el usuario. No se copia literal: se guarda como
+// datos operativos para tutoría, corrección y ruta teoría -> números.
+(function applySolutionOverrides() {
+  const overrides = {
+    "14.41": {title:"Hemisferios y resorte, cuerda cortada a 30°", topics:["linear_momentum","energy"], diff:4,
+      text:`Dos hemisferios de 2.5 kg y 1.5 kg se mantienen unidos por una cuerda que comprime un resorte con energía potencial de 120 J. El conjunto tiene velocidad inicial v0=8 m/s. La cuerda se corta cuando la dirección de separación forma 30°. Determine la velocidad resultante de cada hemisferio.`,
+      answer:`v_A = 4.11 m/s a 46.9°; v_B = 17.39 m/s a 16.7°`,
+      hints:["Usa un marco que se mueve con el centro de masa","En ese marco: momentum interno cero y energía del resorte se convierte en energía cinética relativa","Luego suma vectorialmente la velocidad del centro de masa v0"],
+      errors:["Usar energía sin marco del centro de masa","Olvidar sumar la velocidad inicial del conjunto"]},
+    "14.42": {title:"Hemisferios y resorte, cuerda cortada a 120°", topics:["linear_momentum","energy"], diff:4,
+      text:`Mismo sistema del 14.41, pero la cuerda se corta cuando la orientación corresponde a 120°. Determine las velocidades resultantes de los dos hemisferios.`,
+      answer:`v_A = 12.17 m/s a 25.3°; v_B = 9.17 m/s a 70.9°`,
+      hints:["Mismo método que 14.41","La rapidez relativa sale igual; cambia la dirección geométrica para sumar con v0"], errors:["Confundir rapidez relativa con velocidad absoluta"]},
+    "14.43": {title:"Bloque pendular en carrito sin fricción", topics:["linear_momentum","energy"], diff:4,
+      text:`Un bloque de 40 lb cuelga de una cuerda de 6 ft unida a un carrito de 60 lb que rueda libremente en una vía horizontal sin fricción. Desde reposo con θ=25°, determine las velocidades del carrito A y del bloque B cuando B pasa directamente bajo A.`,
+      answer:`v_B = 4.66 ft/s; v_A = 3.11 ft/s en sentido opuesto`,
+      hints:["No hay fuerza externa horizontal: conserva momentum horizontal","La pérdida de energía potencial del bloque se convierte en energía cinética de ambos"], errors:["Aplicar energía sin la restricción de momentum horizontal"]},
+    "14.44": {title:"Tres esferas con cuerda que se tensa", topics:["linear_momentum","energy","multiple_impact"], diff:5,
+      text:`Tres esferas idénticas A, B y C se deslizan sin fricción. A y B están unidas por una cuerda inextensible e inelástica inicialmente floja. C golpea frontalmente a B con velocidad v0; el impacto B-C es perfectamente elástico. Determine velocidades justo después de que la cuerda AB se vuelve tensa y la fracción de energía disipada.`,
+      answer:`v_A = 0.250 v0 a 60°; v_B = 0.901 v0 a 13.9°; v_C = 0; fracción perdida = 1/8`,
+      hints:["Primero resuelve impacto elástico B-C","Luego aplica cuerda inextensible: componentes a lo largo de AB iguales","La tensión de cuerda disipa energía"], errors:["Tratar impacto y tensión de cuerda como un solo evento"]},
+    "14.45": {title:"Vehículo espacial se separa en tres partes", topics:["linear_momentum","angular_momentum"], diff:5,
+      text:`Un vehículo espacial de 360 kg viaja con v=(450 m/s)k al pasar por O. Explosivos lo separan en A=60 kg, B=120 kg y C=180 kg. Se conocen posiciones posteriores de A, B, C, la velocidad de B y la componente x de C. Determine la velocidad de A.`,
+      answer:`v_A = (60.0 m/s)i + (60.0 m/s)j + (390 m/s)k`,
+      hints:["Conserva momentum lineal para relacionar v_A y v_C","Conserva momento angular respecto a O para hallar componentes faltantes de v_C","Luego sustituye en momentum"], errors:["Usar solo momentum lineal cuando faltan componentes"]},
+    "14.46": {title:"Dispersión alfa: punto B0 en plano xz", topics:["angular_momentum","scattering"], diff:5,
+      text:`En el experimento de dispersión del 14.24, se conoce el punto de proyección de la partícula alfa y el punto Q de colisión con C. Determine las coordenadas del punto B0 donde la trayectoria original del núcleo B corta el plano xz.`,
+      answer:`B0 = (181.7 mm, 0, 139.4 mm)`,
+      hints:["Usa conservación de momento angular de las tres partículas respecto a Q","Las partículas que pasan por Q tienen brazo nulo respecto a Q","Resuelve componentes para el vector QB0"], errors:["Conservar momentum lineal en vez de angular respecto a Q"]},
+    "14.47": {title:"Dos esferas unidas por barra, impulso en A", topics:["linear_momentum","angular_momentum"], diff:4,
+      text:`Dos esferas A=5 lb y B=2 lb unidas por una barra rígida ligera de 7 in reposan sobre una superficie horizontal sin fricción. A recibe v0=(10.5 ft/s)i. Determine (a) momentum lineal y angular respecto a G, (b) velocidades de A y B tras rotar 180°.`,
+      answer:`L=(1.630 lb·s)i; H_G=-(0.272 ft·lb·s)k; v_A=(4.50 ft/s)i; v_B=(15.00 ft/s)i`,
+      hints:["Ubica G usando pesos","Conserva momentum lineal y momento angular respecto a G"], errors:["Medir brazos desde el centro equivocado"]},
+    "14.48": {title:"Dos esferas unidas por barra, impulso en B", topics:["linear_momentum","angular_momentum"], diff:4,
+      text:`Mismo sistema del 14.47, pero B recibe v0=(10.5 ft/s)i. Determine momentum lineal, momento angular respecto a G y velocidades tras 180°.`,
+      answer:`L=(0.652 lb·s)i; H_G=+(0.272 ft·lb·s)k; v_A=(6.00 ft/s)i; v_B=-(4.50 ft/s)i`,
+      hints:["Mismo G que 14.47","Cambia el signo de H_G porque el impulso se aplica en B"], errors:["No cambiar el signo del momento angular"]},
+    "14.49": {title:"Tres esferas con anillo, cuerda CD se rompe, θ=30°", topics:["linear_momentum","angular_momentum","energy"], diff:5,
+      text:`Tres esferas idénticas unidas a un anillo D giran inicialmente. La cuerda CD se rompe. Para θ=30°, determine la velocidad del anillo, rapidez relativa de A y B respecto a D, y porcentaje de energía disipada cuando AD y BD vuelven a tensarse.`,
+      answer:`v_D = 0.866 v0; v' = 0.250 v0; energía disipada = 7.50%`,
+      hints:["Después de romper CD, conserva momentum lineal de A+B+D","Conserva momento angular respecto a G para la rotación relativa","Compara energías antes/después para la pérdida"], errors:["Confundir velocidad del centro/anillo con velocidad relativa de rotación"]},
+    "14.50": {title:"Tres esferas con anillo, θ=45°", topics:["linear_momentum","angular_momentum","energy"], diff:5,
+      text:`Resuelva el 14.49 para θ=45°.`,
+      answer:`v_D = 0.707 v0; v' = 0.500 v0; energía disipada = 12.50%`,
+      hints:["Usa las expresiones generales del 14.49: v_D=v0 cosθ, v'=v0 sin²θ"], errors:["No actualizar trigonometría al cambiar θ"]},
+    "14.51": {title:"Dos discos unidos por cuerda que se rompe", topics:["linear_momentum","angular_momentum","energy"], diff:5,
+      text:`Dos discos A=3 kg y B=1.5 kg unidos por cuerda de 600 mm giran CCW alrededor de G a 10 rad/s. En t=0, G está en (0,2 m) y V_G=(1.2i+0.96j) m/s. Tras romperse la cuerda, A se mueve paralelo al eje y y B cruza el eje x en b=7.5 m. Determine velocidades de A y B y distancia a.`,
+      answer:`v_A=2.56 m/s; v_B=(3.60i-2.24j) m/s = 4.24 m/s a 31.9°; a=2.34 m`,
+      hints:["Calcula L, H_O y T iniciales","Después de romperse: conserva L, H_O y energía"], errors:["Olvidar incluir H_O = r_G × mV_G + H_G"]},
+    "14.52": {title:"Dos discos: hallar V_G, longitud y giro inicial", topics:["linear_momentum","angular_momentum","energy"], diff:5,
+      text:`Dos discos A=2 kg y B=1 kg unidos por cuerda giran alrededor de G. Se observan trayectorias posteriores: A con v_A=(5 m/s)j a distancia a=2.56 m, B con v_B=(7.2i-4.6j) m/s cruzando x en b=7.48 m. Determine V_G inicial, longitud de cuerda y rapidez angular inicial.`,
+      answer:`V_G=(2.4i+1.8j) m/s; l=600 mm; ω=20.0 rad/s`,
+      hints:["Momentum lineal da V_G","Momento angular y energía dan l²ω y l²ω²"], errors:["No combinar H_O y energía para separar l y ω"]},
+    "14.53": {title:"Billiards sucesivo A golpea B y C", topics:["linear_momentum","angular_momentum","energy","billiard"], diff:5, examCritical:true,
+      text:`En billar, A tiene v0=12 ft/s sobre el eje longitudinal. Golpea B y luego C, inicialmente en reposo. A y C llegan a los lados perpendicularmente, B oblicuamente. Dado v_A=5.76 ft/s y a=66 in, determine velocidades de B y C y el punto C'. Impactos elásticos y superficies sin fricción.`,
+      answer:`v_C=7.68 ft/s; v_B=7.20 ft/s a 53.1°; C'=42.0 in`,
+      hints:["Conserva momentum x/y","Conserva momento angular respecto a la esquina D","Usa energía para cerrar el sistema"], errors:["No usar momento angular geométrico para hallar el punto de impacto"]},
+    "14.54": {title:"Variante billar del 14.53", topics:["linear_momentum","angular_momentum","energy","billiard"], diff:5, examCritical:true,
+      text:`Variante del 14.53: v0=15 ft/s, v_C=9.6 ft/s y c=48 in. Determine v_A, v_B y el punto A'.`,
+      answer:`v_A=7.20 ft/s; v_B=9.00 ft/s a 53.1°; A'=74.0 in`,
+      hints:["Mismas ecuaciones que 14.53, con incógnitas cambiadas"], errors:["Reusar resultados numéricos del 14.53 sin replantear"]},
+    "14.55": {title:"Tres esferas con anillo que se rompe", topics:["linear_momentum","angular_momentum","energy"], diff:5,
+      text:`Tres esferas idénticas unidas por cuerdas de 200 mm a un anillo G rotan inicialmente con rapidez relativa 0.8 m/s mientras el anillo se mueve con v=(0.4 m/s)i. El anillo se rompe; A y B siguen trayectorias paralelas al eje y separadas a=346 mm y C una trayectoria paralela al eje x. Determine velocidades y distancia d.`,
+      answer:`v_A=0.693 m/s; v_B=0.693 m/s; v_C=1.200 m/s; d=200 mm`,
+      hints:["Conserva L, H_O y energía","Simetría implica v_A=v_B"], errors:["Perder la simetría A-B"]},
+    "14.56": {title:"Tres esferas: hallar v0, longitud y giro", topics:["linear_momentum","angular_momentum","energy"], diff:5,
+      text:`Tres esferas idénticas unidas por cuerdas de longitud l a un anillo G. Luego de romperse el anillo se conocen v_A=(1.039 m/s)j, v_C=(1.800 m/s)i, a=416 mm y d=240 mm. Determine velocidad inicial del anillo, longitud l y velocidad angular inicial.`,
+      answer:`v0=0.600 m/s; l=240 mm; ω=5.00 rad/s`,
+      hints:["Momentum lineal da v0 y v_B","Momento angular y energía dan l²ω y l²ω²"], errors:["No usar ambas ecuaciones para separar l y ω"]},
+    "14.57": {title:"Chorro de agua contra placa fija", topics:["variable_mass","linear_momentum"], diff:3,
+      text:`Un chorro de agua de área A=500 mm² y velocidad v=25 m/s golpea una placa fija. Determine la fuerza P requerida para sostener la placa.`,
+      answer:`P=312 N`, hints:["Calcula flujo másico ρAv","Impulso-momentum: P=ṁv si el flujo se detiene horizontalmente"], errors:["Usar caudal volumétrico sin multiplicar por densidad"]},
+    "14.58": {title:"Chorro contra placa móvil", topics:["variable_mass","linear_momentum"], diff:4,
+      text:`Un chorro de agua de área A=600 mm² y velocidad v=30 m/s golpea una placa que se mueve en la misma dirección. Si P=400 N, determine la velocidad V de la placa.`,
+      answer:`V=4.18 m/s`, hints:["Trabaja con velocidad relativa u=v−V","P=ρA u²"], errors:["Usar velocidad absoluta del chorro en vez de relativa a la placa"]},
+    "14.59": {title:"Trituradora expulsa astillas", topics:["variable_mass","linear_momentum"], diff:3,
+      text:`Ramas entran a una trituradora a 5 kg/s y salen como astillas a 20 m/s formando 25°. Determine la componente horizontal de la fuerza en el enganche D.`,
+      answer:`F_x=90.6 N`, hints:["F=ṁv en la dirección de salida","Haz DCL de la trituradora para reacción en el enganche"], errors:["Confundir fuerza sobre las astillas con fuerza sobre la máquina"]},
+    "14.60": {title:"Quitanieves rotativo ferroviario", topics:["variable_mass","linear_momentum"], diff:4,
+      text:`Un quitanieves avanza a 12 mi/h y despeja 180 ton/min de nieve, lanzándola a 40 ft/s relativa al vehículo en la dirección indicada. Determine fuerza del motor y fuerza lateral de la vía.`,
+      answer:`F_engine=3280 lb; F_lateral=6450 lb`, hints:["Convierte flujo de peso a flujo de masa en slugs/s","La velocidad absoluta de salida suma velocidad relativa + velocidad del vehículo"], errors:["No sumar la velocidad del vehículo a la velocidad relativa de salida"]}
+  };
+  for (const [id, patch] of Object.entries(overrides)) {
+    const p = PROBLEMS.find(x => x.id === id);
+    if (p) Object.assign(p, {hasImage:false, examCritical:false, ...patch});
+  }
+})();
+
 // Build lookup map
 const PROB_MAP = {};
 PROBLEMS.forEach(p => PROB_MAP[p.id] = p);
+
+const HARVARD_SKILLS = [
+  {id:'linear_momentum', label:'Momentum lineal', why:'choques, explosiones, sistemas'},
+  {id:'center_of_mass', label:'Centro de masa', why:'fragmentos, separación, trayectorias'},
+  {id:'angular_momentum', label:'Momento angular', why:'brazos, r x mv, puntos'},
+  {id:'energy', label:'Energía', why:'impactos elásticos, resortes, pérdidas'},
+  {id:'coeff_restitution', label:'Restitución', why:'impactos directos/oblicuos'},
+  {id:'variable_mass', label:'Masa variable / flujo', why:'chorros, cadenas, cohetes'}
+];
+
+const HARVARD_STAGES = [
+  {name:'1. Lenguaje físico', goal:'Reconocer sistema, evento, estado antes/después y qué se conserva.', target:['14.1','14.5','14.15']},
+  {name:'2. Ecuación simbólica', goal:'Escribir la ecuación correcta sin números y con variables limpias.', target:['14.21','14.38','14.41']},
+  {name:'3. Componentes y geometría', goal:'Resolver x/y, ángulos, brazos y signos sin perder sentido físico.', target:['14.39','14.45','14.53']},
+  {name:'4. Corrección de parcial', goal:'Hacer pizarra completa, pedir revisión y corregir el primer error exacto.', target:['14.57','14.81','14.94']},
+  {name:'5. Transferencia', goal:'Resolver variantes nuevas con misma estructura sin ayuda.', target:['14.60','14.76','14.116']}
+];
 
 // ─── STORAGE ────────────────────────────────────────────────────────────────
 
@@ -633,10 +1032,21 @@ const DB = {
   },
   save(data) {
     localStorage.setItem(this.KEY, JSON.stringify(data));
+    requestSyncUpload();
   },
   get(probId) {
     const d = this.load();
-    if(!d[probId]) d[probId] = {score:0,attempts:0,correct:0,errors:[],chatHistory:[],lastStudied:null};
+    if(!d[probId]) d[probId] = {score:0,attempts:0,correct:0,errors:[],chatHistory:[],boardChatHistory:[],boardStrokes:[],lastStudied:null,lastResult:null,accessUnlocked:false,gatePasses:0,solved:false};
+    if(!Array.isArray(d[probId].errors)) d[probId].errors = [];
+    if(!Array.isArray(d[probId].chatHistory)) d[probId].chatHistory = [];
+    if(!Array.isArray(d[probId].boardChatHistory)) d[probId].boardChatHistory = [];
+    if(!Array.isArray(d[probId].boardStrokes)) d[probId].boardStrokes = [];
+    if(typeof d[probId].accessUnlocked !== 'boolean') d[probId].accessUnlocked = false;
+    if(typeof d[probId].solved !== 'boolean') d[probId].solved = false;
+    if(typeof d[probId].lastResult !== 'string') d[probId].lastResult = d[probId].solved ? 'correct' : ((d[probId].errors || []).length ? 'error' : null);
+    if(typeof d[probId].gatePasses !== 'number') d[probId].gatePasses = 0;
+    if(typeof d[probId].gateCorrect !== 'number') d[probId].gateCorrect = 0;
+    if(!Array.isArray(d[probId].gateSkills)) d[probId].gateSkills = [];
     return d[probId];
   },
   set(probId, state) {
@@ -659,16 +1069,44 @@ const SRS = {
   MASTERED: 8,
   markCorrect(probId) {
     const s = DB.get(probId);
-    s.score = Math.min(s.score + 1, 20);
-    s.correct++;
-    s.attempts++;
+    if(s.solved) return false;
+    s.score = Math.max(s.score || 0, this.MASTERED);
+    s.correct = Math.max(s.correct || 0, 1);
+    s.attempts = Math.max(s.attempts || 0, 1);
+    s.solved = true;
+    s.lastResult = 'correct';
     s.lastStudied = Date.now();
+    DB.set(probId, s);
+    return true;
+  },
+  unlockAccess(probId, reason) {
+    const s = DB.get(probId);
+    s.accessUnlocked = true;
+    s.gatePasses = Math.max(s.gatePasses || 0, 1);
+    s.accessReason = reason || 'Base teorica suficiente. Los numeros van despues.';
+    s.lastStudied = Date.now();
+    DB.set(probId, s);
+  },
+  markGateCorrect(probId, skill) {
+    const s = DB.get(probId);
+    if(!s.gateSkills.includes(skill)) s.gateSkills.push(skill);
+    s.gateCorrect = Math.max(s.gateCorrect || 0, s.gateSkills.length);
+    s.lastStudied = Date.now();
+    const required = ['formula','variables','state'];
+    const hasCore = required.every(k => s.gateSkills.includes(k));
+    if(hasCore) {
+      s.accessUnlocked = true;
+      s.gatePasses = Math.max(s.gatePasses || 0, 1);
+      s.accessReason = 'Acceso liberado: entiendes la estructura. Ahora numeros en tablero.';
+    }
     DB.set(probId, s);
   },
   markWrong(probId, errorType, desc) {
     const s = DB.get(probId);
     s.score = Math.max(s.score - 2, 0);
     s.attempts++;
+    s.solved = false;
+    s.lastResult = 'error';
     s.lastStudied = Date.now();
     s.errors.push({t: Date.now(), type: errorType||'general', desc: desc||'Error sin descripción', attempt: s.attempts});
     DB.set(probId, s);
@@ -684,6 +1122,21 @@ const SRS = {
   clearChat(probId) {
     const s = DB.get(probId);
     s.chatHistory = [];
+    DB.set(probId, s);
+  },
+  addBoardChat(probId, role, content) {
+    const s = DB.get(probId);
+    s.boardChatHistory.push({role, content, t: Date.now()});
+    DB.set(probId, s);
+  },
+  clearBoardChat(probId) {
+    const s = DB.get(probId);
+    s.boardChatHistory = [];
+    DB.set(probId, s);
+  },
+  setBoardStrokes(probId, strokes) {
+    const s = DB.get(probId);
+    s.boardStrokes = Array.isArray(strokes) ? strokes : [];
     DB.set(probId, s);
   }
 };
@@ -734,6 +1187,13 @@ MÉTODO:
 3. Si plantea las ecuaciones pero se equivoca: señala exactamente en qué línea está el error
 4. Si comete el mismo error 2+ veces: explica el concepto con una analogía
 
+COMPUERTA DE ACCESO:
+- El estudiante solo puede "entrar al ejercicio" cuando demuestra que puede plantearlo.
+- Para aprobar la compuerta debe escribir al menos: ley/principio, sistema antes/después, variables, ecuación base correcta.
+- Si lo logra, añade al final una línea oculta exacta: @@GATE:pass
+- Si detectas error, añade al final una línea oculta: @@ERR:tipo:descripcion breve
+- Tipos válidos: momentum_setup, center_of_mass, angle_components, mass_units, energy_conservation, cross_product, sequence_events, general.
+
 PREGUNTAS SOCRÁTICAS QUE USAS:
 - "¿Qué ley de conservación aplica aquí?"
 - "¿Cuántos sistemas separados hay? ¿En qué orden ocurren los eventos?"
@@ -746,22 +1206,23 @@ TEMAS CRÍTICOS EN EL EXAMEN:
 - 3 bolas: A choca con B y C → 2 ecuaciones (x, y) con 2 incógnitas (v_A, v_B si v_C es dado)
 - Impacto elástico: agrega conservación de energía como 3ra ecuación
 
-CUANDO EL ESTUDIANTE SUBE UNA FOTO: analiza el diagrama y comenta sobre ello.
+CUANDO EL ESTUDIANTE SUBE UNA FOTO O PIZARRA: analiza la imagen con cuidado. La pizarra original es oscura, pero la app la convierte a fondo blanco antes de enviarla; si algo no se lee, dilo y pide una zona mas clara en vez de inventar.
 
 CUANDO EL ESTUDIANTE DICE "no sé nada": empieza con "¿Qué conserva el sistema en un choque sin fuerzas externas?"
 
-Responde en español. Sé directo, urgente pero sin estresarlo. Máximo 150 palabras por respuesta.`,
+FORMATO:
+- Usa LaTeX valido con delimitadores \(...\) o \[...\].
+- No escribas LaTeX crudo sin delimitadores, no uses Markdown raro y no mezcles $ con texto normal.
+- Responde en español, directo, máximo 120 palabras visibles.
+- Las líneas @@ son para la app, no las expliques.`,
 
   async chat(probId, userMsg, imageBase64 = null) {
-    const cfg = DB.getConfig();
-    if(!cfg.apiKey) throw new Error('NO_API_KEY');
-
     const prob = PROB_MAP[probId];
     const state = DB.get(probId);
     const history = state.chatHistory || [];
 
     const systemText = this.SYSTEM +
-      `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado: ${prob.text}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`;
+      `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado: ${prob.text}\nRespuesta/solución esperada para verificar sin revelar: ${prob.answer || 'no disponible'}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`;
 
     // Build OpenAI-compatible messages array
     const messages = [{role: 'system', content: systemText}];
@@ -773,9 +1234,10 @@ Responde en español. Sé directo, urgente pero sin estresarlo. Máximo 150 pala
 
     // Current user message (with optional image)
     if(imageBase64) {
+      const imageUrl = imageBase64.startsWith('data:') ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`;
       messages.push({role: 'user', content: [
         {type: 'text', text: `[Problema ${probId}: ${prob.title}]\n\n${userMsg}`},
-        {type: 'image_url', image_url: {url: `data:image/jpeg;base64,${imageBase64}`}}
+        {type: 'image_url', image_url: {url: imageUrl}}
       ]});
     } else {
       messages.push({role: 'user', content: `[Problema ${probId}: ${prob.title}]\n\n${userMsg}`});
@@ -788,13 +1250,10 @@ Responde en español. Sé directo, urgente pero sin estresarlo. Máximo 150 pala
       messages
     };
 
-    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const resp = await fetch('/api/ai', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${cfg.apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://tutor-dinamica-bj.vercel.app',
-        'X-Title': 'Tutor Dinámica Beer & Johnston'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(body)
     });
@@ -814,6 +1273,30 @@ Responde en español. Sé directo, urgente pero sin estresarlo. Máximo 150 pala
 let currentProbId = null;
 let currentFilter = 'all';
 let currentImage = null;
+let boardCtx = null;
+let boardDrawing = false;
+let boardLast = null;
+let boardTool = 'pen';
+let boardColor = '#e2e8f0';
+let boardSize = 3;
+let boardStrokes = [];
+let boardRedo = [];
+let currentBoardStroke = null;
+let boardAiMin = false;
+let boardViewOffset = {x: 0, y: 0};
+let boardViewScale = 1;
+let boardPenActive = false;
+let boardPenTimer = null;
+let boardPanActive = false;
+let boardPanStart = {x: 0, y: 0};
+let boardPanOffsetStart = {x: 0, y: 0};
+let boardTouchPtrs = new Map();
+let boardPinchState = null;
+const CLIENT_ID = crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
+const SYNC_SESSION = new URLSearchParams(location.search).get('sync') || localStorage.getItem('tutor_sync_session') || '';
+let syncDirty = false;
+let syncApplying = false;
+let syncLastRemote = 0;
 
 function init() {
   // Days until exam
@@ -826,12 +1309,11 @@ function init() {
   renderProblemList();
   updateStats();
   updateWeaknessPanel();
+  initBoardEvents();
+  initClipboardPaste();
+  initSync();
 
-  // Check API key
-  const cfg = DB.getConfig();
-  if(!cfg.apiKey) {
-    setTimeout(() => openConfig(), 500);
-  }
+  // API key vive en Vercel como OPENROUTER_API_KEY; no se pide por dispositivo.
 }
 
 function renderProblemList() {
@@ -855,8 +1337,10 @@ function renderProblemList() {
     const errors = (s.errors||[]).length;
 
     let badge = '';
+    const solved = s.solved === true || s.lastResult === 'correct';
+
     if(!attempts) badge = `<span class="prob-badge badge-new">nuevo</span>`;
-    else if(score >= SRS.MASTERED) badge = `<span class="prob-badge badge-score">✓ ${score}</span>`;
+    else if(solved) badge = `<span class="prob-badge badge-score">✓ ${score}</span>`;
     else if(errors >= 3) badge = `<span class="prob-badge badge-error">❌ ${score}</span>`;
     else if(errors >= 1) badge = `<span class="prob-badge badge-warn">⚠ ${score}</span>`;
     else badge = `<span class="prob-badge badge-score">${score}</span>`;
@@ -883,6 +1367,7 @@ function filterProblems() { renderProblemList(); }
 function loadProblem(id) {
   currentProbId = id;
   currentImage = null;
+  updatePdfPage(id);
   const prob = PROB_MAP[id];
   const state = DB.get(id);
 
@@ -891,9 +1376,14 @@ function loadProblem(id) {
 
   document.getElementById('prob-num-big').textContent = id;
   document.getElementById('prob-title-big').textContent = prob.title;
-  document.getElementById('prob-text').textContent = prob.text;
+  const probText = document.getElementById('prob-text');
+  probText.innerHTML = formatText(prob.text);
+  renderMath(probText);
   document.getElementById('score-val').textContent = state.score;
-  document.getElementById('answer-val').textContent = prob.answer;
+  const answerVal = document.getElementById('answer-val');
+  answerVal.innerHTML = formatText(prob.answer);
+  renderMath(answerVal);
+  document.getElementById('answer-hint').style.display = state.accessUnlocked ? 'block' : 'none';
   document.getElementById('answer-val').style.display = 'none';
   document.getElementById('btn-show-answer').textContent = 'Mostrar respuesta';
   document.getElementById('uploaded-photo').style.display = 'none';
@@ -918,6 +1408,9 @@ function loadProblem(id) {
 
   // Error log
   renderErrorLog(id);
+  renderGate(id);
+  renderGateTrainer(id);
+  showBasesLayer();
 
   // Chat history
   renderChatHistory(id);
@@ -929,6 +1422,7 @@ function loadProblem(id) {
 
   renderProblemList();
   updateStats();
+  requestSyncUpload();
 }
 
 function addSystemMessage(id) {
@@ -958,6 +1452,7 @@ function renderChatHistory(id) {
 
 function appendMessage(type, text) {
   const msgs = document.getElementById('chat-messages');
+  const shouldStick = type === 'user' || isNearBottom(msgs);
   const div = document.createElement('div');
   div.className = `msg ${type}`;
 
@@ -968,24 +1463,63 @@ function appendMessage(type, text) {
   const bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
   bubble.innerHTML = formatText(text);
+  renderMath(bubble);
 
   div.appendChild(avatar);
   div.appendChild(bubble);
   msgs.appendChild(div);
-  scrollChat();
+  if(shouldStick) scrollChat();
+}
+
+function renderMath(el) {
+  if(!el) return;
+  if(typeof renderMathInElement !== 'function') {
+    setTimeout(() => renderMath(el), 80);
+    return;
+  }
+  try {
+    renderMathInElement(el, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '\\[', right: '\\]', display: true},
+        {left: '\\(', right: '\\)', display: false},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false,
+      ignoredTags: ['script','noscript','style','textarea','pre','code']
+    });
+  } catch(e) {}
 }
 
 function formatText(t) {
-  return t
+  return normalizeTutorText(t)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
     .replace(/`([^`]+)`/g,'<code>$1</code>')
     .replace(/\n/g,'<br>');
 }
 
+function normalizeTutorText(t) {
+  let text = String(t || '').replace(/\r\n/g, '\n');
+  text = text.replace(/\\\\([()[\]])/g, '\\$1');
+  text = text.replace(/\$\$\s*([\s\S]*?)\s*\$\$/g, (_, eq) => `\\[${eq.trim()}\\]`);
+  text = text.replace(/(^|\n)\s*((?:[A-Za-z][\w_{}^\\]*(?:\s*[=+\-*/^]\s*|\s*\\(?:frac|sum|sqrt|times|cdot|sin|cos|tan|theta|omega|Delta|Sigma|vec|bar|hat|dot))[^\n]{3,}))\s*(?=\n|$)/g, (m, start, eq) => {
+    if(/\\\(|\\\[|\$/.test(eq)) return m;
+    if(!/[=\\^_]/.test(eq)) return m;
+    return `${start}\\(${eq.trim()}\\)`;
+  });
+  return text;
+}
+
 function scrollChat() {
   const msgs = document.getElementById('chat-messages');
-  setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
+  if(!msgs) return;
+  requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight; });
+}
+
+function isNearBottom(el) {
+  if(!el) return true;
+  return el.scrollHeight - el.scrollTop - el.clientHeight < 96;
 }
 
 function renderErrorLog(id) {
@@ -1001,6 +1535,404 @@ function renderErrorLog(id) {
     const icon = cls==='high' ? '🔴' : cls==='warn' ? '⚠️' : '❌';
     return `<div class="error-entry ${cls}">${icon} ${e.desc} <span style="color:var(--muted);font-size:10px">(int. ${e.attempt})</span></div>`;
   }).join('');
+}
+
+function renderGate(id) {
+  const state = DB.get(id);
+  const card = document.getElementById('gate-card');
+  const status = document.getElementById('gate-status');
+  const progress = document.getElementById('gate-progress');
+  const btn = document.getElementById('btn-enter-exercise');
+  if(!card || !status || !btn) return;
+  if(progress) progress.textContent = `Aciertos: ${Math.min(state.gateCorrect || 0, 3)}/3`;
+
+  if(state.accessUnlocked) {
+    card.classList.add('unlocked');
+    status.textContent = state.accessReason || 'Acceso liberado: entiendes la estructura; ahora calcula.';
+    btn.disabled = false;
+    btn.classList.add('enabled');
+    document.getElementById('answer-hint').style.display = 'block';
+  } else {
+    card.classList.remove('unlocked');
+    status.textContent = 'Bloqueado: demuestra teoria, sistema, variables y ecuacion simbolica.';
+    btn.disabled = true;
+    btn.classList.remove('enabled');
+    document.getElementById('answer-hint').style.display = 'none';
+  }
+}
+
+function enterExercise() {
+  if(!currentProbId) return;
+  const state = DB.get(currentProbId);
+  if(!state.accessUnlocked) {
+    showToast('Aún falta demostrar el planteamiento base.');
+    return;
+  }
+  showBoardLayer();
+}
+
+function showBasesLayer() {
+  const chat = document.getElementById('chat-area');
+  const board = document.getElementById('board-area');
+  if(chat) chat.style.display = 'flex';
+  if(board) board.style.display = 'none';
+  requestSyncUpload();
+}
+
+function showBoardLayer() {
+  const chat = document.getElementById('chat-area');
+  const board = document.getElementById('board-area');
+  if(chat) chat.style.display = 'none';
+  if(board) board.style.display = 'flex';
+  const prob = PROB_MAP[currentProbId];
+  document.getElementById('board-prompt').innerHTML = formatText(`${currentProbId}: **${prob.title}**\n\nEstructura primero. Despeje simbolico. Numeros al final.`);
+  renderBoardProblem(currentProbId);
+  renderBoardBrief(currentProbId);
+  renderBoardChatHistory(currentProbId);
+  resizeBoard();
+  restoreBoard();
+  updateBoardSize(boardSize);
+  updateBoardZoomIndicator();
+  requestSyncUpload();
+}
+
+function backToBases() {
+  saveBoard();
+  showBasesLayer();
+}
+
+function toggleChatHelp() {
+  document.getElementById('chat-helper').classList.toggle('open');
+}
+
+function gateProfile(prob) {
+  const topics = prob.topics || [];
+  if(topics.includes('center_of_mass')) return {
+    formula: 'cm',
+    formulaLabel: 'Centro de masa: \\(M\\mathbf r_G = \\sum m_i\\mathbf r_i\\)',
+    variables: ['\\(M\\)', '\\(\\mathbf r_G\\)', '\\(m_i\\)', '\\(\\mathbf r_i\\)'],
+    errorType: 'center_of_mass'
+  };
+  if(topics.includes('angular_momentum') || topics.includes('cross_product')) return {
+    formula: 'angular',
+    formulaLabel: 'Momento angular: \\(\\mathbf H_O = \\sum(\\mathbf r_i \\times m_i\\mathbf v_i)\\)',
+    variables: ['\\(\\mathbf r_i\\)', '\\(m_i\\)', '\\(\\mathbf v_i\\)', '\\(\\mathbf H_O\\)'],
+    errorType: 'cross_product'
+  };
+  if(topics.includes('energy')) return {
+    formula: 'energy',
+    formulaLabel: 'Energía: \\(T_1 + V_1 = T_2 + V_2\\)',
+    variables: ['\\(T_1\\)', '\\(V_1\\)', '\\(T_2\\)', '\\(V_2\\)'],
+    errorType: 'energy_conservation'
+  };
+  if(topics.includes('coeff_restitution') || topics.includes('oblique_impact')) return {
+    formula: 'restitution',
+    formulaLabel: 'Momentum + restitución: \\(e = \\frac{v_{sep}}{v_{acerc}}\\)',
+    variables: ['\\(m_A\\)', '\\(m_B\\)', '\\(\\mathbf v_A\\)', '\\(\\mathbf v_B\\)'],
+    errorType: 'momentum_setup'
+  };
+  return {
+    formula: 'momentum',
+    formulaLabel: 'Momentum lineal: \\(\\sum m\\mathbf v_{antes}=\\sum m\\mathbf v_{despues}\\)',
+    variables: ['\\(m_1\\)', '\\(\\mathbf v_1\\)', '\\(m_2\\)', '\\(\\mathbf v_2\\)'],
+    errorType: 'momentum_setup'
+  };
+}
+
+function buildTheoryBrief(id) {
+  const prob = PROB_MAP[id];
+  const profile = gateProfile(prob);
+  const state = DB.get(id);
+  const topics = prob.topics || [];
+  const components = topics.includes('billiard') || topics.includes('oblique_impact') || topics.includes('center_of_mass') || topics.includes('angular_momentum');
+  const events = topics.includes('multiple_impact') ? 'varios eventos: resolver uno por uno' : 'un evento principal: separar antes/despues';
+  const extra = topics.includes('energy') ? 'Si el impacto es elastico o hay energia, agregar ecuacion de energia.' :
+    topics.includes('center_of_mass') ? 'Primero trayectoria del centro de masa; luego ecuacion ponderada de posiciones.' :
+    topics.includes('coeff_restitution') ? 'Usar momentum + restitucion; separar normal/tangencial si es oblicuo.' :
+    topics.includes('angular_momentum') ? 'Usar producto vectorial en orden correcto: r x mv.' :
+    'Conservar momentum si no hay impulso externo dominante.';
+  return [
+    `BRIEF TEORICO APROBADO PARA ${id}`,
+    `Ley base: ${profile.formulaLabel.replace(/\\\(|\\\)/g, '')}`,
+    `Variables clave: ${profile.variables.join(', ')}`,
+    `Eventos: ${events}`,
+    `Ejes/componentes: ${components ? 'trabajar por componentes antes de numeros' : 'definir signo positivo antes de numeros'}`,
+    `Regla: estructura simbolica -> despeje -> numeros al final`,
+    `Nota: ${extra}`,
+    `Aciertos compuerta: ${(state.gateSkills || []).join(', ') || 'pendiente'}`
+  ].join('\n');
+}
+
+function extractGivenData(text) {
+  const matches = String(text || '').match(/(?:[A-Za-zÁÉÍÓÚÜÑáéíóúüñ_][A-Za-zÁÉÍÓÚÜÑáéíóúüñ_0-9]*\s*=\s*)?-?\d+(?:\.\d+)?\s*(?:kg|lb|slug|ft\/s|m\/s|ft|m|s|mi\/h|kN\/m|N|rad\/s|°|deg)?/g) || [];
+  return [...new Set(matches.map(x => x.trim()))].slice(0, 18);
+}
+
+function inferUnknown(text) {
+  const t = String(text || '');
+  const m = t.match(/Determina(?:r)?\s*:?[\s\S]{0,160}/i) || t.match(/Determine(?:r)?\s*:?[\s\S]{0,160}/i);
+  return m ? m[0].replace(/\n/g, ' ').trim() : 'Identifica la incógnita del enunciado antes de calcular.';
+}
+
+function examChecklist(id) {
+  const prob = PROB_MAP[id];
+  const topics = prob.topics || [];
+  const steps = ['Leer y subrayar datos', 'Definir sistema y estados', 'Escribir ecuación simbólica', 'Despejar incógnita', 'Sustituir números y unidades', 'Verificar signo/sentido'];
+  if(topics.includes('center_of_mass')) steps.splice(2, 0, 'Hallar trayectoria del centro de masa');
+  if(topics.includes('billiard') || topics.includes('oblique_impact')) steps.splice(2, 0, 'Dibujar ejes y componentes x/y');
+  if(topics.includes('multiple_impact')) steps.splice(2, 0, 'Separar eventos en orden temporal');
+  if(topics.includes('coeff_restitution')) steps.splice(3, 0, 'Agregar ecuación de restitución');
+  if(topics.includes('energy')) steps.splice(3, 0, 'Agregar energía si el impacto es elástico');
+  return steps.slice(0, 8);
+}
+
+function boardFullContext(id) {
+  const prob = PROB_MAP[id];
+  return [
+    `ENUNCIADO: ${prob.text}`,
+    `DATOS DETECTADOS: ${extractGivenData(prob.text).join(', ') || 'no extraidos'}`,
+    `INCOGNITA: ${inferUnknown(prob.text)}`,
+    buildTheoryBrief(id),
+    `RESPUESTA ESPERADA BD: ${prob.answer || 'no disponible'}`
+  ].join('\n');
+}
+
+function renderBoardProblem(id) {
+  const el = document.getElementById('board-problem');
+  if(!el || !id) return;
+  const prob = PROB_MAP[id];
+  const data = extractGivenData(prob.text);
+  const checklist = examChecklist(id);
+  el.innerHTML = `<div class="bp-head"><b>${id} · ${prob.title}</b><button class="board-btn" onclick="toggleBoardProblem()">Plegar</button></div>
+    <div class="bp-body">
+      <div class="bp-section"><h5>Enunciado</h5><div>${formatText(prob.text)}</div></div>
+      <div class="bp-section"><h5>Datos detectados</h5>${data.length ? data.map(x => `<span class="data-chip">${x}</span>`).join('') : '<span class="data-chip">extrae datos manualmente</span>'}</div>
+      <div class="bp-section"><h5>Incógnita</h5><div>${formatText(inferUnknown(prob.text))}</div></div>
+      <div class="bp-section"><h5>Ruta examen</h5>${checklist.map((s,i) => `<div class="exam-step"><span>${i+1}.</span><div>${s}</div></div>`).join('')}</div>
+    </div>`;
+  renderMath(el);
+}
+
+function toggleBoardProblem() {
+  const el = document.getElementById('board-problem');
+  el.classList.toggle('min');
+  const btn = el.querySelector('.bp-head button');
+  if(btn) btn.textContent = el.classList.contains('min') ? 'Ver enunciado/datos' : 'Plegar';
+}
+
+function renderBoardBrief(id) {
+  const el = document.getElementById('board-brief');
+  if(!el || !id) return;
+  const prob = PROB_MAP[id];
+  const profile = gateProfile(prob);
+  const brief = buildTheoryBrief(id).split('\n').slice(2);
+  el.innerHTML = `<h4>Brief teoría -> números</h4>
+    <span class="step"><b>Ejercicio:</b> ${id} · ${prob.title}</span>
+    <span class="step"><b>Ley:</b> ${profile.formulaLabel}</span>
+    ${brief.map(x => `<span class="step">${x}</span>`).join('')}`;
+  renderMath(el);
+}
+
+function toggleBoardBrief() {
+  document.getElementById('board-brief').classList.toggle('min');
+}
+
+function renderGateTrainer(id) {
+  const prob = PROB_MAP[id];
+  const state = DB.get(id);
+  const trainer = document.getElementById('gate-trainer');
+  if(!trainer) return;
+  const profile = gateProfile(prob);
+  const done = new Set(state.gateSkills || []);
+  const options = [
+    ['momentum','Momentum lineal: \\(\\sum m\\mathbf v_{antes}=\\sum m\\mathbf v_{despues}\\)'],
+    ['cm','Centro de masa: \\(M\\mathbf r_G=\\sum m_i\\mathbf r_i\\)'],
+    ['angular','Momento angular: \\(\\mathbf H_O=\\sum(\\mathbf r_i\\times m_i\\mathbf v_i)\\)'],
+    ['energy','Energía: \\(T_1+V_1=T_2+V_2\\)'],
+    ['restitution','Restitución: \\(e=\\frac{v_{sep}}{v_{acerc}}\\)']
+  ];
+  const tokens = [...profile.variables, '\\(W\\)', '\\(\\theta\\)', '\\(g\\)', '\\(\\mu\\)'].sort(() => 0.5 - Math.random());
+  trainer.innerHTML = `
+    <div class="gate-round">
+      <h3>Entra rápido al tablero</h3>
+      <p>Acierta 3 bases teoricas. Numeros despues son mecanica. Si fallas, se guarda debilidad.</p>
+      <div class="gate-feedback ${state.accessUnlocked ? 'ok' : ''}" style="${state.accessUnlocked ? '' : 'display:none'}">Tablero desbloqueado. Puedes entrar.</div>
+    </div>
+    <div class="gate-round">
+      <h3>0. Predicción activa</h3>
+      <p>Antes de tocar cartas: di mentalmente qué se conserva y qué NO se conserva. Este paso evita aprendizaje pasivo.</p>
+      <div class="card-grid">
+        <button class="choice-card" onclick="gateOk('prediction','Predicción registrada: ahora comprueba con la fórmula.','prediction-feedback')">Ya hice predicción</button>
+        <button class="choice-card" onclick="toggleChatHelp()">No puedo predecir</button>
+      </div>
+      <div id="prediction-feedback" class="gate-feedback"></div>
+    </div>
+    <div class="gate-round">
+      <h3>1. Escoge la ley base</h3>
+      <p>Sin numeros: ¿que principio gobierna el ejercicio?</p>
+      <div class="card-grid">
+        ${options.map(([key,label]) => `<button class="choice-card ${done.has('formula') && key===profile.formula ? 'correct' : ''}" onclick="checkFormula('${key}')">${label}</button>`).join('')}
+      </div>
+      <div id="formula-feedback" class="gate-feedback"></div>
+    </div>
+    <div class="gate-round">
+      <h3>2. Arma las variables</h3>
+      <p>Arma la estructura simbolica. Despues reemplazar numeros sera facil.</p>
+      <div class="token-row">
+        ${tokens.map(t => `<button class="token-card" draggable="true" ondragstart="dragToken(event,decodeURIComponent('${encodeURIComponent(t)}'))" onclick="placeToken(decodeURIComponent('${encodeURIComponent(t)}'))">${t}</button>`).join('')}
+      </div>
+      <div class="drop-row">
+        ${[0,1,2,3].map(i => `<div class="drop-slot" data-slot="${i}" ondragover="event.preventDefault()" ondrop="dropToken(event,${i})">variable ${i+1}</div>`).join('')}
+      </div>
+      <button class="action-btn primary" onclick="checkVariables()">Verificar variables</button>
+      <div id="vars-feedback" class="gate-feedback"></div>
+    </div>
+    <div class="gate-round">
+      <h3>3. Estado físico</h3>
+      <p>Marca el razonamiento correcto antes de calcular.</p>
+      <div class="card-grid">
+        <button class="choice-card" onclick="checkPhysicalState('before_after')">Separar antes/después del evento</button>
+        <button class="choice-card" onclick="checkPhysicalState('numbers_first')">Meter numeros antes de entender</button>
+        <button class="choice-card" onclick="checkPhysicalState('answer_first')">Copiar respuesta y ajustar</button>
+      </div>
+      <div id="state-feedback" class="gate-feedback"></div>
+    </div>`;
+  renderMath(trainer);
+}
+
+function gateOk(skill, message, elId) {
+  SRS.markGateCorrect(currentProbId, skill);
+  const el = document.getElementById(elId);
+  if(el) { el.className = 'gate-feedback ok'; el.textContent = message; }
+  renderGate(currentProbId);
+  renderProblemList();
+  updateStats();
+  requestSyncUpload();
+}
+
+function gateBad(errorType, message, elId) {
+  SRS.markWrong(currentProbId, errorType, message);
+  const el = document.getElementById(elId);
+  if(el) {
+    el.className = 'gate-feedback bad';
+    el.innerHTML = formatText(message) + coachExplanation(errorType);
+    renderMath(el);
+  }
+  renderGate(currentProbId);
+  renderErrorLog(currentProbId);
+  updateWeaknessPanel();
+  updateStats();
+  requestSyncUpload();
+}
+
+function coachExplanation(errorType) {
+  const prob = PROB_MAP[currentProbId];
+  const profile = gateProfile(prob);
+  const map = {
+    momentum_setup: {
+      why: 'No es una formula suelta: debes congelar el sistema antes y despues del evento.',
+      fix: `Escribe primero ${profile.formulaLabel}. Sin numeros. Luego ya sustituyes.`,
+      check: 'Pregunta rapida: ¿que cuerpos pertenecen al sistema durante el impacto?'
+    },
+    center_of_mass: {
+      why: 'En explosion/separacion, el centro de masa sigue la trayectoria del sistema completo.',
+      fix: 'Primero define \(\mathbf r_G\) simbolicamente. Luego usa \(M\mathbf r_G=\sum m_i\mathbf r_i\).',
+      check: 'Pregunta rapida: ¿donde estaria el vehiculo completo si no se hubiera separado?'
+    },
+    cross_product: {
+      why: 'Momento angular no es solo masa por velocidad: importa el brazo de posicion.',
+      fix: 'Usa siempre \(\mathbf H_O=\sum(\mathbf r_i\times m_i\mathbf v_i)\), en ese orden.',
+      check: 'Pregunta rapida: ¿el producto es \(r\times mv\) o \(mv\times r\)?'
+    },
+    energy_conservation: {
+      why: 'Si hay energia, necesitas comparar estado 1 contra estado 2 antes de meter numeros.',
+      fix: 'Dibuja \(T_1+V_1=T_2+V_2\) y cancela terminos antes de sustituir numeros.',
+      check: 'Pregunta rapida: ¿que energia existe al inicio y cual al final?'
+    },
+    sequence_events: {
+      why: 'Meter numeros directo oculta el evento fisico y produce ecuaciones mezcladas.',
+      fix: 'Divide teoricamente: antes -> evento -> despues. Si hay varios impactos, uno por uno.',
+      check: 'Pregunta rapida: ¿este problema tiene un solo evento o varios eventos?'
+    }
+  };
+  const c = map[errorType] || {
+    why: 'El error indica que falta una base antes del calculo.',
+    fix: 'Vuelve al enunciado y escribe ley, sistema, variables y estado antes/despues.',
+    check: 'Pregunta rapida: ¿que se conserva y por que?'
+  };
+  return `<div class="coach-card"><b>Por que fallo:</b> ${c.why}<br><b>Arreglo:</b> ${c.fix}<br><b>Micro-reintento:</b> ${c.check}<br><button class="micro-btn" onclick="openMicroRetry('${errorType}')">Practicar este error</button></div>`;
+}
+
+function openMicroRetry(errorType) {
+  const input = document.getElementById('chat-input');
+  document.getElementById('chat-helper').classList.add('open');
+  input.value = `Me equivoque en ${errorType}. Hazme una sola pregunta corta para corregir esa base sin darme la respuesta.`;
+  input.focus();
+}
+
+function checkFormula(key) {
+  const profile = gateProfile(PROB_MAP[currentProbId]);
+  if(key === profile.formula) gateOk('formula', 'Bien. Ley base correcta.', 'formula-feedback');
+  else gateBad(profile.errorType, 'Ley equivocada para este enunciado.', 'formula-feedback');
+}
+
+let pickedTokens = [];
+function dragToken(e, token) { e.dataTransfer.setData('text/plain', token); }
+function placeToken(token) {
+  const slots = Array.from(document.querySelectorAll('.drop-slot'));
+  const empty = slots.find(s => !s.dataset.value);
+  if(empty) fillSlot(empty, token);
+}
+function dropToken(e, idx) {
+  e.preventDefault();
+  fillSlot(document.querySelector(`.drop-slot[data-slot="${idx}"]`), e.dataTransfer.getData('text/plain'));
+}
+function fillSlot(slot, token) {
+  if(!slot || !token) return;
+  slot.dataset.value = token;
+  slot.innerHTML = formatText(token);
+  slot.classList.add('filled');
+  renderMath(slot);
+}
+function checkVariables() {
+  const profile = gateProfile(PROB_MAP[currentProbId]);
+  const chosen = Array.from(document.querySelectorAll('.drop-slot')).map(s => s.dataset.value).filter(Boolean);
+  const expected = new Set(profile.variables);
+  const ok = chosen.length === profile.variables.length && chosen.every(v => expected.has(v));
+  if(ok) gateOk('variables', 'Variables clave correctas.', 'vars-feedback');
+  else gateBad(profile.errorType, 'Variables mal escogidas: revisa qué representa cada término.', 'vars-feedback');
+}
+function checkPhysicalState(choice) {
+  if(choice === 'before_after') gateOk('state', 'Correcto: primero estado antes/después, luego cálculo.', 'state-feedback');
+  else gateBad('sequence_events', 'Orden malo: no metas números sin separar estados.', 'state-feedback');
+}
+
+function processTutorMarkers(rawText) {
+  let text = String(rawText || '');
+  const lines = text.split(/\r?\n/);
+  const visible = [];
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if(trimmed === '@@GATE:pass') {
+      SRS.unlockAccess(currentProbId, 'Acceso liberado: planteamiento base correcto.');
+      return;
+    }
+    const errMatch = trimmed.match(/^@@ERR:([^:]+):(.+)$/);
+    if(errMatch) {
+      SRS.markWrong(currentProbId, errMatch[1], errMatch[2]);
+      return;
+    }
+    if(trimmed.startsWith('@@SKILL:')) return;
+    visible.push(line);
+  });
+
+  renderGate(currentProbId);
+  renderErrorLog(currentProbId);
+  updateStats();
+  updateWeaknessPanel();
+  renderProblemList();
+  return visible.join('\n').trim();
 }
 
 function updateStats() {
@@ -1040,10 +1972,10 @@ function updateWeaknessPanel() {
 
 function markCorrect() {
   if(!currentProbId) return;
-  SRS.markCorrect(currentProbId);
+  const changed = SRS.markCorrect(currentProbId);
   const s = DB.get(currentProbId);
   document.getElementById('score-val').textContent = s.score;
-  showToast('✓ Correcto registrado. Score: ' + s.score);
+  showToast(changed ? 'Correcto registrado. Score: ' + s.score : 'Ya estaba marcado correcto. Score no cambia: ' + s.score);
   renderProblemList();
   updateStats();
   updateWeaknessPanel();
@@ -1077,8 +2009,7 @@ function detectErrorType(desc) {
 
 function startProblem() {
   if(!currentProbId) return;
-  const cfg = DB.getConfig();
-  if(!cfg.apiKey) { openConfig(); return; }
+  document.getElementById('chat-helper').classList.add('open');
   const input = document.getElementById('chat-input');
   input.value = 'Quiero empezar este problema. ¿Cómo lo enfrento?';
   sendMessage();
@@ -1112,9 +2043,6 @@ async function sendMessage() {
   const text = input.value.trim();
   if(!text) return;
 
-  const cfg = DB.getConfig();
-  if(!cfg.apiKey) { openConfig(); return; }
-
   appendMessage('user', text);
   SRS.addChat(currentProbId, 'user', text);
   input.value = '';
@@ -1128,18 +2056,70 @@ async function sendMessage() {
     const response = await AI.chat(currentProbId, text, currentImage);
     thinking.style.display = 'none';
     sendBtn.disabled = false;
-    appendMessage('ai', response);
-    SRS.addChat(currentProbId, 'assistant', response);
+    const visibleResponse = processTutorMarkers(response) || 'Bien. Sigue con el siguiente paso.';
+    appendMessage('ai', visibleResponse);
+    SRS.addChat(currentProbId, 'assistant', visibleResponse);
     currentImage = null; // consume image after first send
   } catch(e) {
     thinking.style.display = 'none';
     sendBtn.disabled = false;
-    if(e.message === 'NO_API_KEY') {
-      appendMessage('ai', 'No hay OpenRouter API key configurada. Haz clic en ⚙️ Config para añadirla.');
-    } else {
-      appendMessage('ai', `Error al conectar con el tutor: ${e.message}. Intenta de nuevo.`);
-    }
+    appendMessage('ai', `Error al conectar con el tutor: ${e.message}. Intenta de nuevo.`);
   }
+}
+
+// ─── CLIPBOARD IMAGES ────────────────────────────────────────────────────────
+
+function initClipboardPaste() {
+  window.addEventListener('paste', async e => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imageItem = items.find(item => item.type.startsWith('image/'));
+    if(!imageItem) return;
+    const file = imageItem.getAsFile();
+    if(!file) return;
+    e.preventDefault();
+    try {
+      const dataUrl = await compressImageFile(file);
+      setCurrentImage(dataUrl, 'Imagen pegada desde portapapeles. Envía un mensaje para analizarla.');
+      showToast('Imagen pegada desde portapapeles');
+      requestSyncUpload();
+    } catch(err) {
+      showToast('No pude pegar esa imagen');
+    }
+  });
+}
+
+function compressImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const maxSide = 1400;
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function setCurrentImage(dataUrl, label) {
+  currentImage = dataUrl;
+  const img = document.getElementById('uploaded-photo');
+  if(img) {
+    img.src = dataUrl;
+    img.style.display = 'block';
+  }
+  const uploadLabel = document.getElementById('upload-label');
+  if(uploadLabel) uploadLabel.textContent = label || 'Imagen lista. Envía un mensaje para analizarla.';
 }
 
 function handleKey(e) {
@@ -1158,16 +2138,536 @@ function triggerUpload() {
 function handlePhoto(event) {
   const file = event.target.files[0];
   if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const base64 = e.target.result.split(',')[1];
-    currentImage = base64;
-    const img = document.getElementById('uploaded-photo');
-    img.src = e.target.result;
-    img.style.display = 'block';
-    document.getElementById('upload-label').textContent = '✓ Foto subida. Envía un mensaje para analizarla.';
+  compressImageFile(file).then(dataUrl => {
+    setCurrentImage(dataUrl, '✓ Foto subida. Envía un mensaje para analizarla.');
+    requestSyncUpload();
+  }).catch(() => showToast('No pude cargar la foto'));
+}
+
+// ─── BOARD ──────────────────────────────────────────────────────────────────
+
+function resizeBoard() {
+  const canvas = document.getElementById('exercise-board');
+  const wrap = document.getElementById('board-wrap');
+  if(!canvas || !wrap) return;
+  const rect = wrap.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+  canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  boardCtx = canvas.getContext('2d');
+  boardCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  boardCtx.lineCap = 'round';
+  boardCtx.lineJoin = 'round';
+  renderBoard();
+}
+
+function boardPoint(e) {
+  const canvas = document.getElementById('exercise-board');
+  const r = canvas.getBoundingClientRect();
+  return {x: e.clientX - r.left, y: e.clientY - r.top};
+}
+
+function boardScreenToWorld(p) {
+  return {x: p.x / boardViewScale + boardViewOffset.x, y: p.y / boardViewScale + boardViewOffset.y};
+}
+
+function boardWorldToScreen(p) {
+  return {x: (p.x - boardViewOffset.x) * boardViewScale, y: (p.y - boardViewOffset.y) * boardViewScale};
+}
+
+function updateBoardZoomIndicator() {
+  const el = document.getElementById('board-zoom-ind');
+  if(el) el.textContent = `×${boardViewScale.toFixed(1)}`;
+}
+
+function updateBoardSize(v) {
+  boardSize = v;
+  const dot = document.getElementById('size-preview-dot');
+  if(dot) {
+    const d = Math.min(30, boardTool === 'eraser' ? Math.max(14, v * 2.8) : v);
+    dot.style.width = d + 'px';
+    dot.style.height = d + 'px';
+    dot.style.background = boardTool === 'eraser' ? '#fb7185' : boardColor;
+  }
+}
+
+function showBoardCursor(e) {
+  const cur = document.getElementById('board-cursor-preview');
+  if(!cur || e.pointerType === 'touch') return;
+  const p = boardPoint(e);
+  const d = boardTool === 'eraser' ? Math.max(14, boardSize * 2.8) : boardSize;
+  cur.style.display = 'block';
+  cur.style.left = p.x + 'px';
+  cur.style.top = p.y + 'px';
+  cur.style.width = d + 'px';
+  cur.style.height = d + 'px';
+  cur.classList.toggle('eraser', boardTool === 'eraser');
+}
+
+function hideBoardCursor() {
+  const cur = document.getElementById('board-cursor-preview');
+  if(cur) cur.style.display = 'none';
+}
+
+function initBoardEvents() {
+  const canvas = document.getElementById('exercise-board');
+  if(!canvas) return;
+  canvas.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    try { canvas.setPointerCapture(e.pointerId); } catch(_) {}
+    if(e.pointerType === 'touch') {
+      if(boardPenActive) return;
+      boardTouchPtrs.set(e.pointerId, {x: e.clientX, y: e.clientY});
+      boardDrawing = false;
+      if(boardTouchPtrs.size === 1) {
+        boardPanActive = true;
+        boardPanStart = {x: e.clientX, y: e.clientY};
+        boardPanOffsetStart = {...boardViewOffset};
+      } else if(boardTouchPtrs.size === 2) {
+        boardPanActive = false;
+        const pts = [...boardTouchPtrs.values()];
+        boardPinchState = {
+          dist: Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y),
+          scale: boardViewScale,
+          ox: boardViewOffset.x,
+          oy: boardViewOffset.y,
+          mx: (pts[0].x + pts[1].x) / 2,
+          my: (pts[0].y + pts[1].y) / 2
+        };
+      }
+      return;
+    }
+    if(e.pointerType === 'pen') {
+      boardPenActive = true;
+      clearTimeout(boardPenTimer);
+    }
+    boardDrawing = true;
+    const screen = boardPoint(e);
+    boardLast = boardScreenToWorld(screen);
+    currentBoardStroke = {tool: boardTool, color: boardColor, size: boardSize, pts: [boardLast]};
+    boardRedo = [];
+  });
+  canvas.addEventListener('pointermove', e => {
+    e.preventDefault();
+    showBoardCursor(e);
+    if(e.pointerType === 'touch') {
+      if(boardPenActive) return;
+      boardTouchPtrs.set(e.pointerId, {x: e.clientX, y: e.clientY});
+      if(boardPinchState && boardTouchPtrs.size >= 2) {
+        const pts = [...boardTouchPtrs.values()];
+        const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+        const rect = canvas.getBoundingClientRect();
+        const newScale = Math.max(0.2, Math.min(8, boardPinchState.scale * dist / boardPinchState.dist));
+        const pmx = (pts[0].x + pts[1].x) / 2;
+        const pmy = (pts[0].y + pts[1].y) / 2;
+        const wx = (boardPinchState.mx - rect.left) / boardPinchState.scale + boardPinchState.ox;
+        const wy = (boardPinchState.my - rect.top) / boardPinchState.scale + boardPinchState.oy;
+        boardViewScale = newScale;
+        boardViewOffset.x = wx - (pmx - rect.left) / newScale;
+        boardViewOffset.y = wy - (pmy - rect.top) / newScale;
+        renderBoard();
+        updateBoardZoomIndicator();
+      } else if(boardPanActive) {
+        const dx = (e.clientX - boardPanStart.x) / boardViewScale;
+        const dy = (e.clientY - boardPanStart.y) / boardViewScale;
+        boardViewOffset.x = boardPanOffsetStart.x - dx;
+        boardViewOffset.y = boardPanOffsetStart.y - dy;
+        renderBoard();
+      }
+      return;
+    }
+    if(!boardDrawing || !boardCtx || !boardLast || !currentBoardStroke) return;
+    const p = boardScreenToWorld(boardPoint(e));
+    currentBoardStroke.pts.push(p);
+    if(boardTool === 'eraser') eraseAt(p);
+    else drawBoardSegment(currentBoardStroke, boardLast, p);
+    boardLast = p;
+  });
+  ['pointerup','pointercancel'].forEach(name => canvas.addEventListener(name, e => {
+    if(e.pointerType === 'touch') {
+      boardTouchPtrs.delete(e.pointerId);
+      if(boardTouchPtrs.size < 2) boardPinchState = null;
+      if(boardTouchPtrs.size === 0) boardPanActive = false;
+      return;
+    }
+    if(boardDrawing && currentBoardStroke && currentBoardStroke.pts.length > 1 && currentBoardStroke.tool !== 'eraser') {
+      boardStrokes.push(currentBoardStroke);
+      saveBoard();
+    }
+    boardDrawing = false;
+    boardLast = null;
+    currentBoardStroke = null;
+    if(e.pointerType === 'pen') {
+      clearTimeout(boardPenTimer);
+      boardPenTimer = setTimeout(() => { boardPenActive = false; }, 1800);
+    }
+  }));
+  canvas.addEventListener('pointerleave', hideBoardCursor);
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const p = boardPoint(e);
+    const before = boardScreenToWorld(p);
+    boardViewScale = Math.max(0.2, Math.min(8, boardViewScale * Math.pow(0.999, -e.deltaY)));
+    boardViewOffset.x = before.x - p.x / boardViewScale;
+    boardViewOffset.y = before.y - p.y / boardViewScale;
+    renderBoard();
+    updateBoardZoomIndicator();
+  }, {passive:false});
+}
+
+function boardKey() {
+  return `board_${currentProbId || 'none'}`;
+}
+
+function saveBoard() {
+  if(!currentProbId) return;
+  SRS.setBoardStrokes(currentProbId, boardStrokes);
+  try { localStorage.setItem(boardKey(), JSON.stringify({strokes: boardStrokes})); } catch(_) {}
+  requestSyncUpload();
+}
+
+function restoreBoard() {
+  if(!boardCtx || !currentProbId) return;
+  const state = DB.get(currentProbId);
+  const data = localStorage.getItem(boardKey());
+  boardStrokes = [];
+  boardRedo = [];
+  if(Array.isArray(state.boardStrokes) && state.boardStrokes.length) {
+    boardStrokes = state.boardStrokes;
+  } else if(data) {
+    try {
+      if(data.startsWith('data:image')) boardStrokes = [];
+      else boardStrokes = JSON.parse(data).strokes || [];
+    } catch(_) { boardStrokes = []; }
+    if(boardStrokes.length) SRS.setBoardStrokes(currentProbId, boardStrokes);
+  }
+  renderBoard();
+}
+
+function clearBoard() {
+  if(!boardCtx) return;
+  boardStrokes = [];
+  boardRedo = [];
+  renderBoard();
+  if(currentProbId) SRS.setBoardStrokes(currentProbId, []);
+  if(currentProbId) localStorage.removeItem(boardKey());
+  requestSyncUpload();
+}
+
+function renderBoard() {
+  const canvas = document.getElementById('exercise-board');
+  if(!canvas || !boardCtx) return;
+  const r = canvas.getBoundingClientRect();
+  boardCtx.clearRect(0, 0, r.width, r.height);
+  drawBoardDots(r.width, r.height);
+  boardStrokes.forEach(drawBoardStroke);
+}
+
+function drawBoardDots(width, height) {
+  if(!boardCtx) return;
+  const spacing = 30;
+  const radius = Math.max(0.8, Math.min(2.2, 1.25 * boardViewScale));
+  const startX = Math.floor(boardViewOffset.x / spacing) * spacing;
+  const endX = boardViewOffset.x + width / boardViewScale;
+  const startY = Math.floor(boardViewOffset.y / spacing) * spacing;
+  const endY = boardViewOffset.y + height / boardViewScale;
+  boardCtx.save();
+  boardCtx.fillStyle = 'rgba(148,163,184,.34)';
+  for(let x = startX; x <= endX; x += spacing) {
+    for(let y = startY; y <= endY; y += spacing) {
+      const p = boardWorldToScreen({x, y});
+      boardCtx.beginPath();
+      boardCtx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+      boardCtx.fill();
+    }
+  }
+  boardCtx.restore();
+}
+
+function drawBoardStroke(stroke) {
+  for(let i = 1; i < stroke.pts.length; i++) drawBoardSegment(stroke, stroke.pts[i-1], stroke.pts[i]);
+}
+
+function drawBoardSegment(stroke, a, b) {
+  if(!boardCtx) return;
+  const sa = boardWorldToScreen(a);
+  const sb = boardWorldToScreen(b);
+  boardCtx.save();
+  boardCtx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
+  boardCtx.globalAlpha = stroke.tool === 'marker' ? 0.35 : 1;
+  boardCtx.strokeStyle = stroke.color;
+  boardCtx.lineWidth = (stroke.tool === 'eraser' ? Math.max(14, stroke.size * 2.8) : stroke.size) * boardViewScale;
+  boardCtx.beginPath();
+  boardCtx.moveTo(sa.x, sa.y);
+  boardCtx.lineTo(sb.x, sb.y);
+  boardCtx.stroke();
+  boardCtx.restore();
+}
+
+function strokeHitsWorldPoint(stroke, p, radius) {
+  const r2 = radius * radius;
+  return stroke.pts.some(pt => (pt.x - p.x) * (pt.x - p.x) + (pt.y - p.y) * (pt.y - p.y) <= r2);
+}
+
+function eraseAt(worldPoint) {
+  const radius = Math.max(14, boardSize * 2.8) / boardViewScale;
+  const before = boardStrokes.length;
+  boardStrokes = boardStrokes.filter(s => !strokeHitsWorldPoint(s, worldPoint, radius));
+  if(boardStrokes.length !== before) {
+    boardRedo = [];
+    renderBoard();
+    saveBoard();
+  }
+}
+
+function setBoardTool(t) {
+  boardTool = t;
+  document.getElementById('tool-pen').classList.toggle('active', t === 'pen');
+  document.getElementById('tool-eraser').classList.toggle('active', t === 'eraser');
+  updateBoardSize(boardSize);
+}
+
+function setBoardColor(el) {
+  boardColor = el.dataset.color;
+  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+  el.classList.add('active');
+  setBoardTool('pen');
+  updateBoardSize(boardSize);
+}
+
+function undoBoard() {
+  if(!boardStrokes.length) return;
+  boardRedo.push(boardStrokes.pop());
+  renderBoard();
+  saveBoard();
+}
+
+function redoBoard() {
+  if(!boardRedo.length) return;
+  boardStrokes.push(boardRedo.pop());
+  renderBoard();
+  saveBoard();
+}
+
+function captureBoardDataUrl() {
+  if(!boardStrokes.length) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  boardStrokes.forEach(s => s.pts.forEach(p => {
+    minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+  }));
+  const pad = 50;
+  const w = Math.max(300, maxX - minX + pad * 2);
+  const h = Math.max(220, maxY - minY + pad * 2);
+  const scale = Math.min(1600 / w, 1600 / h, 2);
+  const out = document.createElement('canvas');
+  out.width = Math.ceil(w * scale);
+  out.height = Math.ceil(h * scale);
+  const octx = out.getContext('2d');
+  octx.fillStyle = '#ffffff';
+  octx.fillRect(0, 0, out.width, out.height);
+  boardStrokes.forEach(s => {
+    if(s.pts.length < 2) return;
+    octx.globalCompositeOperation = s.tool === 'eraser' ? 'destination-out' : 'source-over';
+    octx.globalAlpha = s.tool === 'marker' ? 0.35 : 1;
+    octx.strokeStyle = s.color === '#e2e8f0' ? '#111827' : s.color;
+    octx.lineWidth = (s.tool === 'eraser' ? Math.max(14, s.size * 2.8) : s.size) * scale;
+    octx.lineCap = octx.lineJoin = 'round';
+    octx.beginPath();
+    octx.moveTo((s.pts[0].x - minX + pad) * scale, (s.pts[0].y - minY + pad) * scale);
+    for(let i = 1; i < s.pts.length; i++) octx.lineTo((s.pts[i].x - minX + pad) * scale, (s.pts[i].y - minY + pad) * scale);
+    octx.stroke();
+  });
+  return out.toDataURL('image/jpeg', 0.86);
+}
+
+function addBoardMsg(role, text) {
+  const box = document.getElementById('board-ai-msgs');
+  if(!box) return;
+  const shouldStick = role === 'user' || isNearBottom(box);
+  const div = document.createElement('div');
+  div.className = `board-msg ${role}`;
+  div.innerHTML = formatText(text);
+  box.appendChild(div);
+  renderMath(div);
+  if(shouldStick) requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; });
+}
+
+function renderBoardChatHistory(probId) {
+  const box = document.getElementById('board-ai-msgs');
+  if(!box) return;
+  box.innerHTML = '';
+  const state = DB.get(probId);
+  (state.boardChatHistory || []).forEach(h => addBoardMsg(h.role, h.content));
+  if((state.boardChatHistory || []).length === 0) {
+    addBoardMsg('ai', 'Pizarra lista. Envia tu desarrollo cuando tengas ley, ecuacion y despeje.');
+  }
+}
+
+function toggleBoardAI() {
+  boardAiMin = !boardAiMin;
+  document.getElementById('board-ai').classList.toggle('min', boardAiMin);
+  document.getElementById('show-board-ai').style.display = boardAiMin ? 'block' : 'none';
+}
+
+async function analyzeBoard() {
+  if(!currentProbId) return;
+  if(boardAiMin) toggleBoardAI();
+  const dataUrl = captureBoardDataUrl();
+  addBoardMsg('user', '[Pizarra enviada para revision]');
+  SRS.addBoardChat(currentProbId, 'user', '[Pizarra enviada para revision]');
+  addBoardMsg('ai', 'Revisando pizarra...');
+  try {
+    const response = await AI.chat(currentProbId, `[REVISION DE PIZARRA]\n${boardFullContext(currentProbId)}\n\nMira mi desarrollo. Actua como corrector de parcial: revisa ruta, ecuacion, despeje, unidades y numero final. Dime el primer error exacto si existe; si voy bien, dime el siguiente paso minimo. No resuelvas por mi.`, dataUrl);
+    const box = document.getElementById('board-ai-msgs');
+    const last = box?.lastElementChild;
+    if(last && last.textContent.includes('Revisando pizarra')) last.remove();
+    const visible = processTutorMarkers(response) || 'Vas bien. Sigue.';
+    addBoardMsg('ai', visible);
+    SRS.addBoardChat(currentProbId, 'assistant', visible);
+    SRS.addChat(currentProbId, 'assistant', `[Revision pizarra] ${visible}`);
+  } catch(e) {
+    addBoardMsg('ai', `No pude revisar: ${e.message}`);
+  }
+}
+
+function handleBoardAIKey(e) {
+  if(e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendBoardQuestion();
+  }
+}
+
+async function sendBoardQuestion() {
+  if(!currentProbId) return;
+  const input = document.getElementById('board-ai-input');
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  addBoardMsg('user', text);
+  SRS.addBoardChat(currentProbId, 'user', text);
+  addBoardMsg('ai', 'Pensando...');
+  try {
+    const response = await AI.chat(currentProbId, `[PREGUNTA SOBRE MI PIZARRA]\n${boardFullContext(currentProbId)}\n\nPregunta: ${text}`, captureBoardDataUrl());
+    const box = document.getElementById('board-ai-msgs');
+    const last = box?.lastElementChild;
+    if(last && last.textContent.includes('Pensando')) last.remove();
+    const visible = processTutorMarkers(response) || 'Sigue con el siguiente paso.';
+    addBoardMsg('ai', visible);
+    SRS.addBoardChat(currentProbId, 'assistant', visible);
+    SRS.addChat(currentProbId, 'user', `[Pizarra] ${text}`);
+    SRS.addChat(currentProbId, 'assistant', visible);
+  } catch(e) {
+    addBoardMsg('ai', `No pude responder: ${e.message}`);
+  }
+}
+
+function completeExercise() {
+  if(!currentProbId) return;
+  const reflection = prompt('Reflexión Harvard: ¿cuál fue la idea física clave o el error que ya no repetirás?');
+  if(reflection && reflection.trim()) saveReflection(currentProbId, reflection.trim());
+  SRS.markCorrect(currentProbId);
+  saveBoard();
+  showBasesLayer();
+  const next = nextHarvardExercise();
+  showToast(`Completado. Siguiente recomendado: ${next}`);
+  renderGate(currentProbId);
+  renderProblemList();
+  updateStats();
+}
+
+// ─── DEVICE SYNC ────────────────────────────────────────────────────────────
+
+function initSync() {
+  if(!SYNC_SESSION) return;
+  localStorage.setItem('tutor_sync_session', SYNC_SESSION);
+  showToast(`Sync activo: ${SYNC_SESSION}`);
+  syncDirty = true;
+  setInterval(syncTick, 1800);
+  syncTick();
+}
+
+function requestSyncUpload() {
+  if(syncApplying || !SYNC_SESSION) return;
+  syncDirty = true;
+}
+
+function collectBoardImages() {
+  const boards = {};
+  for(let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if(key && key.startsWith('board_')) boards[key] = localStorage.getItem(key);
+  }
+  return boards;
+}
+
+function currentLayer() {
+  const board = document.getElementById('board-area');
+  return board && board.style.display !== 'none' ? 'board' : 'bases';
+}
+
+function buildSyncPayload() {
+  return {
+    clientId: CLIENT_ID,
+    db: DB.getAll(),
+    currentProbId,
+    currentImage,
+    layer: currentLayer(),
+    boards: collectBoardImages()
   };
-  reader.readAsDataURL(file);
+}
+
+async function syncTick() {
+  if(!SYNC_SESSION) return;
+  try {
+    const r = await fetch(`/api/sync?session=${encodeURIComponent(SYNC_SESSION)}`);
+    const remote = await r.json();
+    if(remote.updatedAt > syncLastRemote && remote.payload && remote.payload.clientId !== CLIENT_ID) {
+      applyRemoteSync(remote.payload);
+      syncLastRemote = remote.updatedAt;
+      syncDirty = false;
+      return;
+    }
+    if(syncDirty) {
+      const updatedAt = Date.now();
+      await fetch(`/api/sync?session=${encodeURIComponent(SYNC_SESSION)}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({updatedAt, payload: buildSyncPayload()})
+      });
+      syncLastRemote = updatedAt;
+      syncDirty = false;
+    }
+  } catch(_) {}
+}
+
+function applyRemoteSync(payload) {
+  syncApplying = true;
+  try {
+    if(payload.db) localStorage.setItem(DB.KEY, JSON.stringify(payload.db));
+    Object.entries(payload.boards || {}).forEach(([key, value]) => localStorage.setItem(key, value));
+    if(payload.currentImage) setCurrentImage(payload.currentImage, 'Imagen sincronizada desde otro dispositivo.');
+
+    if(payload.currentProbId && payload.currentProbId !== currentProbId) loadProblem(payload.currentProbId);
+    else if(currentProbId) {
+      renderProblemList();
+      updateStats();
+      updateWeaknessPanel();
+      renderErrorLog(currentProbId);
+      renderGate(currentProbId);
+      renderGateTrainer(currentProbId);
+      renderChatHistory(currentProbId);
+    }
+
+    if(payload.layer === 'board' && currentProbId && DB.get(currentProbId).accessUnlocked) showBoardLayer();
+    if(payload.layer === 'bases') showBasesLayer();
+    if(payload.layer === 'board') restoreBoard();
+  } finally {
+    syncApplying = false;
+  }
 }
 
 // ─── REVIEW MODULE ──────────────────────────────────────────────────────────
@@ -1234,6 +2734,136 @@ function loadProblemFromReview(id) {
   loadProblem(id);
 }
 
+// ─── HARVARD MODE ────────────────────────────────────────────────────────────
+
+function skillMastery(skillId) {
+  const all = DB.getAll();
+  const relevant = PROBLEMS.filter(p => (p.topics || []).includes(skillId));
+  if(!relevant.length) return 0;
+  const scored = relevant.reduce((sum, p) => {
+    const s = all[p.id] || {};
+    const base = Math.min((s.score || 0) / SRS.MASTERED, 1);
+    const gate = Math.min((s.gateCorrect || 0) / 3, 1) * 0.35;
+    const penalty = Math.min((s.errors || []).length * 0.08, 0.35);
+    return sum + Math.max(0, Math.min(1, base * 0.65 + gate - penalty));
+  }, 0);
+  return Math.round((scored / relevant.length) * 100);
+}
+
+function currentHarvardStage() {
+  const avg = HARVARD_SKILLS.reduce((a,s) => a + skillMastery(s.id), 0) / HARVARD_SKILLS.length;
+  if(avg < 12) return 0;
+  if(avg < 28) return 1;
+  if(avg < 48) return 2;
+  if(avg < 70) return 3;
+  return 4;
+}
+
+function adaptiveFeatures(problem) {
+  const s = DB.get(problem.id);
+  const skillAvg = (problem.topics || []).reduce((a,t) => a + skillMastery(t), 0) / Math.max(1, (problem.topics || []).length);
+  const recencyHours = s.lastStudied ? (Date.now() - s.lastStudied) / 36e5 : 999;
+  return {
+    score: s.score || 0,
+    gate: s.gateCorrect || 0,
+    errors: (s.errors || []).length,
+    attempts: s.attempts || 0,
+    skillAvg,
+    difficulty: problem.diff || 3,
+    recencyHours
+  };
+}
+
+function predictSuccess(problem) {
+  const f = adaptiveFeatures(problem);
+  const z = -1.2
+    + 0.22 * f.score
+    + 0.38 * f.gate
+    + 0.018 * f.skillAvg
+    - 0.42 * f.errors
+    - 0.28 * (f.difficulty - 3)
+    + Math.min(f.recencyHours, 72) * 0.004;
+  return 1 / (1 + Math.exp(-z));
+}
+
+function adaptivePriority(problem) {
+  const p = predictSuccess(problem);
+  const f = adaptiveFeatures(problem);
+  const zone = 1 - Math.abs(p - 0.62); // desirable difficulty: around 62% success
+  const weakness = f.errors * 0.18 + Math.max(0, 55 - f.skillAvg) / 100;
+  const exam = problem.examCritical ? 0.25 : 0;
+  const novelty = f.attempts ? 0 : 0.12;
+  return zone + weakness + exam + novelty;
+}
+
+function nextHarvardExercise() {
+  const weak = ErrorTracker.getWeakProblems()[0];
+  if(weak && (DB.get(weak.id).errors || []).length >= 2) return weak.id;
+  const candidates = PROBLEMS.filter(p => (DB.get(p.id).score || 0) < SRS.MASTERED);
+  const ranked = candidates.sort((a,b) => adaptivePriority(b) - adaptivePriority(a));
+  return ranked[0]?.id || '14.1';
+}
+
+function openHarvard() {
+  document.getElementById('harvard-panel').style.display = 'block';
+  renderHarvard();
+}
+
+function closeHarvard() {
+  document.getElementById('harvard-panel').style.display = 'none';
+}
+
+function openGuide() {
+  document.getElementById('guide-panel').style.display = 'block';
+}
+
+function closeGuide() {
+  document.getElementById('guide-panel').style.display = 'none';
+}
+
+function renderHarvard() {
+  const left = document.getElementById('harvard-left');
+  const main = document.getElementById('harvard-main');
+  const all = DB.getAll();
+  const totalErrors = Object.values(all).reduce((n,s) => n + (s.errors || []).length, 0);
+  const completed = Object.values(all).filter(s => (s.score || 0) >= SRS.MASTERED).length;
+  const nextId = nextHarvardExercise();
+  const stageIdx = currentHarvardStage();
+  const high = ErrorTracker.getHighPriority();
+
+  left.innerHTML = `<h2>Modo Harvard</h2>
+    <div class="hv-sub">Sistema de práctica deliberada: diagnóstico, recuperación activa, corrección inmediata, reflexión y repetición espaciada. Objetivo: resolver por estructura, no por memoria.</div>
+    <div class="hv-card hot"><b>Siguiente acción adaptativa</b><div class="hv-sub" style="margin-top:6px">Haz ${nextId}: ${PROB_MAP[nextId]?.title || ''}</div><span class="hv-pill">P éxito ML ${Math.round(predictSuccess(PROB_MAP[nextId] || PROBLEMS[0])*100)}%</span><button class="hv-btn" onclick="startHarvardExercise('${nextId}')">Entrenar ahora</button></div>
+    <h3>Maestría</h3>
+    ${HARVARD_SKILLS.map(s => {
+      const m = skillMastery(s.id);
+      return `<div class="hv-metric"><span title="${s.why}">${s.label}</span><div class="hv-bar"><div class="hv-fill" style="width:${m}%"></div></div><b>${m}%</b></div>`;
+    }).join('')}
+    <h3>Señales reales</h3>
+    <div class="hv-card"><span class="hv-pill">Completados ${completed}</span><span class="hv-pill">Errores ${totalErrors}</span><span class="hv-pill">Alta prioridad ${high.length}</span><span class="hv-pill">Modelo adaptativo activo</span></div>`;
+
+  main.innerHTML = `<h2>Ruta de transformación</h2>
+    <div class="hv-sub">Así pasas de “no sé nada” a resolver el último ejercicio: dominar lenguaje físico, luego ecuaciones simbólicas, luego geometría, luego corrección tipo parcial, luego transferencia.</div>
+    <div class="hv-path">${HARVARD_STAGES.map((st,i) => `<div class="hv-stage ${i===stageIdx?'active':''}"><b>${st.name}</b><p>${st.goal}</p><div>${st.target.map(id => `<span class="hv-pill" onclick="startHarvardExercise('${id}')" style="cursor:pointer">${id}</span>`).join('')}</div></div>`).join('')}</div>
+    <h3>Cómo usarlo hoy</h3>
+    <div class="hv-card"><b>1. Antes de pizarra:</b> responde cartas hasta 3/3 sin números.<br><b>2. En pizarra:</b> usa panel enunciado/datos + brief teoría.<br><b>3. Revisión IA:</b> manda pizarra cuando tengas ecuación y despeje, no al final solamente.<br><b>4. Después:</b> escribe reflexión: “mi error fue..., la señal para detectarlo es...”.</div>
+    <h3>Errores de alto retorno</h3>
+    ${high.length ? high.map(h => `<div class="hv-card hot"><b>${h.type}</b><div class="hv-sub">Aparece en ${h.problems.join(', ')}. Regla: no avances hasta convertirlo en checklist.</div></div>`).join('') : '<div class="hv-card">Sin patrones fuertes todavía. Practica 3 ejercicios para que el sistema diagnostique.</div>'}`;
+}
+
+function startHarvardExercise(id) {
+  closeHarvard();
+  loadProblem(id);
+  showToast('Modo Harvard: demuestra teoría 3/3, luego pizarra.');
+}
+
+function saveReflection(probId, text) {
+  const s = DB.get(probId);
+  if(!Array.isArray(s.reflections)) s.reflections = [];
+  s.reflections.push({t: Date.now(), text});
+  DB.set(probId, s);
+}
+
 // ─── CONFIG ─────────────────────────────────────────────────────────────────
 
 function openConfig() {
@@ -1278,6 +2908,9 @@ document.getElementById('review-panel').addEventListener('click', function(e) {
 document.getElementById('chat-input').addEventListener('input', function() {
   this.style.height = '42px';
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+window.addEventListener('resize', () => {
+  if(document.getElementById('board-area').style.display !== 'none') resizeBoard();
 });
 
 // Photo drag-drop

@@ -17,6 +17,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: body.model || 'google/gemini-2.5-flash',
         max_tokens: body.max_tokens || 1024,
+        temperature: typeof body.temperature === 'number' ? body.temperature : 0.7,
         messages: body.messages || [],
       }),
     });

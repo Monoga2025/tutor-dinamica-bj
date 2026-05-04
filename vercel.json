@@ -5,6 +5,7 @@
     }
   },
   "rewrites": [
-    { "source": "/", "destination": "/dinamica.html" }
+    { "source": "/", "destination": "/tutor-dinamica.html" },
+    { "source": "/dinamica.html", "destination": "/tutor-dinamica.html" }
   ]
 }
