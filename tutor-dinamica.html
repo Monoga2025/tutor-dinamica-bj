@@ -2865,10 +2865,17 @@ async function syncTick() {
     const r = await fetch(`/api/sync?session=${encodeURIComponent(SYNC_SESSION)}`);
     const remote = await r.json();
     if(remote.updatedAt > syncLastRemote && remote.payload && remote.payload.clientId !== CLIENT_ID) {
-      applyRemoteSync(remote.payload);
-      syncLastRemote = remote.updatedAt;
-      syncDirty = false;
-      return;
+      // Only apply remote if remote DB has MORE problems solved than local (never destroy local progress)
+      const localAll = DB.getAll();
+      const remoteAll = remote.payload.db || {};
+      const localSolved = Object.values(localAll).filter(s=>s&&s.solved).length;
+      const remoteSolved = Object.values(remoteAll).filter(s=>s&&s.solved).length;
+      if(remoteSolved >= localSolved) {
+        applyRemoteSync(remote.payload);
+        syncLastRemote = remote.updatedAt;
+        syncDirty = false;
+        return;
+      }
     }
     if(syncDirty) {
       const updatedAt = Date.now();
