@@ -90,8 +90,8 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 /* PROBLEM VIEW */
-#problem-view { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-#prob-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 12px; background: var(--panel); }
+#problem-view { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+#prob-header { flex-shrink: 0; padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 12px; background: var(--panel); }
 #prob-num-big { font-size: 20px; font-weight: 800; color: var(--accent); }
 #prob-meta { flex: 1; }
 #prob-title-big { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
@@ -101,7 +101,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 #prob-score-display { text-align: right; }
 #score-val { font-size: 24px; font-weight: 800; color: var(--ok); }
 #score-label { font-size: 10px; color: var(--muted); }
-#prob-actions { display: flex; gap: 6px; padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--border); }
+#prob-actions { flex-shrink: 0; display: flex; gap: 6px; padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--border); }
 .action-btn { font-size: 11px; padding: 5px 10px; border-radius: 5px; border: 1px solid var(--border); background: none; color: var(--text); cursor: pointer; }
 .action-btn:hover { border-color: var(--accent); color: var(--accent); }
 .action-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
@@ -109,7 +109,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .action-btn.danger { border-color: var(--danger); color: var(--danger); }
 
 /* SPLIT VIEW: statement + chat */
-#prob-body { flex: 1; display: flex; overflow: hidden; }
+#prob-body { flex: 1; min-height: 0; display: flex; overflow: hidden; }
 #prob-statement { width: 380px; flex-shrink: 0; padding: 16px; overflow-y: auto; border-right: 1px solid var(--border); background: var(--panel); }
 #prob-statement h3 { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
 #prob-text { font-size: 13px; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
@@ -164,10 +164,11 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .error-entry.high { background: #2a0a14; border-left-color: #ff0033; color: #ff4466; font-weight: 600; }
 
 /* CHAT */
-#chat-area { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+#chat-area { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 #gate-trainer { flex: 0 0 auto; max-height: 240px; overflow-y: auto; padding: 14px 16px; }
-#chat-helper { display: none; flex: 1; min-height: 120px; flex-direction: column; overflow: hidden; border-top: 1px solid var(--border); }
+#chat-helper { display: none; flex: 1 1 0; min-height: 0; flex-direction: column; overflow: hidden; border-top: 1px solid var(--border); }
 #chat-helper.open { display: flex; }
+.gate-help-toggle { flex-shrink: 0; }
 #chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px 28px; scroll-padding-bottom: 28px; display: flex; flex-direction: column; gap: 10px; }
 .msg { display: flex; gap: 8px; max-width: 92%; }
 .msg.user { align-self: flex-end; flex-direction: row-reverse; }
@@ -182,7 +183,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .msg-bubble .katex { color: inherit; font-size: 1.02em; }
 .msg-bubble .katex-display { overflow-x: auto; overflow-y: hidden; margin: 6px 0; }
 #chat-thinking { align-self: flex-start; padding: 8px 12px; font-size: 12px; color: var(--muted); display: none; }
-#chat-input-row { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: var(--panel); }
+#chat-input-row { flex-shrink: 0; padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: var(--panel); }
 #chat-input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; resize: none; height: 42px; max-height: 120px; overflow-y: auto; font-family: inherit; }
 #chat-input:focus { outline: none; border-color: var(--accent); }
 #btn-send { background: var(--accent); border: none; color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
@@ -617,6 +618,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
             <input type="number" id="pdf-page-input" min="1" max="46" value="1" onchange="pdfGoToPage(+this.value)">
             <span style="font-size:11px;color:var(--muted)">/46</span>
             <button onclick="pdfNext()">▶</button>
+            <button onclick="openPdfNative()" title="Abrir PDF nítido en otra pestaña">Abrir nítido</button>
           </div>
           <div id="pdf-canvas-wrap">
             <span id="pdf-loading">Cargando PDF…</span>
@@ -677,11 +679,15 @@ async function _pdfRender(pageNum) {
     document.getElementById('pdf-page-input').value = pageNum;
     const page = await _pdfDoc.getPage(pageNum);
     const wrap = document.getElementById('pdf-canvas-wrap');
-    const scale = Math.min(2.0, (wrap.clientWidth - 16) / page.getViewport({ scale: 1 }).width);
-    const viewport = page.getViewport({ scale: Math.max(scale, 0.8) });
+    const baseViewport = page.getViewport({ scale: 1 });
+    const cssScale = Math.max(Math.min(2.0, (wrap.clientWidth - 16) / baseViewport.width), 0.8);
+    const outputScale = Math.min((window.devicePixelRatio || 1) * 1.6, 3);
+    const viewport = page.getViewport({ scale: cssScale * outputScale });
     const canvas = document.getElementById('pdf-canvas');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
+    canvas.style.width = Math.round(baseViewport.width * cssScale) + 'px';
+    canvas.style.height = Math.round(baseViewport.height * cssScale) + 'px';
     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
     document.getElementById('pdf-loading').style.display = 'none';
     canvas.style.display = 'block';
@@ -710,11 +716,15 @@ function pdfGoToPage(page) { pdfSetPage(page); }
 function pdfPrev() { pdfSetPage(pdfCurrentPage - 1); }
 function pdfNext() { pdfSetPage(pdfCurrentPage + 1); }
 
+function openPdfNative() {
+  window.open(`/ch14.pdf#page=${pdfCurrentPage}&zoom=page-width`, '_blank', 'noopener');
+}
+
 function updatePdfPage(probId) {
   const page = PDF_PAGES[probId] || 1;
   pdfCurrentPage = page;
   document.getElementById('pdf-page-input').value = page;
-  document.getElementById('pdf-prob-label').textContent = probId;
+  document.getElementById('pdf-prob-label').textContent = `${probId} · PDF 1 p.${297 + page}`;
   if (pdfOpen) _pdfRender(page);
 }
 
@@ -1166,11 +1176,12 @@ const DB = {
   },
   get(probId) {
     const d = this.load();
-    if(!d[probId]) d[probId] = {score:0,attempts:0,correct:0,errors:[],chatHistory:[],boardChatHistory:[],boardStrokes:[],lastStudied:null,lastResult:null,accessUnlocked:false,gatePasses:0,solved:false};
+    if(!d[probId]) d[probId] = {score:0,attempts:0,correct:0,errors:[],chatHistory:[],boardChatHistory:[],boardStrokes:[],problemImage:null,lastStudied:null,lastResult:null,accessUnlocked:false,gatePasses:0,solved:false};
     if(!Array.isArray(d[probId].errors)) d[probId].errors = [];
     if(!Array.isArray(d[probId].chatHistory)) d[probId].chatHistory = [];
     if(!Array.isArray(d[probId].boardChatHistory)) d[probId].boardChatHistory = [];
     if(!Array.isArray(d[probId].boardStrokes)) d[probId].boardStrokes = [];
+    if(typeof d[probId].problemImage !== 'string') d[probId].problemImage = null;
     if(typeof d[probId].accessUnlocked !== 'boolean') d[probId].accessUnlocked = false;
     if(typeof d[probId].solved !== 'boolean') d[probId].solved = false;
     if(typeof d[probId].lastResult !== 'string') d[probId].lastResult = d[probId].solved ? 'correct' : ((d[probId].errors || []).length ? 'error' : null);
@@ -1267,6 +1278,11 @@ const SRS = {
   setBoardStrokes(probId, strokes) {
     const s = DB.get(probId);
     s.boardStrokes = Array.isArray(strokes) ? strokes : [];
+    DB.set(probId, s);
+  },
+  setProblemImage(probId, dataUrl) {
+    const s = DB.get(probId);
+    s.problemImage = dataUrl || null;
     DB.set(probId, s);
   }
 };
@@ -1565,7 +1581,7 @@ function loadProblem(id) {
   document.getElementById('answer-val').style.display = 'none';
   document.getElementById('btn-show-answer').textContent = 'Mostrar respuesta';
   document.getElementById('uploaded-photo').style.display = 'none';
-  document.getElementById('upload-label').textContent = '📷 Subir foto del diagrama (opcional)';
+  document.getElementById('upload-label').textContent = '📷 Subir imagen del enunciado/diagrama (opcional)';
   document.getElementById('btn-verify-data').style.display = 'none';
 
   // Tags
@@ -1582,8 +1598,9 @@ function loadProblem(id) {
   }).join('');
   document.getElementById('prob-tags').innerHTML = tags;
 
-  // Photo upload area
-  document.getElementById('photo-upload-area').style.display = prob.hasImage ? 'block' : 'none';
+  // Photo upload area: enabled for every exercise, including text-only scans.
+  document.getElementById('photo-upload-area').style.display = 'block';
+  if(state.problemImage) setCurrentImage(state.problemImage, '✓ Imagen cargada para este ejercicio.', false);
 
   // Error log
   renderErrorLog(id);
@@ -1612,7 +1629,7 @@ function addSystemMessage(id) {
 
   if(prob.examCritical) intro += `\n\n⚠️ **ESTE PROBLEMA ENTRA EN EL EXAMEN.**`;
 
-  if(prob.hasImage) intro += `\n\n¿Tienes el diagrama a mano? Puedes subirlo con el botón de la foto para que lo analicemos juntos.`;
+  intro += `\n\nSi el enunciado o diagrama en la app no coincide con tu PDF/foto, sube imagen y lo verifico antes de resolver.`;
 
   intro += `\n\nLee el enunciado y dime: **¿qué ley o principio aplica aquí?**`;
 
@@ -1873,11 +1890,13 @@ function boardFullContext(id) {
   const recentChat = (state.chatHistory || []).slice(-10);
   const chatCtx = recentChat.length
     ? '\n--- CONTEXTO DEL CHAT PRINCIPAL (últimos intercambios) ---\n' +
-      recentChat.map(m => `${m.role === 'user' ? 'Estudiante' : 'Tutor'}: ${(m.content||'').slice(0, 300)}`).join('\n') +
+      recentChat.map(m => `${m.role === 'user' ? 'Estudiante' : 'Tutor'}: ${(m.content||'').slice(0, 500)}`).join('\n') +
       '\n--- FIN CONTEXTO ---'
     : '';
+  const imageCtx = state.problemImage ? 'IMAGEN DEL ENUNCIADO/DIAGRAMA: cargada por el estudiante y disponible para comparar datos.' : 'IMAGEN DEL ENUNCIADO/DIAGRAMA: no cargada.';
   return [
     `ENUNCIADO: ${prob.text}`,
+    imageCtx,
     `DATOS DETECTADOS: ${extractGivenData(prob.text).join(', ') || 'no extraidos'}`,
     `INCOGNITA: ${inferUnknown(prob.text)}`,
     buildTheoryBrief(id),
@@ -2262,10 +2281,11 @@ function setImgOpacity(val) {
 function removeImg() {
   boardImg = { el:null, wx:0, wy:0, ww:400, wh:300, opacity:0.82, locked:true, _dragOff:null, _resizing:false };
   currentImage = null;
+  if(currentProbId) SRS.setProblemImage(currentProbId, null);
   syncImgControls();
   renderBoard();
   document.getElementById('uploaded-photo').style.display = 'none';
-  document.getElementById('upload-label').textContent = '📷 Subir foto del diagrama (opcional)';
+  document.getElementById('upload-label').textContent = '📷 Subir imagen del enunciado/diagrama (opcional)';
   document.getElementById('btn-verify-data').style.display = 'none';
 }
 
@@ -2338,7 +2358,6 @@ async function sendMessage() {
     const visibleResponse = processTutorMarkers(response) || 'Bien. Sigue con el siguiente paso.';
     appendMessage('ai', visibleResponse);
     SRS.addChat(currentProbId, 'assistant', visibleResponse);
-    currentImage = null; // consume image after first send
   } catch(e) {
     thinking.style.display = 'none';
     sendBtn.disabled = false;
@@ -2390,8 +2409,9 @@ function compressImageFile(file) {
   });
 }
 
-function setCurrentImage(dataUrl, label) {
+function setCurrentImage(dataUrl, label, persist = true) {
   currentImage = dataUrl;
+  if(persist && currentProbId) SRS.setProblemImage(currentProbId, dataUrl);
   const img = document.getElementById('uploaded-photo');
   if(img) {
     img.src = dataUrl;
@@ -2405,8 +2425,8 @@ function setCurrentImage(dataUrl, label) {
   const bimg = new Image();
   bimg.onload = () => {
     const canvas = document.getElementById('exercise-board');
-    const cw = canvas ? canvas.offsetWidth : 600;
-    const ch = canvas ? canvas.offsetHeight : 400;
+    const cw = canvas && canvas.offsetWidth ? canvas.offsetWidth : 600;
+    const ch = canvas && canvas.offsetHeight ? canvas.offsetHeight : 400;
     const center = boardScreenToWorld({x: cw/2, y: ch/2});
     const aspect = bimg.naturalWidth / bimg.naturalHeight;
     const ww = Math.min(bimg.naturalWidth, cw * 0.6 / boardViewScale);
@@ -2913,10 +2933,10 @@ async function analyzeBoard() {
   SRS.addBoardChat(currentProbId, 'user', '[Imagen enviada para revisión]');
   addBoardMsg('ai', 'Revisando...');
   try {
-    const response = await AI.chat(currentProbId, `[REVISION]\n${boardFullContext(currentProbId)}\n\nMira mi desarrollo. Actua como corrector de parcial: revisa ruta, ecuacion, despeje, unidades y numero final. Dime el primer error exacto si existe; si voy bien, dime el siguiente paso minimo. No resuelvas por mi.`, dataUrl);
+    const response = await AI.chat(currentProbId, `[REVISION]\n${boardFullContext(currentProbId)}\n\nUsa tambien el contexto del chat principal: si alli se corrigio un dato, enunciado, angulo o diagrama, toma esa correccion como verdad para revisar la pizarra. Mira mi desarrollo. Actua como corrector de parcial: revisa ruta, ecuacion, despeje, unidades y numero final. Dime el primer error exacto si existe; si voy bien, dime el siguiente paso minimo. No resuelvas por mi.`, dataUrl);
     const box = document.getElementById('board-ai-msgs');
     const last = box?.lastElementChild;
-    if(last && last.textContent.includes('Revisando pizarra')) last.remove();
+    if(last && last.textContent.includes('Revisando')) last.remove();
     const visible = stripMarkersOnly(response) || 'Vas bien. Sigue.';
     addBoardMsg('ai', visible);
     SRS.addBoardChat(currentProbId, 'assistant', visible);
@@ -2945,7 +2965,7 @@ async function sendBoardQuestion() {
   try {
     // Use uploaded original image if available, fallback to canvas capture
     const imgForBoard = currentImage || captureBoardDataUrl();
-    const response = await AI.chat(currentProbId, `[PREGUNTA SOBRE MI PIZARRA]\n${boardFullContext(currentProbId)}\n\nPregunta: ${text}`, imgForBoard);
+    const response = await AI.chat(currentProbId, `[PREGUNTA SOBRE MI PIZARRA]\n${boardFullContext(currentProbId)}\n\nUsa tambien el contexto del chat principal: si alli se corrigio un dato, enunciado, angulo o diagrama, toma esa correccion como verdad para responder.\n\nPregunta: ${text}`, imgForBoard);
     const box = document.getElementById('board-ai-msgs');
     const last = box?.lastElementChild;
     if(last && last.textContent.includes('Pensando')) last.remove();
