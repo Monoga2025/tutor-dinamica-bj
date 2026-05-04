@@ -177,9 +177,9 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 <div id="config-modal">
   <div id="config-inner">
     <h2>⚙️ Configuración</h2>
-    <label>API Key de Anthropic</label>
-    <input type="password" id="api-key-input" placeholder="sk-ant-...">
-    <p>Tu API key se guarda localmente en el navegador. Nunca se envía a ningún servidor excepto Anthropic.</p>
+    <label>API Key de Google (Gemini)</label>
+    <input type="password" id="api-key-input" placeholder="AIza...">
+    <p>Tu API key se guarda localmente en el navegador. Nunca se envía a ningún servidor excepto Google.</p>
     <div id="config-btns">
       <button class="modal-btn" onclick="closeConfig()">Cancelar</button>
       <button class="modal-btn primary" onclick="saveConfig()">Guardar</button>
@@ -760,52 +760,49 @@ Responde en español. Sé directo, urgente pero sin estresarlo. Máximo 150 pala
     const state = DB.get(probId);
     const history = state.chatHistory || [];
 
-    // Build message array
-    const messages = [];
+    const systemText = this.SYSTEM +
+      `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado: ${prob.text}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`;
 
-    // Add history (last 20 messages)
+    // Build Gemini contents array (role: user / model alternating)
+    const contents = [];
     const recentHistory = history.slice(-20);
     recentHistory.forEach(h => {
-      messages.push({role: h.role, content: h.content});
+      const geminiRole = h.role === 'user' ? 'user' : 'model';
+      contents.push({role: geminiRole, parts: [{text: h.content}]});
     });
 
-    // Add current user message
-    let userContent;
+    // Current user message (with optional image)
+    const userParts = [];
+    userParts.push({text: `[Problema ${probId}: ${prob.title}]\n\n${userMsg}`});
     if(imageBase64) {
-      userContent = [
-        {type:'text', text: `[Problema ${probId}: ${prob.title}]\n\n${userMsg}`},
-        {type:'image', source:{type:'base64', media_type:'image/jpeg', data: imageBase64}}
-      ];
-    } else {
-      userContent = `[Problema ${probId}: ${prob.title}]\n\n${userMsg}`;
+      userParts.push({inline_data: {mime_type: 'image/jpeg', data: imageBase64}});
     }
-    messages.push({role:'user', content: userContent});
+    contents.push({role: 'user', parts: userParts});
+
+    // Gemini requires contents to start with 'user' and alternate properly
+    // Remove any leading 'model' entries
+    while(contents.length > 0 && contents[0].role !== 'user') contents.shift();
 
     const body = {
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 600,
-      system: this.SYSTEM + `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado: ${prob.text}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`,
-      messages
+      system_instruction: {parts: [{text: systemText}]},
+      contents,
+      generationConfig: {maxOutputTokens: 600, temperature: 0.7}
     };
 
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${cfg.apiKey}`;
+    const resp = await fetch(url, {
       method: 'POST',
-      headers: {
-        'x-api-key': cfg.apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
+      headers: {'content-type': 'application/json'},
       body: JSON.stringify(body)
     });
 
     if(!resp.ok) {
       const err = await resp.text();
-      throw new Error(`API ${resp.status}: ${err}`);
+      throw new Error(`Gemini API ${resp.status}: ${err}`);
     }
 
     const data = await resp.json();
-    return data.content[0].text;
+    return data.candidates[0].content.parts[0].text;
   }
 };
 
@@ -1135,7 +1132,7 @@ async function sendMessage() {
     thinking.style.display = 'none';
     sendBtn.disabled = false;
     if(e.message === 'NO_API_KEY') {
-      appendMessage('ai', 'No hay API key configurada. Haz clic en ⚙️ Config para añadirla.');
+      appendMessage('ai', 'No hay API key de Google configurada. Haz clic en ⚙️ Config para añadirla.');
     } else {
       appendMessage('ai', `Error al conectar con el tutor: ${e.message}. Intenta de nuevo.`);
     }
@@ -1248,7 +1245,7 @@ function closeConfig() {
 
 function saveConfig() {
   const key = document.getElementById('api-key-input').value.trim();
-  if(!key) { alert('Ingresa tu API key de Anthropic'); return; }
+  if(!key) { alert('Ingresa tu API key de Google'); return; }
   const cfg = DB.getConfig();
   cfg.apiKey = key;
   DB.saveConfig(cfg);
