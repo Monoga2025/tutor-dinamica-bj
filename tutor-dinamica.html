@@ -1336,6 +1336,13 @@ const AI = {
 
 REGLA ABSOLUTA: NO regales la respuesta final antes de que el estudiante plantee. Sí puedes dar micro-pistas, revisar una línea y decir el siguiente paso mínimo.
 
+USO DEL SOLUCIONARIO:
+- Siempre que exista, úsalo como rúbrica interna: datos, método de referencia, pasos esperados y resultado final.
+- No lo copies al estudiante completo. Extrae solo la pista necesaria.
+- Si el estudiante usa otro método equivalente, acéptalo si respeta física, unidades, signos y llega a resultado compatible.
+- Ejemplo: si el solucionario usa seno/coseno y el estudiante usa cateto opuesto/adyacente/hipotenusa, es válido si las componentes salen iguales.
+- Si el solucionario falta o está incompleto, dilo internamente con prudencia: guía por principios y pide PDF/foto si necesitas verificar datos exactos.
+
 ESTILO 5.0:
 - Frases cortas. Cero párrafos largos.
 - Primero orienta: qué mirar, qué ley, qué sistema.
@@ -1390,9 +1397,11 @@ FORMATO:
     const state = DB.get(probId);
     const history = state.chatHistory || [];
     const hasConcreteAnswer = prob.answer && !/ver soluci[oó]n|ver solucionario/i.test(prob.answer);
+    const sol = await getSolution(probId);
+    const solText = formatSolutionForPrompt(sol);
 
     const systemText = this.SYSTEM +
-      `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado: ${prob.text}\nRespuesta/solución esperada para verificar sin revelar: ${prob.answer || 'no disponible'}\nSolución concreta en app: ${hasConcreteAnswer ? 'sí' : 'no completa; guía por método y pide PDF/foto si necesitas datos exactos'}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`;
+      `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado en app: ${prob.text}\nRespuesta resumida en app: ${prob.answer || 'no disponible'}\nSolución concreta en app: ${hasConcreteAnswer ? 'sí' : 'no completa'}\n${solText}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`;
 
     // Build OpenAI-compatible messages array
     const messages = [{role: 'system', content: systemText}];
@@ -1438,6 +1447,33 @@ FORMATO:
   }
 };
 
+async function getSolution(probId) {
+  if(!probId) return null;
+  if(Object.prototype.hasOwnProperty.call(solutionCache, probId)) return solutionCache[probId];
+  try {
+    const r = await fetch(`/api/solutions?id=${encodeURIComponent(probId)}`);
+    const data = await r.json();
+    solutionCache[probId] = data.found ? data.solution : null;
+  } catch(_) {
+    solutionCache[probId] = null;
+  }
+  return solutionCache[probId];
+}
+
+function formatSolutionForPrompt(sol) {
+  if(!sol) return 'SOLUCIONARIO: no disponible para este ejercicio. No inventes; usa principios y pide PDF/foto si faltan datos exactos.';
+  const steps = Array.isArray(sol.steps) ? sol.steps.slice(0, 8).map((s, i) => `${i + 1}. ${s}`).join('\n') : '';
+  return [
+    'SOLUCIONARIO DE REFERENCIA (rúbrica interna, no copiar completo al estudiante):',
+    `Enunciado solucionario: ${sol.problem_text || 'no disponible'}`,
+    `Método de referencia: ${sol.method || 'no especificado'}`,
+    `Pasos: ${steps || 'no disponibles'}`,
+    `Resultado final de referencia: ${sol.final_answer || 'no disponible'}`,
+    `Página solucionario: ${sol.page_num || 'no disponible'}`,
+    'Criterio: acepta métodos equivalentes si conservan la misma física, componentes, unidades, signos y resultado compatible.'
+  ].join('\n');
+}
+
 // ─── UI ─────────────────────────────────────────────────────────────────────
 
 let currentProbId = null;
@@ -1468,6 +1504,7 @@ let syncSession = '';
 let syncDirty = false;
 let syncApplying = false;
 let syncLastRemote = 0;
+const solutionCache = {};
 
 // ─── SESSION / LOGIN ─────────────────────────────────────────────────────────
 const PROFILES = {
@@ -1590,6 +1627,7 @@ function loadProblem(id) {
   updatePdfPage(id);
   const prob = PROB_MAP[id];
   const state = DB.get(id);
+  getSolution(id);
 
   document.getElementById('welcome-screen').style.display = 'none';
   document.getElementById('problem-view').style.display = 'flex';
