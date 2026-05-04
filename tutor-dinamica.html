@@ -270,6 +270,17 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   .gate-round p { font-size: 11px; margin-bottom: 6px; }
 }
 
+/* LOGIN SCREEN */
+#login-screen { position:fixed; inset:0; z-index:9999; background:#07090d; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:32px; }
+#login-screen h1 { font-size:18px; font-weight:700; color:var(--accent); letter-spacing:.06em; }
+#login-screen p { font-size:13px; color:var(--muted); margin-top:-20px; }
+.profile-grid { display:flex; gap:20px; flex-wrap:wrap; justify-content:center; }
+.profile-card { background:var(--panel); border:2px solid var(--border); border-radius:16px; padding:28px 32px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:12px; transition:border-color .15s,transform .15s; min-width:140px; }
+.profile-card:hover { border-color:var(--accent); transform:translateY(-3px); }
+.profile-avatar { width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg,var(--accent2),var(--accent)); display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:800; color:#fff; }
+.profile-name { font-size:15px; font-weight:700; color:var(--text); }
+.profile-sub { font-size:11px; color:var(--muted); }
+
 /* WELCOME SCREEN */
 #welcome-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; }
 #welcome-screen h2 { font-size: 22px; font-weight: 700; margin-bottom: 12px; }
@@ -403,7 +414,20 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 </div>
 
 <!-- TOP BAR -->
-<div id="topbar">
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:none">
+  <h1>📐 Tutor Dinámica — Beer &amp; Johnston</h1>
+  <p>¿Quién estudia hoy?</p>
+  <div class="profile-grid">
+    <div class="profile-card" onclick="loginAs('daniel')">
+      <div class="profile-avatar">D</div>
+      <div class="profile-name">Daniel</div>
+      <div class="profile-sub">Cap. 14 · Examen 05/05</div>
+    </div>
+  </div>
+</div>
+
+<div id="topbar" style="display:none">
   <h1>📐 Dinámica Cap. 14</h1>
   <div class="exam-badge">🔴 EXAMEN 05/05</div>
   <div class="spacer"></div>
@@ -420,7 +444,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 </div>
 
 <!-- MAIN LAYOUT -->
-<div id="layout">
+<div id="layout" style="display:none">
 
   <!-- SIDEBAR -->
   <div id="sidebar">
@@ -1342,6 +1366,48 @@ const SYNC_SESSION = new URLSearchParams(location.search).get('sync') || localSt
 let syncDirty = false;
 let syncApplying = false;
 let syncLastRemote = 0;
+
+// ─── SESSION / LOGIN ─────────────────────────────────────────────────────────
+const PROFILES = {
+  daniel: { name: 'Daniel', dbKey: 'tutor_dinamica_v2_daniel', syncKey: 'tutor_sync_daniel' }
+};
+
+function getActiveProfile() {
+  const id = localStorage.getItem('tutor_active_profile');
+  return id && PROFILES[id] ? { id, ...PROFILES[id] } : null;
+}
+
+function loginAs(profileId) {
+  const p = PROFILES[profileId];
+  if(!p) return;
+  localStorage.setItem('tutor_active_profile', profileId);
+  // Migrate legacy data (tutor_dinamica_v2) to profile key if profile key is empty
+  const legacyData = localStorage.getItem('tutor_dinamica_v2');
+  const profileData = localStorage.getItem(p.dbKey);
+  if(legacyData && !profileData) {
+    localStorage.setItem(p.dbKey, legacyData);
+  }
+  DB.KEY = p.dbKey;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('topbar').style.display = 'flex';
+  document.getElementById('layout').style.display = 'flex';
+  init();
+}
+
+function checkLogin() {
+  const profile = getActiveProfile();
+  if(profile) {
+    DB.KEY = profile.dbKey;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('topbar').style.display = 'flex';
+    document.getElementById('layout').style.display = 'flex';
+    init();
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('topbar').style.display = 'none';
+    document.getElementById('layout').style.display = 'none';
+  }
+}
 
 function init() {
   // Days until exam
@@ -3177,7 +3243,7 @@ uploadArea.addEventListener('drop', e => {
 });
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
-init();
+checkLogin();
 </script>
 </body>
 </html>
