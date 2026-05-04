@@ -455,6 +455,9 @@ body{display:flex;flex-direction:column;}
 .train-card button{margin-top:8px;background:#1f6feb;border:none;color:#fff;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:700;cursor:pointer;}
 .method-diagnostic{position:absolute;left:50%;top:52px;transform:translateX(-50%);z-index:28;width:min(860px,calc(100% - 280px));max-width:calc(100vw - 360px);background:linear-gradient(180deg,#0e1726,#0b111c);border:1px solid #58a6ff88;border-radius:18px;padding:18px;box-shadow:0 18px 55px rgba(0,0,0,.55);pointer-events:auto;}
 .method-diagnostic h3{font-size:18px;color:#58a6ff;margin-bottom:7px;letter-spacing:.2px;}
+.method-close{position:absolute;right:12px;top:10px;background:#21262d;border:1px solid #30363d;color:#8b949e;border-radius:8px;width:26px;height:26px;cursor:pointer;font-weight:800;display:none;}
+.method-close.show{display:block;}
+.method-close:hover{color:#fff;border-color:#58a6ff;}
 .method-statement{background:#050a12;border:1px solid #30363d;border-radius:12px;padding:12px;margin:11px 0 14px;font-size:13px;line-height:1.5;color:#d5e7ff;max-height:135px;overflow-y:auto;}
 .method-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
 .method-card{background:#161b22;border:1px solid #30363d;border-radius:13px;padding:13px 12px;text-align:left;color:#e6edf3;cursor:pointer;transition:transform .12s,border-color .12s,background .12s;min-height:116px;}
@@ -1560,6 +1563,7 @@ function startMethodDiagnostic(exId) {
   d.className = 'method-diagnostic';
   d.setAttribute('data-method-diagnostic', exId);
   d.innerHTML = `
+    <button class="method-close" onclick="this.closest('.method-diagnostic').remove()" title="Cerrar">×</button>
     <h3>Diagnóstico 10x: selecciona tu método</h3>
     <div style="font-size:11px;color:#8b949e;line-height:1.4;">Antes de resolver, elige la herramienta. Si fallas aquí, entrenamos fundamento y no perdemos tiempo.</div>
     <div class="method-statement"><strong>${ex.id} — ${ex.title}</strong><br>${escH(ex.text)}</div>
@@ -1603,14 +1607,15 @@ function chooseMethod(exId, picked) {
     if (result) result.innerHTML = ok
       ? `<div class="method-result ok">Correcto. Ese es el método. Ahora sí: DCL/esquema mínimo antes de números.</div>`
       : `<div class="method-result bad">Vamos a revisar. Elegiste ${pickedInfo.label}, pero aquí conviene ${expectedInfo.label}. Repararemos esa base primero.</div>`;
+    diagEl.querySelector('.method-close')?.classList.add('show');
   }
   if (ok) {
     launchConfetti();
     addMsg('ai', `Correcto: método ${expectedInfo.label}. Señal clave: ${expectedInfo.when}. Primer paso: ${expectedInfo.firstStep}. Ahora dibuja el DCL o esquema mínimo antes de calcular.`, 'ok');
-    sendAI(`[DIAGNÓSTICO MÉTODO CORRECTO] El estudiante eligió ${expectedInfo.label}. Inicia entrenamiento deliberado: pide el primer paso exacto (${expectedInfo.firstStep}) y no reveles números finales.`, false, false);
+    sendAI(`[DIAGNÓSTICO MÉTODO CORRECTO] El estudiante eligió ${expectedInfo.label}. Responde en formato tarjeta, máximo 3 líneas visibles. Pide solo el primer paso exacto: ${expectedInfo.firstStep}.`, false, false);
   } else {
     addMsg('ai', `Vamos a revisar: elegiste ${pickedInfo.label}, pero este ejercicio pide ${expectedInfo.label}. Señal: ${expectedInfo.when}. Error típico: ${expectedInfo.trap}.`, 'hint');
-    sendAI(`[DIAGNÓSTICO MÉTODO INCORRECTO] El estudiante eligió ${pickedInfo.label}, pero el método correcto es ${expectedInfo.label}. No resuelvas el ejercicio. Haz una micro-lección de 90 segundos: (1) por qué ${pickedInfo.label} no conviene, (2) qué señal del enunciado activa ${expectedInfo.label}, (3) un mini-ejemplo análogo sin números del problema, (4) una pregunta de control para confirmar que entendió.`, false, false);
+    sendAI(`[DIAGNÓSTICO MÉTODO INCORRECTO] El estudiante eligió ${pickedInfo.label}, pero el método correcto es ${expectedInfo.label}. No resuelvas. Responde en 4 bullets cortos: por qué no conviene, señal correcta, mini-ejemplo, pregunta de control.`, false, false);
   }
 }
 
@@ -2967,7 +2972,21 @@ Si el estudiante falla el método inicial o se bloquea antes de ecuaciones, no r
 
 ## REGLA DE VELOCIDAD
 
-Una respuesta ideal tiene 2-5 líneas. Solo da desarrollo largo en modo bloqueado, mini-lección o solución completa.
+Una respuesta ideal tiene máximo 3 bloques cortos. Cada bloque máximo 2 líneas. Solo da desarrollo largo en modo bloqueado o solución completa.
+
+## ESTILO VISUAL OBLIGATORIO
+
+Escribe como tarjeta de estudio, no como párrafo:
+- línea 1: idea central en máximo 12 palabras.
+- línea 2: una fórmula simple si aplica.
+- línea 3: siguiente acción o pregunta.
+
+Usa saltos de línea frecuentes. Prohibido escribir párrafos de más de 2 líneas.
+
+Para conceptos difíciles usa analogía corta:
+"Momentum = masa en movimiento".
+
+Evita notación vectorial pesada si el estudiante está confundido. Primero usa $p=mv$, luego componentes $x,y$.
 
 ## CÓMO RESPONDER SEGÚN EL CONTEXTO
 
@@ -2983,15 +3002,15 @@ Lee todo lo que escribió. Da un veredicto claro: correcto, incompleto, o "Error
 No expliques pasos que ya hizo bien. Apunta solo al primer error.
 
 **El estudiante está perdido o pregunta desde cero:**
-Explica el concepto en 2-4 líneas con la fórmula clave, luego haz UNA pregunta concreta para que avance.
+Explica en 3 líneas máximo: analogía, fórmula, pregunta. No des definición de libro.
 
 **Reglas generales:**
 - Máximo UNA pregunta por respuesta.
 - No digas "¡Excelente!", "¡Muy bien!", ni saludos — ve directo al contenido.
-- No hagas listas cuando una frase sirve.
+- Usa bullets cortos si mejora legibilidad.
 - No preguntes "¿qué tipo de problema es?" si el enunciado lo dice claramente.
-- Usa LaTeX: $fórmula$ para inline, $$fórmula$$ para ecuaciones importantes.
-- Responde tan largo como el estudiante necesite. Un error puntual: 1-2 líneas. Un concepto nuevo: 4-6 líneas con fórmulas.
+- Usa LaTeX solo para fórmulas cortas. Máximo una fórmula por respuesta salvo modo solución.
+- Nunca uses símbolos vectoriales complejos como \vec{} si el estudiante dice "no entiendo".
 
 ## FÓRMULAS CLAVE
 
@@ -3009,7 +3028,18 @@ Explica el concepto en 2-4 líneas con la fórmula clave, luego haz UNA pregunta
 ${exCtx}${diagCtx}${playbookCtx}${errCtx}${hintsCtx}${modeCtx}
 
 ## FORMATO
-Responde en texto libre en español con LaTeX. NO uses JSON.
+Responde en español con formato legible. NO uses JSON.
+
+Plantilla normal:
+**Idea:** ...
+**Fórmula:** $...$
+**Ahora:** pregunta concreta
+
+Plantilla si está confundido:
+**Traducción:** ...
+**Ejemplo mental:** ...
+**Tu paso:** ...
+
 Solo al final del mensaje, si hay imagen con DCL y ves un error visual concreto, añade en una línea separada:
 @@ANNOT:[{"type":"circle","x":300,"y":200,"r":35,"color":"#e94560","label":"falta N"},{"type":"arrow","from":[100,100],"to":[150,200],"color":"#2ea043","label":"Fg"}]
 Para registrar un error recurrente del estudiante: @@ERR:descripción breve
@@ -3213,7 +3243,7 @@ async function sendAI(forceTxt='', isAuto=false, includeCanvas=false) {
     const previews = [];
     if (img64) previews.push('data:image/jpeg;base64,' + img64);
     pendImgs.forEach(im => previews.push('data:image/jpeg;base64,' + im.b64));
-    if ((displayTxt || previews.length) && !displayTxt.startsWith('[REVISION DE PIZARRA]') && !displayTxt.startsWith('[MODO') && !displayTxt.startsWith('[AUTO') && !displayTxt.startsWith('[PASO') && !displayTxt.startsWith('[PREGUNTA')) {
+    if ((displayTxt || previews.length) && !displayTxt.startsWith('[')) {
       addUserMsg(displayTxt, previews);
     }
     chatHistory.push({role:'user',content:content.length===1&&!img64&&!pendImgs.length?txt:content});
