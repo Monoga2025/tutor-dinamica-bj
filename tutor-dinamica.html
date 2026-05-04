@@ -427,10 +427,11 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
         </div>
       </div>
       <div id="prob-actions">
-        <button class="action-btn primary" onclick="startProblem()">▶ Empezar con tutor</button>
-        <button class="action-btn" onclick="markCorrect()">✓ Marqué correcto</button>
-        <button class="action-btn danger" onclick="markError()">✕ Cometí error</button>
-        <button class="action-btn" onclick="resetChat()">🗑 Limpiar chat</button>
+        <button class="action-btn primary" onclick="startProblem()">▶ Tutor</button>
+        <button class="action-btn" onclick="showBoardLayer()" style="border-color:#4ade80;color:#4ade80">🎨 Pizarra</button>
+        <button class="action-btn" onclick="markCorrect()">✓ Correcto</button>
+        <button class="action-btn danger" onclick="markError()">✕ Error</button>
+        <button class="action-btn" onclick="resetChat()">🗑 Chat</button>
       </div>
       <div id="prob-body">
         <div id="prob-statement">
@@ -1274,6 +1275,7 @@ let currentProbId = null;
 let currentFilter = 'all';
 let currentImage = null;
 let boardCtx = null;
+let boardBgImg = null;
 let boardDrawing = false;
 let boardLast = null;
 let boardTool = 'pen';
@@ -1313,7 +1315,9 @@ function init() {
   initClipboardPaste();
   initSync();
 
-  // API key vive en Vercel como OPENROUTER_API_KEY; no se pide por dispositivo.
+  // Restore last viewed problem
+  const lastProb = localStorage.getItem('lastProbId');
+  if(lastProb && PROB_MAP[lastProb]) loadProblem(lastProb);
 }
 
 function renderProblemList() {
@@ -1367,6 +1371,8 @@ function filterProblems() { renderProblemList(); }
 function loadProblem(id) {
   currentProbId = id;
   currentImage = null;
+  boardBgImg = null;
+  localStorage.setItem('lastProbId', id);
   updatePdfPage(id);
   const prob = PROB_MAP[id];
   const state = DB.get(id);
@@ -2120,6 +2126,10 @@ function setCurrentImage(dataUrl, label) {
   }
   const uploadLabel = document.getElementById('upload-label');
   if(uploadLabel) uploadLabel.textContent = label || 'Imagen lista. Envía un mensaje para analizarla.';
+  // Load as board background
+  const bimg = new Image();
+  bimg.onload = () => { boardBgImg = bimg; renderBoard(); };
+  bimg.src = dataUrl;
 }
 
 function handleKey(e) {
@@ -2362,6 +2372,15 @@ function renderBoard() {
   if(!canvas || !boardCtx) return;
   const r = canvas.getBoundingClientRect();
   boardCtx.clearRect(0, 0, r.width, r.height);
+  if(boardBgImg) {
+    const scale = Math.min(r.width / boardBgImg.naturalWidth, r.height / boardBgImg.naturalHeight) * 0.92;
+    const dx = (r.width - boardBgImg.naturalWidth * scale) / 2;
+    const dy = (r.height - boardBgImg.naturalHeight * scale) / 2;
+    boardCtx.save();
+    boardCtx.globalAlpha = 0.82;
+    boardCtx.drawImage(boardBgImg, dx, dy, boardBgImg.naturalWidth * scale, boardBgImg.naturalHeight * scale);
+    boardCtx.restore();
+  }
   drawBoardDots(r.width, r.height);
   boardStrokes.forEach(drawBoardStroke);
 }
