@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <style>
 :root {
   --bg: #0d0d0f;
@@ -49,7 +50,9 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 #pdf-page-input { width: 44px; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 2px 6px; border-radius: 4px; font-size: 12px; text-align: center; }
 #pdf-toolbar button { font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--border); background: none; color: var(--text); cursor: pointer; }
 #pdf-toolbar button:hover { border-color: var(--accent); color: var(--accent); }
-#pdf-iframe { flex: 1; width: 100%; border: none; }
+#pdf-canvas-wrap { flex: 1; overflow: auto; display: flex; align-items: flex-start; justify-content: center; background: #1a1a1a; padding: 8px; }
+#pdf-canvas { display: block; box-shadow: 0 2px 12px rgba(0,0,0,0.5); }
+#pdf-loading { color: var(--muted); font-size: 13px; padding: 32px; text-align: center; }
 
 /* MAIN LAYOUT */
 #layout { display: flex; flex: 1; overflow: hidden; }
@@ -593,7 +596,10 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
             <span style="font-size:11px;color:var(--muted)">/46</span>
             <button onclick="pdfNext()">▶</button>
           </div>
-          <iframe id="pdf-iframe" src="" title="Libro Dinámica Cap.14"></iframe>
+          <div id="pdf-canvas-wrap">
+            <span id="pdf-loading">Cargando PDF…</span>
+            <canvas id="pdf-canvas" style="display:none"></canvas>
+          </div>
         </div>
       </div>
     </div>
@@ -629,19 +635,53 @@ const PDF_PAGES = {
 };
 let pdfOpen = false;
 let pdfCurrentPage = 1;
+let _pdfDoc = null;
+let _pdfRendering = false;
+let _pdfPending = null;
+
+async function _pdfInit() {
+  if (_pdfDoc) return;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  _pdfDoc = await pdfjsLib.getDocument('/ch14.pdf').promise;
+}
+
+async function _pdfRender(pageNum) {
+  if (_pdfRendering) { _pdfPending = pageNum; return; }
+  _pdfRendering = true;
+  try {
+    await _pdfInit();
+    pageNum = Math.max(1, Math.min(_pdfDoc.numPages, pageNum));
+    pdfCurrentPage = pageNum;
+    document.getElementById('pdf-page-input').value = pageNum;
+    const page = await _pdfDoc.getPage(pageNum);
+    const wrap = document.getElementById('pdf-canvas-wrap');
+    const scale = Math.min(2.0, (wrap.clientWidth - 16) / page.getViewport({ scale: 1 }).width);
+    const viewport = page.getViewport({ scale: Math.max(scale, 0.8) });
+    const canvas = document.getElementById('pdf-canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    document.getElementById('pdf-loading').style.display = 'none';
+    canvas.style.display = 'block';
+  } catch(e) {
+    document.getElementById('pdf-loading').textContent = 'Error cargando PDF: ' + e.message;
+  }
+  _pdfRendering = false;
+  if (_pdfPending !== null) { const p = _pdfPending; _pdfPending = null; _pdfRender(p); }
+}
 
 function togglePdf() {
   pdfOpen = !pdfOpen;
   document.getElementById('pdf-panel').classList.toggle('open', pdfOpen);
   document.getElementById('btn-pdf').classList.toggle('active', pdfOpen);
-  if (pdfOpen && pdfCurrentPage) pdfSetPage(pdfCurrentPage);
+  if (pdfOpen) _pdfRender(pdfCurrentPage);
 }
 
 function pdfSetPage(page) {
   page = Math.max(1, Math.min(46, page));
   pdfCurrentPage = page;
   document.getElementById('pdf-page-input').value = page;
-  document.getElementById('pdf-iframe').src = '/ch14.pdf#page=' + page;
+  if (pdfOpen) _pdfRender(page);
 }
 
 function pdfGoToPage(page) { pdfSetPage(page); }
@@ -653,7 +693,7 @@ function updatePdfPage(probId) {
   pdfCurrentPage = page;
   document.getElementById('pdf-page-input').value = page;
   document.getElementById('pdf-prob-label').textContent = probId;
-  if (pdfOpen) document.getElementById('pdf-iframe').src = '/ch14.pdf#page=' + page;
+  if (pdfOpen) _pdfRender(page);
 }
 
 // ─── PROBLEM DATABASE ───────────────────────────────────────────────────────
