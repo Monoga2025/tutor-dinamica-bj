@@ -1588,6 +1588,8 @@ let boardRecognition = null;
 let boardVoiceListening = false;
 let boardVoiceBaseText = '';
 let boardVoiceSilenceTimer = null;
+let boardVoiceNoTextTimer = null;
+let boardVoiceGotText = false;
 
 // ─── SESSION / LOGIN ─────────────────────────────────────────────────────────
 const PROFILES = {
@@ -2461,29 +2463,41 @@ function saveBoardImage() {
   requestSyncUpload();
 }
 
+function normalizeBoardImageOptions(dataUrl, bimg, options = {}) {
+  const canvas = document.getElementById('exercise-board');
+  const cw = canvas && canvas.offsetWidth ? canvas.offsetWidth : 600;
+  const ch = canvas && canvas.offsetHeight ? canvas.offsetHeight : 400;
+  const aspect = bimg.naturalWidth / Math.max(1, bimg.naturalHeight);
+  const maxW = Math.max(120, cw * 0.72 / boardViewScale);
+  const maxH = Math.max(90, ch * 0.72 / boardViewScale);
+  let ww = Number(options.ww) || Math.min(bimg.naturalWidth, cw * 0.6 / boardViewScale);
+  let wh = Number(options.wh) || ww / aspect;
+  if(ww > maxW || wh > maxH) {
+    const fit = Math.min(maxW / ww, maxH / wh);
+    ww *= fit;
+    wh *= fit;
+  }
+  ww = Math.max(60, ww);
+  wh = Math.max(40, wh);
+  const center = boardScreenToWorld({x: cw/2, y: ch/2});
+  return {
+    src: dataUrl,
+    wx: Number.isFinite(options.wx) ? options.wx : center.x - ww/2,
+    wy: Number.isFinite(options.wy) ? options.wy : center.y - wh/2,
+    ww,
+    wh,
+    opacity: Number.isFinite(options.opacity) ? Math.max(0.1, Math.min(1, options.opacity)) : 0.82,
+    locked: typeof options.locked === 'boolean' ? options.locked : false
+  };
+}
+
 function loadBoardImage(dataUrl, options = {}) {
   if(!dataUrl) return;
   const bimg = new Image();
   bimg.onload = () => {
-    const canvas = document.getElementById('exercise-board');
-    const cw = canvas && canvas.offsetWidth ? canvas.offsetWidth : 600;
-    const ch = canvas && canvas.offsetHeight ? canvas.offsetHeight : 400;
-    const center = boardScreenToWorld({x: cw/2, y: ch/2});
-    const aspect = bimg.naturalWidth / Math.max(1, bimg.naturalHeight);
-    const ww = Math.min(bimg.naturalWidth, cw * 0.6 / boardViewScale);
-    const base = {
-      el: bimg,
-      src: dataUrl,
-      wx: center.x - ww/2,
-      wy: center.y - (ww/aspect)/2,
-      ww,
-      wh: ww/aspect,
-      opacity: 0.82,
-      locked: false,
-      _dragOff: null,
-      _resizing: false
-    };
+    const base = normalizeBoardImageOptions(dataUrl, bimg, options);
     boardImg = {...base, ...options, el: bimg, src: dataUrl, _dragOff: null, _resizing: false};
+    delete boardImg.noSave;
     syncImgControls();
     renderBoard();
     if(!options.noSave) saveBoardImage();
@@ -2829,13 +2843,6 @@ function initBoardEvents() {
           return;
         }
       }
-      if(boardTouchPtrs.size === 2 && boardImg.el && !boardImg.locked) {
-        // 2 fingers on unlocked image = resize
-        const pts = [...boardTouchPtrs.values()];
-        boardImg._resizing = { dist: Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y), ww: boardImg.ww, wh: boardImg.wh };
-        boardPinchState = null;
-        return;
-      }
       if(boardTouchPtrs.size === 1) {
         boardPanActive = true;
         boardPanStart = {x: e.clientX, y: e.clientY};
@@ -2889,15 +2896,6 @@ function initBoardEvents() {
         const sp = boardPoint(e);
         const nw = boardScreenToWorld({x: sp.x - boardImg._dragOff.x, y: sp.y - boardImg._dragOff.y});
         boardImg.wx = nw.x; boardImg.wy = nw.y;
-        renderBoard(); return;
-      }
-      // Image resize (2 fingers, unlocked)
-      if(boardImg.el && !boardImg.locked && boardImg._resizing && boardTouchPtrs.size === 2) {
-        const pts = [...boardTouchPtrs.values()];
-        const dist = Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y);
-        const ratio = dist / boardImg._resizing.dist;
-        boardImg.ww = Math.max(50/boardViewScale, boardImg._resizing.ww * ratio);
-        boardImg.wh = Math.max(50/boardViewScale, boardImg._resizing.wh * ratio);
         renderBoard(); return;
       }
       if(boardPinchState && boardTouchPtrs.size >= 2) {
@@ -3020,8 +3018,11 @@ function clearBoard() {
   if(!boardCtx) return;
   boardStrokes = [];
   boardRedo = [];
+  boardImg = { el:null, src:null, wx:0, wy:0, ww:400, wh:300, opacity:0.82, locked:true, _dragOff:null, _resizing:false };
+  syncImgControls();
   renderBoard();
   if(currentProbId) SRS.setBoardStrokes(currentProbId, []);
+  if(currentProbId) SRS.setBoardImage(currentProbId, null);
   if(currentProbId) localStorage.removeItem(boardKey());
   requestSyncUpload();
 }
@@ -3296,15 +3297,39 @@ function updateBoardVoiceUi(status) {
   }
 }
 
+function stopBoardVoice(status) {
+  boardVoiceListening = false;
+  clearTimeout(boardVoiceSilenceTimer);
+  clearTimeout(boardVoiceNoTextTimer);
+  try { boardRecognition?.stop(); } catch(_) {}
+  updateBoardVoiceUi(status);
+}
+
+function armBoardVoiceNoTextTimer() {
+  clearTimeout(boardVoiceNoTextTimer);
+  boardVoiceNoTextTimer = setTimeout(() => {
+    if(!boardVoiceListening || boardVoiceGotText) return;
+    stopBoardVoice('No llegó texto del micrófono. En Lenovo/Chrome cierra burbujas flotantes, permite Micrófono para Chrome y vuelve a tocar Mic.');
+  }, 7000);
+}
+
 function ensureBoardRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SpeechRecognition) return null;
   if(boardRecognition) return boardRecognition;
   const rec = new SpeechRecognition();
-  rec.lang = 'es-CO';
-  rec.continuous = true;
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  rec.lang = 'es-ES';
+  rec.continuous = !isAndroid;
   rec.interimResults = true;
+  rec.onstart = () => {
+    boardVoiceGotText = false;
+    armBoardVoiceNoTextTimer();
+    updateBoardVoiceUi('Escuchando... habla claro cerca del micrófono.');
+  };
   rec.onresult = event => {
+    boardVoiceGotText = true;
+    armBoardVoiceNoTextTimer();
     let finalText = '';
     let interimText = '';
     for(let i = event.resultIndex; i < event.results.length; i++) {
@@ -3328,14 +3353,22 @@ function ensureBoardRecognition() {
     updateBoardVoiceUi(interimText.trim() ? `Escuchando: ${interimText.trim()}` : 'Escuchando...');
   };
   rec.onerror = event => {
-    boardVoiceListening = false;
-    updateBoardVoiceUi(event.error === 'not-allowed' ? 'Permiso de micrófono denegado.' : `Micrófono: ${event.error}`);
+    const messages = {
+      'not-allowed': 'Permiso de micrófono denegado. Activa Micrófono para Chrome/Edge.',
+      'audio-capture': 'No encuentro micrófono disponible. Cierra otras apps que lo estén usando.',
+      'no-speech': 'No detecté voz. Vuelve a tocar Mic y habla más cerca del micrófono.',
+      'network': 'El dictado de Chrome necesita conexión con Google. Revisa internet y vuelve a intentar.',
+      'aborted': 'Dictado cancelado por el navegador. Cierra burbujas flotantes/superposiciones y reintenta.'
+    };
+    stopBoardVoice(messages[event.error] || `Micrófono: ${event.error}`);
   };
   rec.onend = () => {
     if(boardVoiceListening) {
-      try { rec.start(); } catch(_) {}
-    } else {
-      updateBoardVoiceUi();
+      if(/Android/i.test(navigator.userAgent)) {
+        setTimeout(() => { try { rec.start(); } catch(_) {} }, 250);
+      } else {
+        try { rec.start(); } catch(_) {}
+      }
     }
   };
   boardRecognition = rec;
@@ -3348,16 +3381,15 @@ function toggleBoardVoice() {
   if(!rec) { showToast('Este navegador no soporta dictado por voz. Usa Chrome o Edge.'); return; }
   const input = document.getElementById('board-ai-input');
   if(boardVoiceListening) {
-    boardVoiceListening = false;
-    clearTimeout(boardVoiceSilenceTimer);
-    try { rec.stop(); } catch(_) {}
-    updateBoardVoiceUi();
+    stopBoardVoice();
     return;
   }
   boardVoiceBaseText = input ? input.value.trim() : '';
   boardVoiceListening = true;
+  boardVoiceGotText = false;
   updateBoardVoiceUi('Escuchando... habla y el tutor enviará tu frase al pausar.');
-  try { rec.start(); } catch(_) {}
+  try { rec.start(); }
+  catch(_) { stopBoardVoice('No pude iniciar el micrófono. Cierra otras grabaciones y vuelve a tocar Mic.'); }
 }
 
 async function analyzeBoard() {
