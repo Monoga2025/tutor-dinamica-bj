@@ -194,6 +194,12 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 #btn-send { background: var(--accent); border: none; color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
 #btn-send:hover { opacity: 0.85; }
 #btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+.attach-btn { flex-shrink: 0; border: 1px solid var(--border); background: transparent; color: var(--muted); border-radius: 8px; padding: 7px 10px; cursor: pointer; font-size: 13px; }
+.attach-btn:hover { border-color: var(--accent); color: var(--accent); }
+.attach-preview { display: none; flex-shrink: 0; align-items: center; gap: 8px; margin: 8px 14px 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: #0f1117; font-size: 12px; color: var(--muted); }
+.attach-preview.visible { display: flex; }
+.attach-preview img { width: 42px; height: 42px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
+.attach-preview button { margin-left: auto; border: 1px solid var(--danger); color: var(--danger); background: transparent; border-radius: 6px; padding: 3px 7px; cursor: pointer; }
 
 /* FULL SCREEN BOARD */
 #board-area { position: fixed; inset: 0; z-index: 500; display: none; flex-direction: column; overflow: hidden; background: #07090d; color: #e2e8f0; }
@@ -241,8 +247,10 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .board-msg pre { background: #020617; border: 1px solid #334155; padding: 8px; border-radius: 5px; overflow-x: auto; margin: 5px 0; }
 .board-msg .katex { color: inherit; font-size: 1.02em; }
 .board-msg .katex-display { overflow-x: auto; overflow-y: hidden; margin: 6px 0; }
-#board-ai-input-row { display: flex; gap: 7px; padding: 9px; border-top: 1px solid #334155; }
-#board-ai-input { flex: 1; resize: none; min-height: 36px; max-height: 90px; background: #020617; color: #e2e8f0; border: 1px solid #334155; border-radius: 7px; padding: 7px; font-family: inherit; font-size: 12px; }
+#board-ai-input-row { display: flex; flex-wrap: wrap; gap: 7px; padding: 9px; border-top: 1px solid #334155; }
+#board-ai-input { flex: 1 1 160px; resize: none; min-height: 36px; max-height: 90px; background: #020617; color: #e2e8f0; border: 1px solid #334155; border-radius: 7px; padding: 7px; font-family: inherit; font-size: 12px; }
+.board-attach-preview { margin: 7px 9px 0; border-color: #334155; background: #020617; color: #94a3b8; }
+.board-attach-preview img { border-color: #334155; }
 #show-board-ai { position: absolute; right: 0; top: 50%; z-index: 5; display: none; writing-mode: vertical-rl; background: var(--accent); color: #fff; border: none; border-radius: 8px 0 0 8px; padding: 12px 5px; cursor: pointer; }
 #toggle-brief { position:absolute; left:12px; bottom:18px; z-index:521; }
 
@@ -555,7 +563,14 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
           <div id="chat-helper">
             <div id="chat-messages"></div>
             <div id="chat-thinking">El tutor está pensando...</div>
+            <div id="chat-attach-preview" class="attach-preview">
+              <img id="chat-attach-img" alt="Imagen adjunta">
+              <span id="chat-attach-label">Imagen lista para enviar</span>
+              <button onclick="clearChatAttachment()">Quitar</button>
+            </div>
             <div id="chat-input-row">
+              <input type="file" id="chat-image-input" accept="image/*" style="display:none" onchange="handleChatImage(event)">
+              <button class="attach-btn" onclick="triggerChatImageUpload()" title="Adjuntar imagen al chat">📎</button>
               <textarea id="chat-input" placeholder="Escribe tu respuesta o pregunta..." onkeydown="handleKey(event)"></textarea>
               <button id="btn-send" onclick="sendMessage()">Enviar</button>
             </div>
@@ -606,8 +621,17 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
                 <button class="board-btn" onclick="toggleBoardAI()">Ocultar</button>
               </div>
               <div id="board-ai-msgs"></div>
+              <div id="board-attach-preview" class="attach-preview board-attach-preview">
+                <img id="board-attach-img" alt="Imagen adjunta">
+                <span id="board-attach-label">Pizarra lista para enviar</span>
+                <button onclick="clearBoardAttachment()">Quitar</button>
+              </div>
               <div id="board-ai-input-row">
+                <input type="file" id="board-image-input" accept="image/*" style="display:none" onchange="handleBoardChatImage(event)">
+                <button class="board-btn" onclick="attachBoardSnapshot()" title="Adjuntar captura actual de la pizarra">📷 Pizarra</button>
+                <button class="board-btn" onclick="triggerBoardImageUpload()" title="Subir imagen al tutor de pizarra">📎</button>
                 <textarea id="board-ai-input" placeholder="Pregunta al tutor sobre tu pizarra..." onkeydown="handleBoardAIKey(event)"></textarea>
+                <button class="board-btn" onclick="quickSendBoardImage()" title="Enviar captura de pizarra sin texto">Rápida</button>
                 <button class="board-btn" onclick="sendBoardQuestion()">Enviar</button>
               </div>
             </div>
@@ -1505,6 +1529,8 @@ let syncDirty = false;
 let syncApplying = false;
 let syncLastRemote = 0;
 const solutionCache = {};
+let chatPendingImage = null;
+let boardPendingImage = null;
 
 // ─── SESSION / LOGIN ─────────────────────────────────────────────────────────
 const PROFILES = {
@@ -2362,6 +2388,7 @@ function verifyProblemData() {
   const prob = PROB_MAP[currentProbId];
   document.getElementById('chat-helper').classList.add('open');
   showBasesLayer();
+  setChatAttachment(currentImage, 'Imagen del enunciado/diagrama adjunta');
   const input = document.getElementById('chat-input');
   input.value = `Tengo la imagen del diagrama del problema ${currentProbId}. Los datos que tenemos registrados son:\n\n${prob.text}\n\nRespuesta registrada: ${prob.answer}\n\nPor favor compara la imagen con estos datos. ¿Los ángulos, velocidades y configuración son correctos? Si hay errores, dime exactamente qué valores son incorrectos y cuáles deberían ser.`;
   sendMessage();
@@ -2391,6 +2418,38 @@ function resetChat() {
   SRS.addChat(currentProbId, 'assistant', 'Historial borrado. ¿Empezamos?');
 }
 
+function setChatAttachment(dataUrl, label) {
+  chatPendingImage = dataUrl;
+  const box = document.getElementById('chat-attach-preview');
+  const img = document.getElementById('chat-attach-img');
+  const text = document.getElementById('chat-attach-label');
+  if(img) img.src = dataUrl;
+  if(text) text.textContent = label || 'Imagen lista para enviar';
+  if(box) box.classList.add('visible');
+}
+
+function clearChatAttachment(resetInput = true) {
+  chatPendingImage = null;
+  const box = document.getElementById('chat-attach-preview');
+  const img = document.getElementById('chat-attach-img');
+  const input = document.getElementById('chat-image-input');
+  if(box) box.classList.remove('visible');
+  if(img) img.removeAttribute('src');
+  if(resetInput && input) input.value = '';
+}
+
+function triggerChatImageUpload() {
+  document.getElementById('chat-image-input')?.click();
+}
+
+function handleChatImage(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  compressImageFile(file)
+    .then(dataUrl => setChatAttachment(dataUrl, 'Imagen adjunta al mensaje'))
+    .catch(() => showToast('No pude cargar la imagen'));
+}
+
 function toggleAnswer() {
   const val = document.getElementById('answer-val');
   const btn = document.getElementById('btn-show-answer');
@@ -2407,11 +2466,14 @@ async function sendMessage() {
   if(!currentProbId) return;
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
-  if(!text) return;
+  const imageToSend = chatPendingImage;
+  if(!text && !imageToSend) return;
 
-  appendMessage('user', text);
-  SRS.addChat(currentProbId, 'user', text);
+  const visibleText = text || '[Imagen enviada para revisión]';
+  appendMessage('user', imageToSend ? `${visibleText}\n\n[Imagen adjunta]` : visibleText);
+  SRS.addChat(currentProbId, 'user', imageToSend ? `${visibleText}\n[Imagen adjunta]` : visibleText);
   input.value = '';
+  clearChatAttachment(false);
 
   const thinking = document.getElementById('chat-thinking');
   const sendBtn = document.getElementById('btn-send');
@@ -2419,7 +2481,7 @@ async function sendMessage() {
   sendBtn.disabled = true;
 
   try {
-    const response = await AI.chat(currentProbId, text, currentImage);
+    const response = await AI.chat(currentProbId, visibleText, imageToSend);
     thinking.style.display = 'none';
     sendBtn.disabled = false;
     const visibleResponse = processTutorMarkers(response) || 'Bien. Sigue con el siguiente paso.';
@@ -2444,7 +2506,9 @@ function initClipboardPaste() {
     e.preventDefault();
     try {
       const dataUrl = await compressImageFile(file);
-      setCurrentImage(dataUrl, 'Imagen pegada desde portapapeles. Envía un mensaje para analizarla.');
+      const boardVisible = document.getElementById('board-area')?.style.display !== 'none';
+      if(boardVisible) setBoardAttachment(dataUrl, 'Imagen pegada adjunta al tutor de pizarra');
+      else setChatAttachment(dataUrl, 'Imagen pegada adjunta al mensaje');
       showToast('Imagen pegada desde portapapeles');
       requestSyncUpload();
     } catch(err) {
@@ -2990,11 +3054,57 @@ function boardVerifyData() {
   verifyProblemData();
 }
 
+function setBoardAttachment(dataUrl, label) {
+  boardPendingImage = dataUrl;
+  const box = document.getElementById('board-attach-preview');
+  const img = document.getElementById('board-attach-img');
+  const text = document.getElementById('board-attach-label');
+  if(img) img.src = dataUrl;
+  if(text) text.textContent = label || 'Imagen lista para enviar';
+  if(box) box.classList.add('visible');
+}
+
+function clearBoardAttachment(resetInput = true) {
+  boardPendingImage = null;
+  const box = document.getElementById('board-attach-preview');
+  const img = document.getElementById('board-attach-img');
+  const input = document.getElementById('board-image-input');
+  if(box) box.classList.remove('visible');
+  if(img) img.removeAttribute('src');
+  if(resetInput && input) input.value = '';
+}
+
+function attachBoardSnapshot() {
+  const dataUrl = captureBoardDataUrl();
+  if(!dataUrl) { showToast('Dibuja algo en la pizarra primero'); return; }
+  setBoardAttachment(dataUrl, 'Captura actual de pizarra adjunta');
+}
+
+function triggerBoardImageUpload() {
+  document.getElementById('board-image-input')?.click();
+}
+
+function handleBoardChatImage(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  compressImageFile(file)
+    .then(dataUrl => setBoardAttachment(dataUrl, 'Imagen adjunta al tutor de pizarra'))
+    .catch(() => showToast('No pude cargar la imagen'));
+}
+
+function quickSendBoardImage() {
+  const dataUrl = captureBoardDataUrl();
+  if(!dataUrl) { showToast('Dibuja algo en la pizarra primero'); return; }
+  setBoardAttachment(dataUrl, 'Captura actual de pizarra adjunta');
+  const input = document.getElementById('board-ai-input');
+  if(input && !input.value.trim()) input.value = 'Revisa esta pizarra y dime el primer error exacto o el siguiente paso.';
+  sendBoardQuestion();
+}
+
 async function analyzeBoard() {
   if(!currentProbId) return;
   if(boardAiMin) toggleBoardAI();
-  // Use uploaded original image if available, fallback to canvas capture
-  const dataUrl = currentImage || captureBoardDataUrl();
+  const dataUrl = captureBoardDataUrl() || currentImage;
   if(!dataUrl) { showToast('Dibuja algo en la pizarra primero'); return; }
   addBoardMsg('user', '[Imagen enviada para revisión]');
   SRS.addBoardChat(currentProbId, 'user', '[Imagen enviada para revisión]');
@@ -3024,22 +3134,24 @@ async function sendBoardQuestion() {
   if(!currentProbId) return;
   const input = document.getElementById('board-ai-input');
   const text = input.value.trim();
-  if(!text) return;
+  const attachedImage = boardPendingImage;
+  if(!text && !attachedImage) return;
   input.value = '';
-  addBoardMsg('user', text);
-  SRS.addBoardChat(currentProbId, 'user', text);
+  const visibleText = text || '[Imagen enviada al tutor de pizarra]';
+  addBoardMsg('user', attachedImage ? `${visibleText}\n\n[Imagen adjunta]` : visibleText);
+  SRS.addBoardChat(currentProbId, 'user', attachedImage ? `${visibleText}\n[Imagen adjunta]` : visibleText);
+  clearBoardAttachment(false);
   addBoardMsg('ai', 'Pensando...');
   try {
-    // Use uploaded original image if available, fallback to canvas capture
-    const imgForBoard = currentImage || captureBoardDataUrl();
-    const response = await AI.chat(currentProbId, `[PREGUNTA SOBRE MI PIZARRA]\n${boardFullContext(currentProbId)}\n\nUsa tambien el contexto del chat principal: si alli se corrigio un dato, enunciado, angulo o diagrama, toma esa correccion como verdad para responder.\n\nPregunta: ${text}`, imgForBoard);
+    const imgForBoard = attachedImage || captureBoardDataUrl() || currentImage;
+    const response = await AI.chat(currentProbId, `[PREGUNTA SOBRE MI PIZARRA]\n${boardFullContext(currentProbId)}\n\nUsa tambien el contexto del chat principal: si alli se corrigio un dato, enunciado, angulo o diagrama, toma esa correccion como verdad para responder.\n\nPregunta: ${visibleText}`, imgForBoard);
     const box = document.getElementById('board-ai-msgs');
     const last = box?.lastElementChild;
     if(last && last.textContent.includes('Pensando')) last.remove();
     const visible = stripMarkersOnly(response) || 'Sigue con el siguiente paso.';
     addBoardMsg('ai', visible);
     SRS.addBoardChat(currentProbId, 'assistant', visible);
-    SRS.addChat(currentProbId, 'user', `[Pizarra] ${text}`);
+    SRS.addChat(currentProbId, 'user', `[Pizarra] ${visibleText}`);
     SRS.addChat(currentProbId, 'assistant', visible);
   } catch(e) {
     addBoardMsg('ai', `No pude responder: ${e.message}`);
