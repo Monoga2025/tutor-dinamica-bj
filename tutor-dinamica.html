@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dinámica Cap.14 — Beer & Johnston</title>
+<style>
+:root {
+  --bg: #0d0d0f;
+  --panel: #13141a;
+  --border: #1e2030;
+  --accent: #4f8ef7;
+  --accent2: #7c5cfc;
+  --danger: #e74c6c;
+  --warn: #f5a623;
+  --ok: #27c990;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --chat-user: #1e2540;
+  --chat-ai: #131820;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* TOP BAR */
+#topbar { background: var(--panel); border-bottom: 1px solid var(--border); padding: 0 16px; height: 48px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+#topbar h1 { font-size: 14px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+.exam-badge { background: #2d1a1a; border: 1px solid var(--danger); color: var(--danger); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+.spacer { flex: 1; }
+#top-stats { display: flex; gap: 16px; font-size: 12px; color: var(--muted); }
+#top-stats span b { color: var(--text); }
+#btn-review { background: linear-gradient(135deg, var(--accent2), var(--accent)); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+#btn-review:hover { opacity: 0.85; }
+#btn-config { background: none; border: 1px solid var(--border); color: var(--muted); padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+#btn-config:hover { border-color: var(--accent); color: var(--accent); }
+
+/* MAIN LAYOUT */
+#layout { display: flex; flex: 1; overflow: hidden; }
+
+/* SIDEBAR */
+#sidebar { width: 260px; flex-shrink: 0; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+#sidebar-header { padding: 12px; border-bottom: 1px solid var(--border); }
+#sidebar-header h2 { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+#search-box { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 4px; font-size: 12px; }
+#search-box:focus { outline: none; border-color: var(--accent); }
+#filter-row { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.filter-btn { font-size: 10px; padding: 2px 7px; border-radius: 3px; border: 1px solid var(--border); background: none; color: var(--muted); cursor: pointer; }
+.filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+#problem-list { flex: 1; overflow-y: auto; }
+.problem-item { padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.1s; }
+.problem-item:hover { background: rgba(79,142,247,0.08); }
+.problem-item.active { background: rgba(79,142,247,0.15); border-left: 3px solid var(--accent); }
+.problem-item.exam-crit { border-left: 2px solid var(--danger); }
+.prob-num { font-size: 12px; font-weight: 700; color: var(--accent); min-width: 36px; }
+.prob-title { font-size: 11px; color: var(--text); flex: 1; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prob-badge { font-size: 10px; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+.badge-score { background: #1a2a1a; color: var(--ok); }
+.badge-warn { background: #2a1e0a; color: var(--warn); }
+.badge-error { background: #2a0e14; color: var(--danger); }
+.badge-new { background: #1a1a2a; color: var(--muted); }
+.badge-crit { background: #2a0a14; color: var(--danger); border: 1px solid var(--danger); font-weight: 700; }
+
+/* WEAKNESS PANEL */
+#weakness-panel { padding: 10px 12px; border-top: 1px solid var(--border); max-height: 200px; overflow-y: auto; }
+#weakness-panel h3 { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+.weakness-item { font-size: 11px; padding: 3px 0; display: flex; align-items: center; gap: 6px; }
+.w-icon { width: 14px; text-align: center; }
+
+/* MAIN CONTENT */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* PROBLEM VIEW */
+#problem-view { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#prob-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 12px; background: var(--panel); }
+#prob-num-big { font-size: 20px; font-weight: 800; color: var(--accent); }
+#prob-meta { flex: 1; }
+#prob-title-big { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+#prob-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: 10px; padding: 1px 6px; border-radius: 3px; background: var(--border); color: var(--muted); }
+.tag.crit { background: #2a0a14; color: var(--danger); border: 1px solid var(--danger); }
+#prob-score-display { text-align: right; }
+#score-val { font-size: 24px; font-weight: 800; color: var(--ok); }
+#score-label { font-size: 10px; color: var(--muted); }
+#prob-actions { display: flex; gap: 6px; padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--border); }
+.action-btn { font-size: 11px; padding: 5px 10px; border-radius: 5px; border: 1px solid var(--border); background: none; color: var(--text); cursor: pointer; }
+.action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.action-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.action-btn.primary:hover { opacity: 0.85; }
+.action-btn.danger { border-color: var(--danger); color: var(--danger); }
+
+/* SPLIT VIEW: statement + chat */
+#prob-body { flex: 1; display: flex; overflow: hidden; }
+#prob-statement { width: 380px; flex-shrink: 0; padding: 16px; overflow-y: auto; border-right: 1px solid var(--border); background: var(--panel); }
+#prob-statement h3 { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+#prob-text { font-size: 13px; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
+#photo-upload-area { margin-top: 12px; border: 2px dashed var(--border); border-radius: 6px; padding: 16px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
+#photo-upload-area:hover { border-color: var(--accent); }
+#photo-upload-area span { font-size: 12px; color: var(--muted); }
+#uploaded-photo { max-width: 100%; border-radius: 6px; margin-top: 8px; display: none; }
+#answer-hint { margin-top: 12px; background: #0d1a14; border: 1px solid #1a3a24; border-radius: 6px; padding: 10px 12px; }
+#answer-hint h4 { font-size: 10px; font-weight: 700; color: var(--ok); text-transform: uppercase; margin-bottom: 4px; }
+#answer-val { font-size: 12px; color: #a0d4b8; font-family: monospace; display: none; }
+#btn-show-answer { font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; text-decoration: underline; }
+
+/* ERROR LOG */
+#error-log-section { margin-top: 16px; }
+#error-log-section h3 { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+.error-entry { font-size: 11px; padding: 5px 8px; background: #1a0e14; border-radius: 4px; margin-bottom: 4px; color: #e88; border-left: 3px solid var(--danger); }
+.error-entry.warn { background: #1a1408; border-left-color: var(--warn); color: #f5c842; }
+.error-entry.high { background: #2a0a14; border-left-color: #ff0033; color: #ff4466; font-weight: 600; }
+
+/* CHAT */
+#chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#chat-messages { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+.msg { display: flex; gap: 8px; max-width: 92%; }
+.msg.user { align-self: flex-end; flex-direction: row-reverse; }
+.msg-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.msg.ai .msg-avatar { background: var(--accent2); color: #fff; }
+.msg.user .msg-avatar { background: var(--accent); color: #fff; }
+.msg-bubble { padding: 9px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5; }
+.msg.ai .msg-bubble { background: var(--chat-ai); border: 1px solid var(--border); }
+.msg.user .msg-bubble { background: var(--chat-user); }
+.msg-bubble code { background: #1a2030; padding: 1px 5px; border-radius: 3px; font-family: 'Consolas', monospace; font-size: 12px; }
+.msg-bubble pre { background: #0d1520; border: 1px solid var(--border); padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px; margin: 4px 0; }
+#chat-thinking { align-self: flex-start; padding: 8px 12px; font-size: 12px; color: var(--muted); display: none; }
+#chat-input-row { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: var(--panel); }
+#chat-input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; resize: none; height: 42px; max-height: 120px; overflow-y: auto; font-family: inherit; }
+#chat-input:focus { outline: none; border-color: var(--accent); }
+#btn-send { background: var(--accent); border: none; color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+#btn-send:hover { opacity: 0.85; }
+#btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* WELCOME SCREEN */
+#welcome-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; }
+#welcome-screen h2 { font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+#welcome-screen p { color: var(--muted); font-size: 14px; max-width: 400px; line-height: 1.6; }
+
+/* REVIEW PANEL */
+#review-panel { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; }
+#review-inner { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: min(700px, 95vw); max-height: 85vh; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+#review-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+#review-header h2 { font-size: 16px; font-weight: 700; }
+#btn-close-review { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 4px; }
+#review-content { flex: 1; overflow-y: auto; padding: 20px; }
+.review-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+.review-card.high { border-color: var(--danger); }
+.review-card h3 { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+.review-card .rc-error { font-size: 12px; color: #e88; margin-bottom: 8px; }
+.review-card .rc-btn { font-size: 12px; padding: 5px 12px; border-radius: 5px; border: 1px solid var(--accent); background: none; color: var(--accent); cursor: pointer; }
+.review-card .rc-btn:hover { background: var(--accent); color: #fff; }
+
+/* CONFIG MODAL */
+#config-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; }
+#config-inner { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 400px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 24px; }
+#config-inner h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+#config-inner label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+#api-key-input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 6px; font-size: 13px; font-family: monospace; }
+#api-key-input:focus { outline: none; border-color: var(--accent); }
+#config-inner p { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+#config-btns { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+.modal-btn { font-size: 13px; padding: 7px 16px; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text); cursor: pointer; }
+.modal-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* UPLOAD HIGHLIGHT */
+.upload-highlight { border-color: var(--accent) !important; background: rgba(79,142,247,0.05); }
+</style>
+</head>
+<body>
+
+<!-- CONFIG MODAL -->
+<div id="config-modal">
+  <div id="config-inner">
+    <h2>⚙️ Configuración</h2>
+    <label>API Key de Anthropic</label>
+    <input type="password" id="api-key-input" placeholder="sk-ant-...">
+    <p>Tu API key se guarda localmente en el navegador. Nunca se envía a ningún servidor excepto Anthropic.</p>
+    <div id="config-btns">
+      <button class="modal-btn" onclick="closeConfig()">Cancelar</button>
+      <button class="modal-btn primary" onclick="saveConfig()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- REVIEW PANEL -->
+<div id="review-panel">
+  <div id="review-inner">
+    <div id="review-header">
+      <h2>🔁 Repasar Áreas Débiles</h2>
+      <button id="btn-close-review" onclick="closeReview()">✕</button>
+    </div>
+    <div id="review-content"></div>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <h1>📐 Dinámica Cap. 14</h1>
+  <div class="exam-badge">🔴 EXAMEN 05/05</div>
+  <div class="spacer"></div>
+  <div id="top-stats">
+    <span>Progreso: <b id="stat-progress">0/116</b></span>
+    <span>Errores: <b id="stat-errors" style="color:var(--danger)">0</b></span>
+    <span>Alta prioridad: <b id="stat-high" style="color:var(--danger)">0</b></span>
+  </div>
+  <button id="btn-review" onclick="openReview()">🔁 Repasar Débiles</button>
+  <button id="btn-config" onclick="openConfig()">⚙️ Config</button>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div id="layout">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h2>Problemas (116)</h2>
+      <input type="text" id="search-box" placeholder="Buscar..." oninput="filterProblems()">
+      <div id="filter-row">
+        <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">Todos</button>
+        <button class="filter-btn" data-filter="weak" onclick="setFilter('weak',this)">Débiles</button>
+        <button class="filter-btn" data-filter="crit" onclick="setFilter('crit',this)">Examen</button>
+        <button class="filter-btn" data-filter="unseen" onclick="setFilter('unseen',this)">Sin ver</button>
+      </div>
+    </div>
+    <div id="problem-list"></div>
+    <div id="weakness-panel">
+      <h3>Panel de Debilidades</h3>
+      <div id="weakness-list"></div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div id="main">
+    <div id="welcome-screen">
+      <h2>Beer &amp; Johnston — Sistemas de Partículas</h2>
+      <p>Selecciona un problema del panel izquierdo. El tutor socrático te guiará sin darte la respuesta directa.</p>
+      <p style="margin-top:16px;font-size:13px;color:var(--accent)">⚠️ Examen el 5 de mayo — <span id="days-left"></span></p>
+    </div>
+    <div id="problem-view" style="display:none">
+      <div id="prob-header">
+        <div id="prob-num-big"></div>
+        <div id="prob-meta">
+          <div id="prob-title-big"></div>
+          <div id="prob-tags"></div>
+        </div>
+        <div id="prob-score-display">
+          <div id="score-val">0</div>
+          <div id="score-label">Score SRS</div>
+        </div>
+      </div>
+      <div id="prob-actions">
+        <button class="action-btn primary" onclick="startProblem()">▶ Empezar con tutor</button>
+        <button class="action-btn" onclick="markCorrect()">✓ Marqué correcto</button>
+        <button class="action-btn danger" onclick="markError()">✕ Cometí error</button>
+        <button class="action-btn" onclick="resetChat()">🗑 Limpiar chat</button>
+      </div>
+      <div id="prob-body">
+        <div id="prob-statement">
+          <h3>Enunciado</h3>
+          <div id="prob-text"></div>
+          <div id="photo-upload-area" onclick="triggerUpload()">
+            <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhoto(event)">
+            <span id="upload-label">📷 Subir foto del diagrama (opcional)</span>
+          </div>
+          <img id="uploaded-photo" alt="Diagrama subido">
+          <div id="answer-hint">
+            <h4>Respuesta</h4>
+            <button id="btn-show-answer" onclick="toggleAnswer()">Mostrar respuesta</button>
+            <div id="answer-val"></div>
+          </div>
+          <div id="error-log-section">
+            <h3>Errores Registrados</h3>
+            <div id="error-log-list"></div>
+          </div>
+        </div>
+        <div id="chat-area">
+          <div id="chat-messages"></div>
+          <div id="chat-thinking">El tutor está pensando...</div>
+          <div id="chat-input-row">
+            <textarea id="chat-input" placeholder="Escribe tu respuesta o pregunta..." onkeydown="handleKey(event)"></textarea>
+            <button id="btn-send" onclick="sendMessage()">Enviar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ─── PROBLEM DATABASE ───────────────────────────────────────────────────────
+
+const PROBLEMS = [
+{id:"14.1",title:"Maletas en carruaje (sucesivo)",topics:["linear_momentum","multiple_impact"],diff:2,hasImage:false,
+ text:`Una empleada de aerolínea lanza dos maletas (15 kg y 20 kg) sucesivamente sobre un carruaje de 25 kg en reposo. La empleada imparte 3 m/s a la de 15 kg y 2 m/s a la de 20 kg.
+Determine la velocidad final del carruaje si la primera maleta lanzada es:
+(a) la de 15 kg  (b) la de 20 kg`,
+ answer:"(a) v₂ = 1.417 m/s  (b) v₂ = 1.417 m/s",
+ hints:["¿Cuántos impactos hay? ¿Son simultáneos o sucesivos?","El carruaje 'costea' entre impactos. ¿Qué ley aplica en cada impacto?","Conservación de cantidad de movimiento lineal en cada impacto por separado"],
+ errors:["Sumar todas las masas de una vez","No aplicar la conservación dos veces separadas"]},
+
+{id:"14.2",title:"Maletas (masa desconocida)",topics:["linear_momentum"],diff:2,hasImage:false,
+ text:`Un empleado lanza dos maletas sucesivamente con 2.4 m/s sobre un carruaje de 25 kg en reposo.
+(a) Si la velocidad final es 1.2 m/s y la primera maleta pesa 15 kg, ¿cuál es la masa de la segunda?
+(b) ¿Cuál sería la velocidad final si se invierten el orden?`,
+ answer:"(a) m_B = 10.00 kg  (b) v₂ = 1.200 m/s",
+ hints:["Plantea conservación de momentum para cada impacto","Usa la velocidad final para despejar la masa desconocida"],
+ errors:["Olvidar que el carruaje costea entre impactos"]},
+
+{id:"14.3",title:"Hombre y mujer en bote (misma dirección)",topics:["linear_momentum","multiple_impact"],diff:2,hasImage:false,
+ text:`Un hombre (180 lb) y una mujer (120 lb) están en el mismo extremo de un bote de 300 lb, listos para tirarse con velocidad de 16 ft/s relativa al bote.
+Determine la velocidad del bote si: (a) la mujer se tira primero  (b) el hombre se tira primero`,
+ answer:"(a) v = 9.20 ft/s  (b) v = 9.37 ft/s",
+ hints:["La velocidad de 16 ft/s es RELATIVA al bote. Si bote tiene velocidad V, ¿cuál es la velocidad absoluta de la persona?","Aplica conservación de momento en cada salto"],
+ errors:["Confundir velocidad relativa con velocidad absoluta"]},
+
+{id:"14.4",title:"Hombre y mujer en bote (extremos opuestos)",topics:["linear_momentum","multiple_impact"],diff:2,hasImage:false,
+ text:`Un hombre (180 lb) y una mujer (120 lb) están en extremos OPUESTOS de un bote de 300 lb, listos para tirarse con 16 ft/s relativa al bote.
+Determine la velocidad del bote si: (a) la mujer se tira primero  (b) el hombre se tira primero`,
+ answer:"(a) v = 2.80 ft/s  (b) v = −0.229 ft/s",
+ hints:["Ahora las personas se tiran en direcciones opuestas. Define un signo positivo","Los saltos opuestos parcialmente cancelan el momento"],
+ errors:["No considerar el signo de la dirección del salto"]},
+
+{id:"14.5",title:"Bala a través de bloque A, se incrusta en B",topics:["linear_momentum"],diff:3,hasImage:false,examCritical:false,
+ text:`Una bala se dispara a 1500 ft/s horizontalmente y pasa a través del bloque A (6 lb, queda moviéndose a 5 ft/s) y se incrusta en el bloque B (4.95 lb, queda a 9 ft/s).
+Determine: (a) el peso de la bala  (b) la velocidad de la bala al viajar de A hacia B`,
+ answer:"(a) W_bullet = 0.0500 lb  (b) v₁ = 900 ft/s",
+ hints:["La bala pasa a través de A Y se incrusta en B. Son dos eventos separados","Para (a): aplica conservación de momento para TODO el sistema (bala + A + B)","Para (b): aplica conservación de momento solo para el primer evento (bala + A)"],
+ errors:["Aplicar un solo evento en lugar de dos","Usar lb en lugar de lb/g para la masa","No conservar el momento por separado en cada subevento"]},
+
+{id:"14.6",title:"Vagones ferroviarios acoplados",topics:["linear_momentum","multiple_impact"],diff:3,hasImage:false,
+ text:`Un vagón A (45 ton) viaja a 5.6 mi/h hacia los vagones B y C en reposo. B es una plataforma (25 ton) con contenedor (30 ton). C = 40 ton.
+Determina la velocidad de A después de cada acoplamiento si: (a) el contenedor no desliza  (b) desliza después del 1er acoplamiento pero para antes del 2do  (c) desliza y para solo después del 2do`,
+ answer:"(a) v₁=2.52, v₂=1.800 mi/h  (b) v₁=3.60, v₂=1.800 mi/h  (c) v₁=3.60, v₂=1.800 mi/h",
+ hints:["El acoplamiento es impacto perfectamente plástico","¿El contenedor se mueve junto al vagón o tiene inercia separada?"],
+ errors:["No diferenciar si el contenedor es parte del sistema o no"]},
+
+{id:"14.7",title:"Autos chocadores (3 autos, e=0.8)",topics:["linear_momentum","coeff_restitution"],diff:4,hasImage:false,
+ text:`Autos A (240 kg), B (260 kg), C (235 kg). A se mueve a 2 m/s →, C a 1.5 m/s ←, B en reposo. Coef. de restitución e=0.8.
+(a) A y C golpean B simultáneamente  (b) A golpea B antes que C`,
+ answer:"(a) vA=−1.288, vB=0.312, vC=1.512 m/s  (b) vA=−0.346, vB=1.195, vC=1.512 m/s",
+ hints:["Para (a): 3 ecuaciones (momentum + 2 restituciones)","Para (b): primer impacto A-B, luego impacto B-C"],
+ errors:["En (a), aplicar solo conservación de momentum sin las dos condiciones de restitución"]},
+
+{id:"14.8",title:"Autos chocadores (velocidad de C para v_B=0)",topics:["linear_momentum","coeff_restitution"],diff:3,hasImage:false,
+ text:`Autos A (240 kg), B (260 kg), C (235 kg). A a 2 m/s golpea B. e=0.8.
+Determina la velocidad de C tal que después del segundo impacto (B-C), la velocidad de B sea cero.`,
+ answer:"v_C = −1.5 m/s (hacia la izquierda)",
+ hints:["Primer impacto A-B: encuentra v'_A y v'_B","Segundo impacto B-C: usa e=0.8 y la condición v''_B=0"],
+ errors:["Olvidar aplicar la condición de restitución en el segundo impacto"]},
+
+{id:"14.9",title:"Momento angular de 3 partículas",topics:["angular_momentum","cross_product"],diff:4,hasImage:false,
+ text:`Sistema de 3 partículas: m_A=3 kg, m_B=4 kg, m_C=5 kg.
+Velocidades (m/s): v_A=4i+4j+6k, v_B=−6i+8j+4k, v_C=2i−6j−4k
+Posiciones (m): r_A=1.2i+1.5k, r_B=0.9i+1.2j+1.2k, r_C=2.4j+1.8k
+Determina el momento angular H_O del sistema respecto a O.`,
+ answer:"H_O = −(31.2)i − (64.8)j + (48.0)k  kg·m²/s",
+ hints:["H_O = Σ(r_i × m_i·v_i). Calcula cada producto vectorial por separado","Para producto vectorial 3x3: |i  j  k / rx ry rz / px py pz|","H_Ox = ry·pz − rz·py, etc."],
+ errors:["Error aritmético en el producto vectorial (componentes mezcladas)","Olvidar multiplicar por la masa antes del producto vectorial","Confundir el orden del producto vectorial (r × mv, no mv × r)"]},
+
+{id:"14.10",title:"Centro de masa y H_G del sistema del 14.9",topics:["angular_momentum","center_of_mass"],diff:4,hasImage:false,
+ text:`Para el sistema del Problema 14.9, determina:
+(a) El vector de posición r̄ del centro de masa G
+(b) El momento lineal total mv̄ del sistema
+(c) El momento angular H_G respecto a G
+Verifica que H_O = r̄×mv̄ + H_G`,
+ answer:"Ver desarrollo. H_O = r̄×mv̄ + H_G (verificado)",
+ hints:["r̄ = Σ(m_i·r_i)/M, donde M es la masa total","v̄ = Σ(m_i·v_i)/M","H_G usa posiciones relativas al centro de masa: r'_i = r_i − r̄"],
+ errors:["No restar la posición del centro de masa para calcular H_G"]},
+
+{id:"14.11",title:"H_O paralelo al eje z (componentes desconocidos)",topics:["angular_momentum"],diff:4,hasImage:false,
+ text:`Sistema con m_A=3 kg, m_B=4 kg, m_C=5 kg.
+v_A=−4i+4j+6k, v_B=vx·i+vy·j+4k, v_C=2i−6j−4k
+r_A=1.2i+1.5k, r_B=0.9i+1.2j+1.2k, r_C=2.4j+1.8k
+Determina v_x y v_y de la partícula B para que H_O sea paralelo al eje z.`,
+ answer:"v_x = 7.50 m/s, v_y = 1.500 m/s",
+ hints:["Si H_O es paralelo a z, entonces H_Ox=0 y H_Oy=0","Expresa H_O en función de v_x y v_y, luego iguala las componentes x,y a cero"],
+ errors:["No reconocer que paralelo a z implica H_x=H_y=0"]},
+
+{id:"14.12",title:"H_O paralelo al eje y",topics:["angular_momentum"],diff:4,hasImage:false,
+ text:`Mismo sistema del Problema 14.11. Determina v_x y v_y para que H_O sea paralelo al eje y.`,
+ answer:"Ver solución (H_Ox=0, H_Oz=0)",
+ hints:["Paralelo a y implica H_x=0 y H_z=0"],
+ errors:["Confundir qué componentes se anulan según el eje de dirección"]},
+
+{id:"14.13",title:"H_O paralelo al eje x (sistema lb)",topics:["angular_momentum"],diff:4,hasImage:false,
+ text:`Sistema: W_A=5 lb, W_B=4 lb, W_C=3 lb.
+v_A=2i+3j−2k ft/s, v_B=vx·i+vy·j+vz·k, v_C=−3i−2j+k ft/s
+Determina v_x y v_y de B para que H_O sea paralelo al eje x.`,
+ answer:"v_x = −0.75 ft/s, v_y = 0.4375 ft/s, H_O = −(3.39 ft·lb·s)i",
+ hints:["Usa W/g para obtener las masas en slugs","Paralelo a x: H_Oy=0 y H_Oz=0"],
+ errors:["Usar lb directamente como masa (deben ser slugs = lb/32.2)"]},
+
+{id:"14.14",title:"H_O paralelo al eje z (sistema lb)",topics:["angular_momentum"],diff:4,hasImage:false,
+ text:`Mismo sistema del Problema 14.13. Determina v_x y v_z de B para que H_O sea paralelo al eje z.`,
+ answer:"Ver solución",
+ hints:["Paralelo a z: H_x=0 y H_y=0"],
+ errors:[]},
+
+{id:"14.15",title:"Vehículo espacial: posición del fragmento C",topics:["center_of_mass","linear_momentum"],diff:4,hasImage:false,
+ text:`Un vehículo espacial de 900 lb pasa por el origen con v₀=(1200 ft/s)i en t=0. Luego se separa en 3 partes:
+A=450 lb, B=300 lb, C=150 lb.
+En t=4 s: A está en (3840, −960, −1920) ft y B en (6480, 1200, 2640) ft.
+Determina la posición de C. Desprecia la gravedad.`,
+ answer:"r_C = (4320)i + (480)j + (480)k ft",
+ hints:["Sin fuerzas externas, el centro de masa continúa con v₀=(1200 ft/s)i","Posición del CM en t=4s: r̄ = (4800 ft)i","Aplica: M·r̄ = m_A·r_A + m_B·r_B + m_C·r_C y despeja r_C"],
+ errors:["Confundir conservación de momentum (velocidades) con posición del CM (esta NO usa velocidades después de la explosión, usa la trayectoria del CM)","Olvidar que el CM sigue moviéndose con v₀ porque no hay fuerzas externas","Error al calcular la posición del CM: r̄ = v₀·t = 1200×4 = 4800 ft en dirección i"]},
+
+{id:"14.16",title:"Proyectil explota en 2 fragmentos",topics:["center_of_mass","linear_momentum"],diff:3,hasImage:false,
+ text:`Proyectil de 30 lb pasa por el origen con v₀=(120 ft/s)i y explota en dos fragmentos A (12 lb) y B (18 lb). A los 3 s, A está en (300, 24, −48) ft. g=32.2 ft/s².
+Determina la posición de B.`,
+ answer:"r_B = (400)i − (258)j + (32.0)k ft",
+ hints:["El CM se mueve como si no hubiera explosión (proyectil normal con gravedad)","r̄_CM = v₀·t − (1/2)g·t²·j","Luego: m·r̄_CM = m_A·r_A + m_B·r_B"],
+ errors:["Olvidar el efecto de la gravedad en el movimiento del CM","Confundir con el caso sin gravedad"]},
+
+{id:"14.17",title:"Colisión avión-helicóptero, posición del avión",topics:["center_of_mass","linear_momentum"],diff:4,hasImage:false,
+ text:`Avión (1500 kg) y helicóptero (3000 kg) colisionan a 1200 m de altura. 4 min antes: helicóptero a 8.4 km al oeste; avión a 16 km oeste, 12 km norte. Tras la colisión: H₁ (1000 kg) en (500,−100) m, H₂ (2000 kg) en (600,−500) m. El avión cae intacto. Determina la posición del avión.`,
+ answer:"r_A = (712, −260) m aproximadamente",
+ hints:["Calcula la velocidad del CM antes de la colisión","Después, el CM sigue moviéndose hasta el piso (movimiento de caída libre)"],
+ errors:[]},
+
+{id:"14.18",title:"Variante del 14.17",topics:["center_of_mass"],diff:4,hasImage:false,
+ text:`Variante del Problema 14.17. Dado que el avión cayó en un punto específico, determinar datos desconocidos.`,
+ answer:"Ver solución",hints:[],errors:[]},
+
+{id:"14.19",title:"Explosión en reposo: 3 fragmentos",topics:["linear_momentum","center_of_mass"],diff:3,hasImage:false,
+ text:`Un cuerpo en reposo explota en 3 fragmentos que se mueven en el plano horizontal. Fragmento A (2 kg) a 5 m/s en dirección 30°, fragmento B (3 kg) a 4 m/s en dirección 150°. Determina la velocidad del fragmento C (5 kg).`,
+ answer:"v_C calculado por conservación de momentum (suma vectorial = 0)",
+ hints:["Si el cuerpo estaba en reposo, el momento total inicial es CERO","Σm_i·v_i = 0 → m_C·v_C = −(m_A·v_A + m_B·v_B)"],
+ errors:["Olvidar que el momento inicial era cero"]},
+
+{id:"14.20",title:"Variante explosión",topics:["linear_momentum"],diff:3,hasImage:false,
+ text:`Variante del Problema 14.19 con datos diferentes.`,
+ answer:"Ver solución",hints:["Conservación de momentum total = 0 (reposo inicial)"],errors:[]},
+
+{id:"14.21",title:"Pool 3 bolas (ángulos dados, v₀=12 ft/s, vc=6.29 ft/s) — EXAMEN",topics:["linear_momentum","billiard"],diff:4,hasImage:true,examCritical:true,
+ text:`PROBLEMA DE EXAMEN — CARAMBOLA
+En una mesa de billar, la bola A se mueve con v₀=12 ft/s y choca con las bolas B y C (en reposo alineadas).
+Después de la colisión, las tres bolas se mueven en las direcciones indicadas.
+Dato adicional: v_C = 6.29 ft/s.
+Determina la magnitud de la velocidad de:
+(a) bola A  (b) bola B
+
+Configuración típica: A viaja a 45° respecto a la horizontal de la mesa.
+B se desvía 4.3° de la vertical. C continúa a 30°.`,
+ answer:"(a) v_A = 8.50 ft/s  (b) v_B = 3.95 ft/s",
+ hints:["Conservación de momentum lineal: aplica por separado en x y en y","Plantea dos ecuaciones (∑p_x = 0 desplazado, ∑p_y = 0 desplazado)","Tienes 2 incógnitas (v_A y v_B) y 2 ecuaciones — ¡es un sistema 2×2!","Con las masas iguales (m), estas se cancelan — solo hay velocidades"],
+ errors:["No separar en componentes x e y","No colocar bien los ángulos de cada bola","Error al resolver el sistema 2×2"]},
+
+{id:"14.22",title:"Pool 3 bolas (ángulos diferentes, v₀=12 ft/s) — EXAMEN",topics:["linear_momentum","billiard"],diff:4,hasImage:true,examCritical:true,
+ text:`PROBLEMA DE EXAMEN — CARAMBOLA
+Mismo escenario que 14.21 pero con ángulos diferentes.
+v₀=12 ft/s, v_C=6.29 ft/s.
+A viaja a 30°. B se desvía 7.4°. C va a 45°.
+Determina: (a) v_A  (b) v_B`,
+ answer:"(a) v_A = 6.05 ft/s  (b) v_B = 6.81 ft/s",
+ hints:["Mismo método que 14.21: conservación de momentum en x y en y","Cuidado con los ángulos — dibuja el diagrama de velocidades antes","Sistema 2×2: resuelve por método de eliminación o matrices"],
+ errors:["Error en descomposición de velocidades en componentes","Poner signos incorrectos a las componentes y de las velocidades"]},
+
+{id:"14.23",title:"Arquero y pelota de tenis",topics:["linear_momentum"],diff:3,hasImage:false,
+ text:`Pelota de tenis (58 g) con velocidad (10 m/s)i−(2 m/s)j, a 10 m de altura, es golpeada por una flecha (40 g) con velocidad (50 m/s)j+(70 m/s)k.
+Determina la posición P donde caen (juntos) respecto al punto O bajo el impacto.`,
+ answer:"Posición: x=(5.9184)(4.39) m, z=(28.57)(4.39) m (calcular)",
+ hints:["Conservación de momento durante el golpe → velocidad inicial del sistema bola+flecha","Luego proyectil ordinario en 3D con gravedad en −j"],
+ errors:[]},
+
+{id:"14.24",title:"Partícula alfa y núcleos de oxígeno",topics:["linear_momentum","scattering"],diff:5,hasImage:false,
+ text:`Partícula alfa A entra con u_A=−600i+750j−800k m/s en un flujo de núcleos de oxígeno con v₀=600j m/s. Choca con B y C sucesivamente. Se dan las trayectorias de A, B, C después. Masa del oxígeno = 4× masa del alfa.
+Determina las velocidades de las 3 partículas después.`,
+ answer:"Ver solución (cálculo vectorial complejo)",
+ hints:["La dirección del movimiento determina el vector unitario de velocidad","Conservación de momentum en cada colisión"],
+ errors:[]},
+
+{id:"14.25",title:"Proyectil explota en 3 fragmentos (A, B, C)",topics:["linear_momentum","center_of_mass"],diff:4,hasImage:false,
+ text:`Proyectil de 12 lb con v₀=(40i−30j−1200k) ft/s explota en D en fragmentos A(5 lb), B(4 lb), C(3 lb) que golpean una pared vertical. Las posiciones en la pared están dadas. Desprecia gravedad.
+Determina la velocidad de cada fragmento después de la explosión.`,
+ answer:"Ver solución (velocidades en dirección del vector posición de cada fragmento)",
+ hints:["Los fragmentos viajan en línea recta (sin gravedad) desde D hasta la pared","La dirección de la velocidad = dirección del vector r_D→pared","Velocidad total = rapidez × vector unitario"],
+ errors:[]},
+
+{id:"14.26",title:"Variante del 14.25 (pesos diferentes)",topics:["linear_momentum"],diff:4,hasImage:false,
+ text:`Misma situación que 14.25 pero con A=4 lb, B=3 lb, C=5 lb.`,
+ answer:"Ver solución",hints:[],errors:[]},
+
+{id:"14.27",title:"Derivación: H_O = r̄×mv̄ + H_G",topics:["angular_momentum","theory"],diff:3,hasImage:false,
+ text:`Problema teórico: Deriva la relación H_O = r̄×mv̄ + H_G entre los momentos angulares H_O y H_G del sistema de partículas.`,
+ answer:"Derivación algebraica (ver texto)",
+ hints:["Expresa r_i = r̄ + r'_i donde r'_i es posición relativa al CM","Sustituye en la definición H_O = Σ(r_i × m_i·v_i)"],
+ errors:[]},
+
+{id:"14.28",title:"Derivación: ΣM_G = dH_G/dt",topics:["angular_momentum","theory"],diff:3,hasImage:false,
+ text:`Muestra que ΣM_G = dH_G/dt puede derivarse directamente de la ecuación de momento angular.`,
+ answer:"Ver derivación en texto",hints:[],errors:[]},
+
+{id:"14.29",title:"Marco en traslación: condiciones para H=H'",topics:["angular_momentum","theory"],diff:4,hasImage:false,
+ text:`Para un marco A en traslación respecto a O: demuestra que H_A = H'_A si y solo si (a) v_A=0, (b) A coincide con G, o (c) v_A es paralelo a AG.`,
+ answer:"Demostración algebraica",hints:[],errors:[]},
+
+{id:"14.30",title:"Marco en traslación: validez de ΣM_A=dH_A/dt",topics:["angular_momentum","theory"],diff:4,hasImage:false,
+ text:`Demuestra que ΣM_A = dH_A/dt es válido bajo las mismas tres condiciones del Problema 14.29.`,
+ answer:"Demostración algebraica",hints:[],errors:[]},
+
+{id:"14.31",title:"Partículas en arreglo hexagonal",topics:["linear_momentum","angular_momentum"],diff:3,hasImage:false,
+ text:`Seis partículas idénticas en las esquinas de un hexágono regular se mueven hacia el centro con velocidad v. Determina: (a) momentum lineal del sistema, (b) momentum angular respecto al centro.`,
+ answer:"(a) p = 0 (simetría), (b) H = 0",
+ hints:["Por simetría, las velocidades opuestas se cancelan"],errors:[]},
+
+{id:"14.32",title:"Variante partículas en hexágono",topics:["angular_momentum"],diff:3,hasImage:false,
+ text:`Variante del problema 14.31 con velocidades en diferentes direcciones.`,
+ answer:"Ver solución",hints:[],errors:[]},
+
+{id:"14.33",title:"Sistema masa-resorte-masa",topics:["linear_momentum","energy"],diff:3,hasImage:false,
+ text:`Dos partículas conectadas por un resorte. Cuando el resorte pasa por su longitud natural, las partículas tienen velocidades dadas. Determina la velocidad del centro de masa.`,
+ answer:"v_CM = Σm_i·v_i / M (constante)",
+ hints:["El CM se mueve a velocidad constante si no hay fuerzas externas"],errors:[]},
+
+{id:"14.34",title:"Colisión angular (particulas con spin)",topics:["angular_momentum"],diff:4,hasImage:false,
+ text:`Dos barras colisionan. Aplicar conservación de momento angular respecto a un punto.`,
+ answer:"Ver solución",hints:[],errors:[]},
+
+{id:"14.35",title:"Bola y platillo",topics:["linear_momentum","angular_momentum"],diff:3,hasImage:false,
+ text:`Una bola de masa m impacta un platillo de masa M. Determina velocidades después del impacto usando conservación de momento.`,
+ answer:"Ver solución",hints:[],errors:[]},
+
+{id:"14.36",title:"Cadena que cae sobre superficie",topics:["variable_mass","linear_momentum"],diff:4,hasImage:false,
+ text:`Una cadena cae sobre una superficie horizontal. Determina la fuerza que ejerce sobre la superficie usando el principio de impulso-momento variable.`,
+ answer:"F = ρ·v² + ρ·g·x (donde x es la longitud caída)",
+ hints:["F = dP/dt + fuerza del impacto = ρ·g·x + ρ·v²"],errors:[]},
+
+{id:"14.37",title:"Cadena que se apila",topics:["variable_mass"],diff:4,hasImage:false,
+ text:`Una cadena se descuelga de una altura y se apila en el suelo. Determina la fuerza en la pila.`,
+ answer:"Ver solución",hints:[],errors:[]},
+
+{id:"14.38",title:"Pool 3 bolas perfectamente elástico (centrado) — EXAMEN",topics:["linear_momentum","energy","billiard"],diff:5,hasImage:true,examCritical:true,
+ text:`PROBLEMA DE EXAMEN — CARAMBOLA ELÁSTICA
+Bola A se mueve con v₀ y choca simultáneamente con B y C (alineadas, lado a lado).
+Impacto perfectamente elástico (conservación de energía). Contacto hace ángulo 30° con la dirección de v₀.
+
+(a) Impacto perfectamente centrado (A golpea B y C simultáneamente): determina v_A, v_B, v_C.
+(b) Impacto no centrado (A golpea B ligeramente antes que C): determina v_A, v_B, v_C.`,
+ answer:"(a) v_A = 0, v_B = v_C = v₀/√3 · (por ángulo 30°)\n(b) v_A ≠ 0 (ver solución)",
+ hints:["Caso (a): Por simetría, v_B = v_C. Los impulsos son normales a las superficies de contacto","Conservación de momentum: 3 ecuaciones (x, y total)","Conservación de energía: ½mv₀² = ½m(v_A² + v_B² + v_C²)","Los ángulos de los impulsos determinan la dirección de v_B y v_C"],
+ errors:["No usar la dirección del impulso (normal al contacto) para v_B y v_C","Olvidar la ecuación de energía","En caso (b): tratar los dos impactos como simultáneos cuando no lo son"]},
+
+{id:"14.39",title:"Pool 3 bolas elástico (A a 45°, v₀=15 ft/s) — EXAMEN",topics:["linear_momentum","energy","billiard"],diff:5,hasImage:true,examCritical:true,
+ text:`PROBLEMA DE EXAMEN — CARAMBOLA ELÁSTICA
+Bola A se mueve a v₀=15 ft/s con dirección 45°. Choca con B y C en reposo y alineadas.
+Después: A viaja en alguna dirección, B en dirección 30° (específica), C en dirección 30° diferente.
+Impacto perfectamente elástico (conservación de energía).
+Determina v_A, v_B, v_C.`,
+ answer:"v_A = 10.61 ft/s, v_B = 5.30 ft/s, v_C = 9.19 ft/s",
+ hints:["4 ecuaciones: momentum-x, momentum-y, energía, y la dirección de las velocidades","v_A = v_A·(cos θ_A·i + sin θ_A·j) — las direcciones están fijadas por el enunciado","Sustituye las expresiones de v_A, v_B, v_C en las 3 ecuaciones y resuelve","Este es un sistema 3×3 no lineal — usa la ec. de energía para eliminar incógnitas"],
+ errors:["No usar conservación de energía (no es solo momentum)","Error en las componentes de velocidad por los ángulos dados","No reducir correctamente el sistema de ecuaciones"]},
+
+{id:"14.40",title:"Pool 3 bolas elástico (A a 30°, v₀=15 ft/s) — EXAMEN",topics:["linear_momentum","energy","billiard"],diff:5,hasImage:true,examCritical:true,
+ text:`PROBLEMA DE EXAMEN — CARAMBOLA ELÁSTICA
+Bola A a v₀=15 ft/s en dirección 30°. Choca con B y C en reposo alineadas.
+Después: A se desvía, B va en dirección vertical, C va a 45°.
+Impacto perfectamente elástico.
+Determina v_A, v_B, v_C.`,
+ answer:"v_A = 7.50 ft/s, v_B = 9.19 ft/s, v_C = 9.19 ft/s",
+ hints:["Misma metodología que 14.39","Aquí v_B va en j puro (dirección vertical), simplificando el sistema","Momentum-x, momentum-y, energía → 3 ecuaciones con 3 incógnitas"],
+ errors:["Error en la descomposición de v₀ en el eje de referencia","No aprovechar que v_B es puramente vertical para simplificar"]},
+];
+
+// Add problems 14.41-14.116 (abbreviated)
+(function() {
+  const extras = [
+    {id:"14.41",title:"Sistema de partículas: trabajo y energía",topics:["energy","linear_momentum"],diff:3,
+     text:`Dos partículas unidas por un resorte se mueven. Determina la velocidad del CM y la energía cinética relativa al CM.`,answer:"Ver solución"},
+    {id:"14.42",title:"Variante 14.41",topics:["energy"],diff:3,text:`Variante con masas diferentes.`,answer:"Ver solución"},
+    {id:"14.43",title:"Impacto directo central (e dado)",topics:["coeff_restitution","linear_momentum"],diff:3,
+     text:`Dos esferas chocan en impacto directo central. Dado e, determina velocidades finales.`,answer:"Ver solución"},
+    {id:"14.44",title:"Impacto: pérdida de energía",topics:["coeff_restitution","energy"],diff:3,
+     text:`Determina la pérdida de energía cinética en un impacto con e dado.`,answer:"ΔT = ½·μ·(v_rel)²·(1−e²)"},
+    {id:"14.45",title:"Impacto oblicuo",topics:["coeff_restitution","oblique_impact"],diff:4,
+     text:`Esfera A choca oblicuamente con esfera B en reposo. Determina velocidades después del impacto.`,answer:"Ver solución"},
+    {id:"14.46",title:"Esfera contra pared (e dado)",topics:["coeff_restitution"],diff:3,
+     text:`Una esfera choca contra una pared con ángulo θ. Dado e, determina el ángulo de rebote.`,answer:"tan θ' = tan θ / e"},
+    {id:"14.47",title:"Variante impacto oblicuo",topics:["oblique_impact"],diff:4,text:`Variante.`,answer:"Ver solución"},
+    {id:"14.48",title:"Impacto oblicuo con superficie",topics:["oblique_impact"],diff:4,text:`Impacto oblicuo.`,answer:"Ver solución"},
+    {id:"14.49",title:"Bola de golf (loft angle)",topics:["oblique_impact","coeff_restitution"],diff:4,
+     text:`Una bola de golf es golpeada con un palo en ángulo. Dados e y fricción, determina la velocidad y spin.`,answer:"Ver solución"},
+    {id:"14.50",title:"Palo de billar y bola",topics:["oblique_impact","angular_momentum"],diff:4,
+     text:`Un palo golpea una bola de billar en punto P. Determina la velocidad y velocidad angular de la bola.`,answer:"Ver solución"},
+  ];
+  for(let i=51; i<=116; i++) {
+    const tmap = {
+      51:"variable_mass",52:"variable_mass",53:"variable_mass",54:"variable_mass",55:"variable_mass",
+      56:"rocket",57:"rocket",58:"rocket",59:"rocket",60:"rocket",
+      61:"chain",62:"chain",63:"chain",64:"chain",65:"chain",
+      66:"jet",67:"jet",68:"jet",69:"jet",70:"jet",
+      71:"coeff_restitution",72:"coeff_restitution",73:"oblique_impact",74:"oblique_impact",75:"oblique_impact",
+      76:"oblique_impact",77:"oblique_impact",78:"oblique_impact",79:"oblique_impact",80:"oblique_impact",
+      81:"energy",82:"energy",83:"energy",84:"energy",85:"energy",
+      86:"energy",87:"energy",88:"energy",89:"energy",90:"energy",
+      91:"angular_momentum",92:"angular_momentum",93:"angular_momentum",94:"angular_momentum",95:"angular_momentum",
+      96:"angular_momentum",97:"angular_momentum",98:"angular_momentum",99:"angular_momentum",100:"angular_momentum",
+      101:"review",102:"review",103:"review",104:"review",105:"review",
+      106:"review",107:"review",108:"review",109:"review",110:"review",
+      111:"review",112:"review",113:"review",114:"review",115:"review",116:"review"
+    };
+    extras.push({
+      id:`14.${i}`,
+      title:`Problema ${i} (Cap. 14)`,
+      topics:[tmap[i]||"linear_momentum"],
+      diff:3,
+      text:`Problema 14.${i} de Beer & Johnston.\nConsulta el solucionario para el enunciado completo.`,
+      answer:"Ver solucionario"
+    });
+  }
+  extras.forEach(p => {
+    PROBLEMS.push({hasImage:false,hints:[],errors:[],examCritical:false,...p});
+  });
+})();
+
+// Build lookup map
+const PROB_MAP = {};
+PROBLEMS.forEach(p => PROB_MAP[p.id] = p);
+
+// ─── STORAGE ────────────────────────────────────────────────────────────────
+
+const DB = {
+  KEY: 'tutor_dinamica_v2',
+  load() {
+    try { return JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch { return {}; }
+  },
+  save(data) {
+    localStorage.setItem(this.KEY, JSON.stringify(data));
+  },
+  get(probId) {
+    const d = this.load();
+    if(!d[probId]) d[probId] = {score:0,attempts:0,correct:0,errors:[],chatHistory:[],lastStudied:null};
+    return d[probId];
+  },
+  set(probId, state) {
+    const d = this.load();
+    d[probId] = state;
+    this.save(d);
+  },
+  getAll() { return this.load(); },
+  getConfig() {
+    try { return JSON.parse(localStorage.getItem('tutor_config_v2')) || {}; } catch { return {}; }
+  },
+  saveConfig(cfg) {
+    localStorage.setItem('tutor_config_v2', JSON.stringify(cfg));
+  }
+};
+
+// ─── SPACED REPETITION ──────────────────────────────────────────────────────
+
+const SRS = {
+  MASTERED: 8,
+  markCorrect(probId) {
+    const s = DB.get(probId);
+    s.score = Math.min(s.score + 1, 20);
+    s.correct++;
+    s.attempts++;
+    s.lastStudied = Date.now();
+    DB.set(probId, s);
+  },
+  markWrong(probId, errorType, desc) {
+    const s = DB.get(probId);
+    s.score = Math.max(s.score - 2, 0);
+    s.attempts++;
+    s.lastStudied = Date.now();
+    s.errors.push({t: Date.now(), type: errorType||'general', desc: desc||'Error sin descripción', attempt: s.attempts});
+    DB.set(probId, s);
+    ErrorTracker.record(probId, errorType||'general', desc||'Error sin descripción');
+  },
+  getScore(probId) { return DB.get(probId).score; },
+  isMastered(probId) { return this.getScore(probId) >= this.MASTERED; },
+  addChat(probId, role, content) {
+    const s = DB.get(probId);
+    s.chatHistory.push({role, content, t: Date.now()});
+    DB.set(probId, s);
+  },
+  clearChat(probId) {
+    const s = DB.get(probId);
+    s.chatHistory = [];
+    DB.set(probId, s);
+  }
+};
+
+// ─── ERROR TRACKER ──────────────────────────────────────────────────────────
+
+const ErrorTracker = {
+  record(probId, type, desc) {
+    const cfg = DB.getConfig();
+    if(!cfg.errorPatterns) cfg.errorPatterns = {};
+    if(!cfg.errorPatterns[type]) cfg.errorPatterns[type] = {count:0, problems:[], descs:[]};
+    const ep = cfg.errorPatterns[type];
+    ep.count++;
+    if(!ep.problems.includes(probId)) ep.problems.push(probId);
+    ep.descs.push({probId, desc, t: Date.now()});
+    DB.saveConfig(cfg);
+  },
+  getPatterns() {
+    const cfg = DB.getConfig();
+    return cfg.errorPatterns || {};
+  },
+  getHighPriority() {
+    const patterns = this.getPatterns();
+    return Object.entries(patterns)
+      .filter(([,v]) => v.problems.length >= 3)
+      .map(([type, v]) => ({type, ...v}));
+  },
+  getWeakProblems() {
+    const all = DB.getAll();
+    return PROBLEMS.filter(p => {
+      const s = all[p.id];
+      if(!s) return false;
+      return s.score < 3 && s.attempts > 0;
+    }).sort((a,b) => (DB.get(a.id).score||0) - (DB.get(b.id).score||0));
+  }
+};
+
+// ─── AI TUTOR ───────────────────────────────────────────────────────────────
+
+const AI = {
+  SYSTEM: `Eres un tutor socrático de élite para Dinámica de Ingeniería (Beer & Johnston Cap. 14: Sistemas de Partículas). El estudiante tiene examen el 5 de mayo de 2026.
+
+REGLA ABSOLUTA: NUNCA das la respuesta directa. Guías al estudiante a descubrirla.
+
+MÉTODO:
+1. Si el estudiante no ha intentado nada: pídele que identifique la fórmula/ley que aplica
+2. Si identificó la ley pero no sabe cómo aplicar: dile qué variables definir
+3. Si plantea las ecuaciones pero se equivoca: señala exactamente en qué línea está el error
+4. Si comete el mismo error 2+ veces: explica el concepto con una analogía
+
+PREGUNTAS SOCRÁTICAS QUE USAS:
+- "¿Qué ley de conservación aplica aquí?"
+- "¿Cuántos sistemas separados hay? ¿En qué orden ocurren los eventos?"
+- "¿Las masas están en kg o necesitas convertir?"
+- "¿Cuál es el sistema antes del impacto? ¿Y después?"
+- "Si tuvieras que escribir la ecuación vectorial, ¿cómo sería?"
+
+TEMAS CRÍTICOS EN EL EXAMEN:
+- Problemas de billar (carambola): CONSERVACIÓN de momentum lineal en x e y + posiblemente energía
+- 3 bolas: A choca con B y C → 2 ecuaciones (x, y) con 2 incógnitas (v_A, v_B si v_C es dado)
+- Impacto elástico: agrega conservación de energía como 3ra ecuación
+
+CUANDO EL ESTUDIANTE SUBE UNA FOTO: analiza el diagrama y comenta sobre ello.
+
+CUANDO EL ESTUDIANTE DICE "no sé nada": empieza con "¿Qué conserva el sistema en un choque sin fuerzas externas?"
+
+Responde en español. Sé directo, urgente pero sin estresarlo. Máximo 150 palabras por respuesta.`,
+
+  async chat(probId, userMsg, imageBase64 = null) {
+    const cfg = DB.getConfig();
+    if(!cfg.apiKey) throw new Error('NO_API_KEY');
+
+    const prob = PROB_MAP[probId];
+    const state = DB.get(probId);
+    const history = state.chatHistory || [];
+
+    // Build message array
+    const messages = [];
+
+    // Add history (last 20 messages)
+    const recentHistory = history.slice(-20);
+    recentHistory.forEach(h => {
+      messages.push({role: h.role, content: h.content});
+    });
+
+    // Add current user message
+    let userContent;
+    if(imageBase64) {
+      userContent = [
+        {type:'text', text: `[Problema ${probId}: ${prob.title}]\n\n${userMsg}`},
+        {type:'image', source:{type:'base64', media_type:'image/jpeg', data: imageBase64}}
+      ];
+    } else {
+      userContent = `[Problema ${probId}: ${prob.title}]\n\n${userMsg}`;
+    }
+    messages.push({role:'user', content: userContent});
+
+    const body = {
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      system: this.SYSTEM + `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado: ${prob.text}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`,
+      messages
+    };
+
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': cfg.apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if(!resp.ok) {
+      const err = await resp.text();
+      throw new Error(`API ${resp.status}: ${err}`);
+    }
+
+    const data = await resp.json();
+    return data.content[0].text;
+  }
+};
+
+// ─── UI ─────────────────────────────────────────────────────────────────────
+
+let currentProbId = null;
+let currentFilter = 'all';
+let currentImage = null;
+
+function init() {
+  // Days until exam
+  const examDate = new Date('2026-05-05');
+  const today = new Date();
+  const days = Math.ceil((examDate - today) / 86400000);
+  const el = document.getElementById('days-left');
+  if(el) el.textContent = days > 0 ? `faltan ${days} días` : '¡HOY ES EL EXAMEN!';
+
+  renderProblemList();
+  updateStats();
+  updateWeaknessPanel();
+
+  // Check API key
+  const cfg = DB.getConfig();
+  if(!cfg.apiKey) {
+    setTimeout(() => openConfig(), 500);
+  }
+}
+
+function renderProblemList() {
+  const list = document.getElementById('problem-list');
+  const search = (document.getElementById('search-box').value || '').toLowerCase();
+  const all = DB.getAll();
+
+  let filtered = PROBLEMS.filter(p => {
+    if(search && !p.id.includes(search) && !p.title.toLowerCase().includes(search) && !p.topics.some(t=>t.includes(search))) return false;
+    const s = all[p.id] || {};
+    if(currentFilter === 'weak') return (s.score||0) < 3 && (s.attempts||0) > 0;
+    if(currentFilter === 'crit') return p.examCritical;
+    if(currentFilter === 'unseen') return !(s.attempts > 0);
+    return true;
+  });
+
+  list.innerHTML = filtered.map(p => {
+    const s = all[p.id] || {};
+    const score = s.score || 0;
+    const attempts = s.attempts || 0;
+    const errors = (s.errors||[]).length;
+
+    let badge = '';
+    if(!attempts) badge = `<span class="prob-badge badge-new">nuevo</span>`;
+    else if(score >= SRS.MASTERED) badge = `<span class="prob-badge badge-score">✓ ${score}</span>`;
+    else if(errors >= 3) badge = `<span class="prob-badge badge-error">❌ ${score}</span>`;
+    else if(errors >= 1) badge = `<span class="prob-badge badge-warn">⚠ ${score}</span>`;
+    else badge = `<span class="prob-badge badge-score">${score}</span>`;
+
+    if(p.examCritical) badge += `<span class="prob-badge badge-crit">EXAM</span>`;
+
+    return `<div class="problem-item${p.examCritical?' exam-crit':''}${currentProbId===p.id?' active':''}" onclick="loadProblem('${p.id}')">
+      <span class="prob-num">${p.id}</span>
+      <span class="prob-title">${p.title}</span>
+      ${badge}
+    </div>`;
+  }).join('');
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderProblemList();
+}
+
+function filterProblems() { renderProblemList(); }
+
+function loadProblem(id) {
+  currentProbId = id;
+  currentImage = null;
+  const prob = PROB_MAP[id];
+  const state = DB.get(id);
+
+  document.getElementById('welcome-screen').style.display = 'none';
+  document.getElementById('problem-view').style.display = 'flex';
+
+  document.getElementById('prob-num-big').textContent = id;
+  document.getElementById('prob-title-big').textContent = prob.title;
+  document.getElementById('prob-text').textContent = prob.text;
+  document.getElementById('score-val').textContent = state.score;
+  document.getElementById('answer-val').textContent = prob.answer;
+  document.getElementById('answer-val').style.display = 'none';
+  document.getElementById('btn-show-answer').textContent = 'Mostrar respuesta';
+  document.getElementById('uploaded-photo').style.display = 'none';
+  document.getElementById('upload-label').textContent = '📷 Subir foto del diagrama (opcional)';
+
+  // Tags
+  const tags = prob.topics.map(t => {
+    const labels = {
+      linear_momentum:'Momentum lineal', angular_momentum:'Momento angular',
+      coeff_restitution:'Restitución', billiard:'Billar', energy:'Energía',
+      center_of_mass:'Centro de masa', variable_mass:'Masa variable',
+      oblique_impact:'Impacto oblicuo', rocket:'Cohete', chain:'Cadena',
+      cross_product:'Producto vectorial', scattering:'Dispersión',
+      multiple_impact:'Impacto múltiple', theory:'Teoría', review:'Repaso'
+    };
+    return `<span class="tag${prob.examCritical?' crit':''}">${labels[t]||t}</span>`;
+  }).join('');
+  document.getElementById('prob-tags').innerHTML = tags;
+
+  // Photo upload area
+  document.getElementById('photo-upload-area').style.display = prob.hasImage ? 'block' : 'none';
+
+  // Error log
+  renderErrorLog(id);
+
+  // Chat history
+  renderChatHistory(id);
+
+  // If has chat history, show the problem view with chat; otherwise show starter
+  if(state.chatHistory.length === 0) {
+    addSystemMessage(id);
+  }
+
+  renderProblemList();
+  updateStats();
+}
+
+function addSystemMessage(id) {
+  const prob = PROB_MAP[id];
+  const msgs = document.getElementById('chat-messages');
+  let intro = `Hola. Vamos con el Problema ${id}: **${prob.title}**.`;
+
+  if(prob.examCritical) intro += `\n\n⚠️ **ESTE PROBLEMA ENTRA EN EL EXAMEN.**`;
+
+  if(prob.hasImage) intro += `\n\n¿Tienes el diagrama a mano? Puedes subirlo con el botón de la foto para que lo analicemos juntos.`;
+
+  intro += `\n\nLee el enunciado y dime: **¿qué ley o principio aplica aquí?**`;
+
+  appendMessage('ai', intro);
+  SRS.addChat(id, 'assistant', intro);
+}
+
+function renderChatHistory(id) {
+  const msgs = document.getElementById('chat-messages');
+  msgs.innerHTML = '';
+  const state = DB.get(id);
+  (state.chatHistory || []).forEach(h => {
+    appendMessage(h.role === 'user' ? 'user' : 'ai', h.content);
+  });
+  scrollChat();
+}
+
+function appendMessage(type, text) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `msg ${type}`;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'msg-avatar';
+  avatar.textContent = type === 'ai' ? 'T' : 'D';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.innerHTML = formatText(text);
+
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  msgs.appendChild(div);
+  scrollChat();
+}
+
+function formatText(t) {
+  return t
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\n/g,'<br>');
+}
+
+function scrollChat() {
+  const msgs = document.getElementById('chat-messages');
+  setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 50);
+}
+
+function renderErrorLog(id) {
+  const state = DB.get(id);
+  const list = document.getElementById('error-log-list');
+  if(!state.errors || state.errors.length === 0) {
+    list.innerHTML = '<div style="font-size:11px;color:var(--muted)">Sin errores registrados</div>';
+    return;
+  }
+  const hp = ErrorTracker.getHighPriority().map(p=>p.type);
+  list.innerHTML = state.errors.slice(-5).map((e,i) => {
+    const cls = hp.includes(e.type) ? 'high' : state.errors.filter(x=>x.type===e.type).length >= 2 ? 'warn' : '';
+    const icon = cls==='high' ? '🔴' : cls==='warn' ? '⚠️' : '❌';
+    return `<div class="error-entry ${cls}">${icon} ${e.desc} <span style="color:var(--muted);font-size:10px">(int. ${e.attempt})</span></div>`;
+  }).join('');
+}
+
+function updateStats() {
+  const all = DB.getAll();
+  const studied = Object.values(all).filter(s => s.attempts > 0).length;
+  const totalErrors = Object.values(all).reduce((acc,s) => acc + (s.errors||[]).length, 0);
+  const highPriority = ErrorTracker.getHighPriority().length;
+
+  document.getElementById('stat-progress').textContent = `${studied}/116`;
+  document.getElementById('stat-errors').textContent = totalErrors;
+  document.getElementById('stat-high').textContent = highPriority;
+}
+
+function updateWeaknessPanel() {
+  const weak = ErrorTracker.getWeakProblems().slice(0, 8);
+  const hp = ErrorTracker.getHighPriority();
+  const list = document.getElementById('weakness-list');
+
+  if(weak.length === 0 && hp.length === 0) {
+    list.innerHTML = '<div class="weakness-item" style="color:var(--muted)">Sin debilidades detectadas</div>';
+    return;
+  }
+
+  const items = [];
+  hp.slice(0,3).forEach(p => {
+    items.push(`<div class="weakness-item"><span class="w-icon">🔴</span><span style="font-size:10px;color:var(--danger)"><b>ALTA:</b> Error tipo "${p.type}" en ${p.problems.join(', ')}</span></div>`);
+  });
+  weak.slice(0,5).forEach(p => {
+    const s = DB.get(p.id);
+    items.push(`<div class="weakness-item" onclick="loadProblem('${p.id}')" style="cursor:pointer"><span class="w-icon">⚠️</span><span>${p.id}: ${p.title.substring(0,25)}...</span></div>`);
+  });
+
+  list.innerHTML = items.join('');
+}
+
+// ─── USER ACTIONS ───────────────────────────────────────────────────────────
+
+function markCorrect() {
+  if(!currentProbId) return;
+  SRS.markCorrect(currentProbId);
+  const s = DB.get(currentProbId);
+  document.getElementById('score-val').textContent = s.score;
+  showToast('✓ Correcto registrado. Score: ' + s.score);
+  renderProblemList();
+  updateStats();
+  updateWeaknessPanel();
+}
+
+function markError() {
+  if(!currentProbId) return;
+  const desc = prompt('Describe brevemente el error que cometiste:');
+  if(desc === null) return;
+  const type = detectErrorType(desc);
+  SRS.markWrong(currentProbId, type, desc || 'Error general');
+  const s = DB.get(currentProbId);
+  document.getElementById('score-val').textContent = s.score;
+  renderErrorLog(currentProbId);
+  updateStats();
+  updateWeaknessPanel();
+  renderProblemList();
+  showToast('❌ Error registrado. Score: ' + s.score);
+}
+
+function detectErrorType(desc) {
+  const d = (desc||'').toLowerCase();
+  if(d.includes('momentum') || d.includes('momento') || d.includes('conservac')) return 'momentum_setup';
+  if(d.includes('producto vectorial') || d.includes('cross') || d.includes('vector')) return 'cross_product';
+  if(d.includes('ángulo') || d.includes('angulo') || d.includes('componente') || d.includes('cos') || d.includes('sin')) return 'angle_components';
+  if(d.includes('masa') || d.includes('peso') || d.includes('slug') || d.includes('kg')) return 'mass_units';
+  if(d.includes('centro de masa') || d.includes('cm ') || d.includes('posición')) return 'center_of_mass';
+  if(d.includes('energia') || d.includes('energía') || d.includes('elástico')) return 'energy_conservation';
+  return 'general';
+}
+
+function startProblem() {
+  if(!currentProbId) return;
+  const cfg = DB.getConfig();
+  if(!cfg.apiKey) { openConfig(); return; }
+  const input = document.getElementById('chat-input');
+  input.value = 'Quiero empezar este problema. ¿Cómo lo enfrento?';
+  sendMessage();
+}
+
+function resetChat() {
+  if(!currentProbId) return;
+  if(!confirm('¿Borrar el historial de chat de este problema?')) return;
+  SRS.clearChat(currentProbId);
+  const msgs = document.getElementById('chat-messages');
+  msgs.innerHTML = '';
+  addSystemMessage(currentProbId);
+  SRS.addChat(currentProbId, 'assistant', 'Historial borrado. ¿Empezamos?');
+}
+
+function toggleAnswer() {
+  const val = document.getElementById('answer-val');
+  const btn = document.getElementById('btn-show-answer');
+  if(val.style.display === 'none') {
+    val.style.display = 'block';
+    btn.textContent = 'Ocultar respuesta';
+  } else {
+    val.style.display = 'none';
+    btn.textContent = 'Mostrar respuesta';
+  }
+}
+
+async function sendMessage() {
+  if(!currentProbId) return;
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if(!text) return;
+
+  const cfg = DB.getConfig();
+  if(!cfg.apiKey) { openConfig(); return; }
+
+  appendMessage('user', text);
+  SRS.addChat(currentProbId, 'user', text);
+  input.value = '';
+
+  const thinking = document.getElementById('chat-thinking');
+  const sendBtn = document.getElementById('btn-send');
+  thinking.style.display = 'block';
+  sendBtn.disabled = true;
+
+  try {
+    const response = await AI.chat(currentProbId, text, currentImage);
+    thinking.style.display = 'none';
+    sendBtn.disabled = false;
+    appendMessage('ai', response);
+    SRS.addChat(currentProbId, 'assistant', response);
+    currentImage = null; // consume image after first send
+  } catch(e) {
+    thinking.style.display = 'none';
+    sendBtn.disabled = false;
+    if(e.message === 'NO_API_KEY') {
+      appendMessage('ai', 'No hay API key configurada. Haz clic en ⚙️ Config para añadirla.');
+    } else {
+      appendMessage('ai', `Error al conectar con el tutor: ${e.message}. Intenta de nuevo.`);
+    }
+  }
+}
+
+function handleKey(e) {
+  if(e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+// ─── PHOTO ──────────────────────────────────────────────────────────────────
+
+function triggerUpload() {
+  document.getElementById('photo-input').click();
+}
+
+function handlePhoto(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64 = e.target.result.split(',')[1];
+    currentImage = base64;
+    const img = document.getElementById('uploaded-photo');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('upload-label').textContent = '✓ Foto subida. Envía un mensaje para analizarla.';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ─── REVIEW MODULE ──────────────────────────────────────────────────────────
+
+function openReview() {
+  const panel = document.getElementById('review-panel');
+  panel.style.display = 'block';
+  renderReviewContent();
+}
+
+function closeReview() {
+  document.getElementById('review-panel').style.display = 'none';
+}
+
+function renderReviewContent() {
+  const content = document.getElementById('review-content');
+  const hp = ErrorTracker.getHighPriority();
+  const weak = ErrorTracker.getWeakProblems().slice(0, 8);
+
+  let html = '';
+
+  if(hp.length > 0) {
+    html += '<h3 style="font-size:13px;color:var(--danger);margin-bottom:12px">🔴 ALTA PRIORIDAD — Mismo error en múltiples problemas</h3>';
+    hp.forEach(p => {
+      html += `<div class="review-card high">
+        <h3>Error: "${p.type}" — ${p.problems.length} problemas afectados</h3>
+        <div class="rc-error">Problemas: ${p.problems.join(', ')} (${p.count} veces total)</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Últimos errores: ${p.descs.slice(-2).map(d=>d.desc).join(' | ')}</div>
+        <button class="rc-btn" onclick="loadProblemFromReview('${p.problems[0]}')">Repasar ${p.problems[0]}</button>
+        ${p.problems.slice(1).map(pid => `<button class="rc-btn" style="margin-left:6px" onclick="loadProblemFromReview('${pid}')">Repasar ${pid}</button>`).join('')}
+      </div>`;
+    });
+  }
+
+  if(weak.length > 0) {
+    html += '<h3 style="font-size:13px;color:var(--warn);margin-bottom:12px;margin-top:16px">⚠️ Problemas débiles (bajo score)</h3>';
+    weak.forEach(p => {
+      const s = DB.get(p.id);
+      html += `<div class="review-card">
+        <h3>${p.id}: ${p.title}</h3>
+        <div class="rc-error">Score: ${s.score} | Errores: ${s.errors.length} | Intentos: ${s.attempts}</div>
+        <button class="rc-btn" onclick="loadProblemFromReview('${p.id}')">Estudiar este problema</button>
+      </div>`;
+    });
+  }
+
+  const examCrit = PROBLEMS.filter(p => p.examCritical);
+  html += '<h3 style="font-size:13px;color:var(--danger);margin-bottom:12px;margin-top:16px">📋 Problemas de EXAMEN</h3>';
+  examCrit.forEach(p => {
+    const s = DB.get(p.id);
+    html += `<div class="review-card high">
+      <h3>${p.id}: ${p.title}</h3>
+      <div class="rc-error">Score: ${s.score} | Intentos: ${s.attempts} | ${p.topics.join(', ')}</div>
+      <button class="rc-btn" onclick="loadProblemFromReview('${p.id}')">Estudiar</button>
+    </div>`;
+  });
+
+  if(!html) html = '<p style="color:var(--muted);font-size:13px">¡Todo bien por ahora! Sigue practicando.</p>';
+  content.innerHTML = html;
+}
+
+function loadProblemFromReview(id) {
+  closeReview();
+  loadProblem(id);
+}
+
+// ─── CONFIG ─────────────────────────────────────────────────────────────────
+
+function openConfig() {
+  const cfg = DB.getConfig();
+  document.getElementById('api-key-input').value = cfg.apiKey || '';
+  document.getElementById('config-modal').style.display = 'block';
+}
+
+function closeConfig() {
+  document.getElementById('config-modal').style.display = 'none';
+}
+
+function saveConfig() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if(!key) { alert('Ingresa tu API key de Anthropic'); return; }
+  const cfg = DB.getConfig();
+  cfg.apiKey = key;
+  DB.saveConfig(cfg);
+  closeConfig();
+  showToast('✓ API key guardada');
+}
+
+// ─── UTILS ──────────────────────────────────────────────────────────────────
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1e2a3a;border:1px solid var(--accent);color:var(--text);padding:10px 16px;border-radius:8px;font-size:13px;z-index:999;transition:opacity 0.3s';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2500);
+}
+
+// Close modals on backdrop click
+document.getElementById('config-modal').addEventListener('click', function(e) {
+  if(e.target === this) closeConfig();
+});
+document.getElementById('review-panel').addEventListener('click', function(e) {
+  if(e.target === this) closeReview();
+});
+
+// Auto-resize textarea
+document.getElementById('chat-input').addEventListener('input', function() {
+  this.style.height = '42px';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// Photo drag-drop
+const uploadArea = document.getElementById('photo-upload-area');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('upload-highlight'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('upload-highlight'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.classList.remove('upload-highlight');
+  const file = e.dataTransfer.files[0];
+  if(file && file.type.startsWith('image/')) {
+    const input = document.getElementById('photo-input');
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    handlePhoto({target: input});
+  }
+});
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
