@@ -1176,12 +1176,14 @@ const DB = {
   },
   get(probId) {
     const d = this.load();
-    if(!d[probId]) d[probId] = {score:0,attempts:0,correct:0,errors:[],chatHistory:[],boardChatHistory:[],boardStrokes:[],problemImage:null,lastStudied:null,lastResult:null,accessUnlocked:false,gatePasses:0,solved:false};
+    if(!d[probId]) d[probId] = {score:0,attempts:0,correct:0,errors:[],chatHistory:[],boardChatHistory:[],boardStrokes:[],boardUpdatedAt:0,problemImage:null,problemImageUpdatedAt:0,lastStudied:null,lastResult:null,accessUnlocked:false,gatePasses:0,solved:false};
     if(!Array.isArray(d[probId].errors)) d[probId].errors = [];
     if(!Array.isArray(d[probId].chatHistory)) d[probId].chatHistory = [];
     if(!Array.isArray(d[probId].boardChatHistory)) d[probId].boardChatHistory = [];
     if(!Array.isArray(d[probId].boardStrokes)) d[probId].boardStrokes = [];
+    if(typeof d[probId].boardUpdatedAt !== 'number') d[probId].boardUpdatedAt = d[probId].boardStrokes.length ? (d[probId].lastStudied || 0) : 0;
     if(typeof d[probId].problemImage !== 'string') d[probId].problemImage = null;
+    if(typeof d[probId].problemImageUpdatedAt !== 'number') d[probId].problemImageUpdatedAt = d[probId].problemImage ? (d[probId].lastStudied || 0) : 0;
     if(typeof d[probId].accessUnlocked !== 'boolean') d[probId].accessUnlocked = false;
     if(typeof d[probId].solved !== 'boolean') d[probId].solved = false;
     if(typeof d[probId].lastResult !== 'string') d[probId].lastResult = d[probId].solved ? 'correct' : ((d[probId].errors || []).length ? 'error' : null);
@@ -1278,11 +1280,13 @@ const SRS = {
   setBoardStrokes(probId, strokes) {
     const s = DB.get(probId);
     s.boardStrokes = Array.isArray(strokes) ? strokes : [];
+    s.boardUpdatedAt = Date.now();
     DB.set(probId, s);
   },
   setProblemImage(probId, dataUrl) {
     const s = DB.get(probId);
     s.problemImage = dataUrl || null;
+    s.problemImageUpdatedAt = Date.now();
     DB.set(probId, s);
   }
 };
@@ -1440,7 +1444,7 @@ let boardPanOffsetStart = {x: 0, y: 0};
 let boardTouchPtrs = new Map();
 let boardPinchState = null;
 const CLIENT_ID = crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
-const SYNC_SESSION = new URLSearchParams(location.search).get('sync') || localStorage.getItem('tutor_sync_session') || '';
+let syncSession = '';
 let syncDirty = false;
 let syncApplying = false;
 let syncLastRemote = 0;
@@ -1459,6 +1463,7 @@ function loginAs(profileId) {
   const p = PROFILES[profileId];
   if(!p) return;
   localStorage.setItem('tutor_active_profile', profileId);
+  localStorage.setItem('tutor_sync_session', p.syncKey);
   // Migrate legacy data (tutor_dinamica_v2) to profile key if profile key is empty
   const legacyData = localStorage.getItem('tutor_dinamica_v2');
   const profileData = localStorage.getItem(p.dbKey);
@@ -1476,6 +1481,7 @@ function checkLogin() {
   const profile = getActiveProfile();
   if(profile) {
     DB.KEY = profile.dbKey;
+    localStorage.setItem('tutor_sync_session', profile.syncKey);
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('topbar').style.display = 'flex';
     document.getElementById('layout').style.display = 'flex';
@@ -2996,16 +3002,18 @@ function completeExercise() {
 // ─── DEVICE SYNC ────────────────────────────────────────────────────────────
 
 function initSync() {
-  if(!SYNC_SESSION) return;
-  localStorage.setItem('tutor_sync_session', SYNC_SESSION);
-  showToast(`Sync activo: ${SYNC_SESSION}`);
-  syncDirty = true;
+  syncSession = getSyncSession();
+  if(!syncSession) return;
+  showToast(`Sync Daniel activo`);
+  syncDirty = false;
   setInterval(syncTick, 1800);
   syncTick();
 }
 
 function requestSyncUpload() {
-  if(syncApplying || !SYNC_SESSION) return;
+  if(syncApplying) return;
+  syncSession = syncSession || getSyncSession();
+  if(!syncSession) return;
   syncDirty = true;
 }
 
@@ -3026,6 +3034,7 @@ function currentLayer() {
 function buildSyncPayload() {
   return {
     clientId: CLIENT_ID,
+    profileId: getActiveProfile()?.id || 'daniel',
     db: DB.getAll(),
     currentProbId,
     currentImage,
@@ -3034,27 +3043,87 @@ function buildSyncPayload() {
   };
 }
 
+function getSyncSession() {
+  const fromUrl = new URLSearchParams(location.search).get('sync');
+  if(fromUrl) {
+    localStorage.setItem('tutor_sync_session', fromUrl);
+    return fromUrl;
+  }
+  const profile = getActiveProfile();
+  if(profile?.syncKey) {
+    localStorage.setItem('tutor_sync_session', profile.syncKey);
+    return profile.syncKey;
+  }
+  return localStorage.getItem('tutor_sync_session') || '';
+}
+
+function mergeByKey(a, b, keyFn) {
+  const map = new Map();
+  [...(a || []), ...(b || [])].forEach(item => {
+    if(!item) return;
+    map.set(keyFn(item), item);
+  });
+  return [...map.values()].sort((x, y) => (x.t || 0) - (y.t || 0));
+}
+
+function mergeProblemState(local = {}, remote = {}) {
+  const merged = {...remote, ...local};
+  merged.score = Math.max(local.score || 0, remote.score || 0);
+  merged.attempts = Math.max(local.attempts || 0, remote.attempts || 0);
+  merged.correct = Math.max(local.correct || 0, remote.correct || 0);
+  merged.solved = Boolean(local.solved || remote.solved);
+  merged.accessUnlocked = Boolean(local.accessUnlocked || remote.accessUnlocked);
+  merged.gatePasses = Math.max(local.gatePasses || 0, remote.gatePasses || 0);
+  merged.gateCorrect = Math.max(local.gateCorrect || 0, remote.gateCorrect || 0);
+  merged.gateSkills = [...new Set([...(remote.gateSkills || []), ...(local.gateSkills || [])])];
+  merged.lastStudied = Math.max(local.lastStudied || 0, remote.lastStudied || 0) || null;
+  merged.errors = mergeByKey(remote.errors, local.errors, e => `${e.t || ''}|${e.type || ''}|${e.desc || ''}`);
+  merged.chatHistory = mergeByKey(remote.chatHistory, local.chatHistory, m => `${m.t || ''}|${m.role || ''}|${m.content || ''}`);
+  merged.boardChatHistory = mergeByKey(remote.boardChatHistory, local.boardChatHistory, m => `${m.t || ''}|${m.role || ''}|${m.content || ''}`);
+  if((local.boardUpdatedAt || 0) || (remote.boardUpdatedAt || 0)) {
+    const useLocalBoard = (local.boardUpdatedAt || 0) >= (remote.boardUpdatedAt || 0);
+    merged.boardStrokes = useLocalBoard ? (local.boardStrokes || []) : (remote.boardStrokes || []);
+    merged.boardUpdatedAt = Math.max(local.boardUpdatedAt || 0, remote.boardUpdatedAt || 0);
+  } else {
+    merged.boardStrokes = (local.boardStrokes || []).length >= (remote.boardStrokes || []).length ? (local.boardStrokes || []) : (remote.boardStrokes || []);
+    merged.boardUpdatedAt = merged.boardStrokes.length ? merged.lastStudied || 0 : 0;
+  }
+  if((local.problemImageUpdatedAt || 0) || (remote.problemImageUpdatedAt || 0)) {
+    const useLocalImage = (local.problemImageUpdatedAt || 0) >= (remote.problemImageUpdatedAt || 0);
+    merged.problemImage = useLocalImage ? (local.problemImage || null) : (remote.problemImage || null);
+    merged.problemImageUpdatedAt = Math.max(local.problemImageUpdatedAt || 0, remote.problemImageUpdatedAt || 0);
+  } else {
+    merged.problemImage = local.problemImage || remote.problemImage || null;
+    merged.problemImageUpdatedAt = merged.problemImage ? merged.lastStudied || 0 : 0;
+  }
+  merged.lastResult = merged.solved ? 'correct' : (local.lastResult || remote.lastResult || null);
+  return merged;
+}
+
+function mergeDb(localDb = {}, remoteDb = {}) {
+  const out = {};
+  const ids = new Set([...Object.keys(remoteDb || {}), ...Object.keys(localDb || {})]);
+  ids.forEach(id => { out[id] = mergeProblemState(localDb[id] || {}, remoteDb[id] || {}); });
+  return out;
+}
+
 async function syncTick() {
-  if(!SYNC_SESSION) return;
+  syncSession = syncSession || getSyncSession();
+  if(!syncSession) return;
   try {
-    const r = await fetch(`/api/sync?session=${encodeURIComponent(SYNC_SESSION)}`);
+    const r = await fetch(`/api/sync?session=${encodeURIComponent(syncSession)}`);
     const remote = await r.json();
     if(remote.updatedAt > syncLastRemote && remote.payload && remote.payload.clientId !== CLIENT_ID) {
-      // Only apply remote if remote DB has MORE problems solved than local (never destroy local progress)
       const localAll = DB.getAll();
       const remoteAll = remote.payload.db || {};
-      const localSolved = Object.values(localAll).filter(s=>s&&s.solved).length;
-      const remoteSolved = Object.values(remoteAll).filter(s=>s&&s.solved).length;
-      if(remoteSolved >= localSolved) {
-        applyRemoteSync(remote.payload);
-        syncLastRemote = remote.updatedAt;
-        syncDirty = false;
-        return;
-      }
+      const mergedDb = mergeDb(localAll, remoteAll);
+      applyRemoteSync({...remote.payload, db: mergedDb});
+      syncLastRemote = remote.updatedAt;
+      syncDirty = JSON.stringify(mergedDb) !== JSON.stringify(remoteAll);
     }
-    if(syncDirty) {
+    if(syncDirty || !remote.updatedAt) {
       const updatedAt = Date.now();
-      await fetch(`/api/sync?session=${encodeURIComponent(SYNC_SESSION)}`, {
+      await fetch(`/api/sync?session=${encodeURIComponent(syncSession)}`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({updatedAt, payload: buildSyncPayload()})
