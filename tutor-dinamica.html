@@ -162,7 +162,8 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 
 /* CHAT */
 #chat-area { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-#chat-helper { display: none; flex: 1; min-height: 220px; flex-direction: column; overflow: hidden; border-top: 1px solid var(--border); }
+#gate-trainer { flex: 0 0 auto; max-height: 240px; overflow-y: auto; padding: 14px 16px; }
+#chat-helper { display: none; flex: 1; min-height: 120px; flex-direction: column; overflow: hidden; border-top: 1px solid var(--border); }
 #chat-helper.open { display: flex; }
 #chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px 28px; scroll-padding-bottom: 28px; display: flex; flex-direction: column; gap: 10px; }
 .msg { display: flex; gap: 8px; max-width: 92%; }
@@ -260,7 +261,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   #prob-title-big { font-size: 12px; }
   #prob-actions { padding: 4px 10px; gap: 4px; }
   .action-btn { font-size: 10px; padding: 3px 7px; }
-  #gate-trainer { flex: none; max-height: 180px; overflow-y: auto; }
+  #gate-trainer { flex: 0 0 auto; max-height: 140px; }
   #chat-helper { min-height: 0; flex: 1; }
   #chat-input { height: 36px; font-size: 12px; }
   #chat-input-row { padding: 6px 10px; }
@@ -1462,9 +1463,10 @@ function loadProblem(id) {
   showBasesLayer();
 
   // Chat history
-  renderChatHistory(id);
+  // Always open chat
+  document.getElementById('chat-helper').classList.add('open');
 
-  // If has chat history, show the problem view with chat; otherwise show starter
+  renderChatHistory(id);
   if(state.chatHistory.length === 0) {
     addSystemMessage(id);
   }
@@ -1738,12 +1740,20 @@ function examChecklist(id) {
 
 function boardFullContext(id) {
   const prob = PROB_MAP[id];
+  const state = DB.get(id);
+  const recentChat = (state.chatHistory || []).slice(-10);
+  const chatCtx = recentChat.length
+    ? '\n--- CONTEXTO DEL CHAT PRINCIPAL (últimos intercambios) ---\n' +
+      recentChat.map(m => `${m.role === 'user' ? 'Estudiante' : 'Tutor'}: ${(m.content||'').slice(0, 300)}`).join('\n') +
+      '\n--- FIN CONTEXTO ---'
+    : '';
   return [
     `ENUNCIADO: ${prob.text}`,
     `DATOS DETECTADOS: ${extractGivenData(prob.text).join(', ') || 'no extraidos'}`,
     `INCOGNITA: ${inferUnknown(prob.text)}`,
     buildTheoryBrief(id),
-    `RESPUESTA ESPERADA BD: ${prob.answer || 'no disponible'}`
+    `RESPUESTA ESPERADA BD: ${prob.answer || 'no disponible'}`,
+    chatCtx
   ].join('\n');
 }
 
