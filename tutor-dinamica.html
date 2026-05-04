@@ -273,6 +273,18 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   .gate-round p { font-size: 11px; margin-bottom: 6px; }
 }
 
+/* CONFETTI + CORRECT TOAST */
+#correct-toast { position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(140%); z-index:8000; background:linear-gradient(135deg,#0d200d,#1a3a1a); border:2px solid var(--ok); border-radius:18px; padding:18px 28px; display:flex; align-items:center; gap:16px; box-shadow:0 8px 32px rgba(39,201,144,0.25); transition:transform .45s cubic-bezier(.34,1.56,.64,1); pointer-events:none; }
+#correct-toast.show { transform:translateX(-50%) translateY(0); pointer-events:all; }
+.ct-icon { font-size:30px; line-height:1; }
+.ct-body { display:flex; flex-direction:column; gap:2px; }
+.ct-text { font-size:17px; font-weight:800; color:var(--ok); letter-spacing:.02em; }
+.ct-sub { font-size:12px; color:var(--muted); }
+.ct-close { margin-left:10px; background:none; border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:5px 12px; cursor:pointer; font-size:14px; transition:border-color .15s,color .15s; }
+.ct-close:hover { border-color:var(--ok); color:var(--ok); }
+.confetti-p { position:fixed; top:-12px; border-radius:2px; pointer-events:none; z-index:7999; animation:cf-fall linear forwards; }
+@keyframes cf-fall { 0%{transform:translateY(0) rotate(0deg);opacity:1} 80%{opacity:1} 100%{transform:translateY(110vh) rotate(800deg);opacity:0} }
+
 /* LOGIN SCREEN */
 #login-screen { position:fixed; inset:0; z-index:9999; background:#07090d; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:32px; }
 #login-screen h1 { font-size:18px; font-weight:700; color:var(--accent); letter-spacing:.06em; }
@@ -414,6 +426,16 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
     <div class="guide-step">El sistema estima probabilidad de éxito por ejercicio usando score, errores, cartas, habilidad y recencia. Te recomienda ejercicios en zona óptima: ni fáciles ni imposibles.</div>
     <button class="hv-btn" onclick="closeGuide(); openHarvard();">Abrir Modo Harvard</button>
   </div>
+</div>
+
+<!-- CORRECT TOAST -->
+<div id="correct-toast">
+  <span class="ct-icon">🎉</span>
+  <div class="ct-body">
+    <div class="ct-text">¡Resultado Correcto!</div>
+    <div class="ct-sub" id="ct-subtitle">¡Planteamiento base aprobado!</div>
+  </div>
+  <button class="ct-close" onclick="hideCorrectToast()">✕</button>
 </div>
 
 <!-- TOP BAR -->
@@ -2074,10 +2096,36 @@ function checkPhysicalState(choice) {
   else gateBad('sequence_events', 'Orden malo: no metas números sin separar estados.', 'state-feedback');
 }
 
+function showCorrectEffect(subtitle) {
+  const colors = ['#4f8ef7','#7c5cfc','#27c990','#f5a623','#e74c6c','#fbbf24','#34d399','#f472b6'];
+  for(let i = 0; i < 90; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-p';
+    const size = 6 + Math.random() * 9;
+    p.style.cssText = `left:${Math.random()*100}vw;background:${colors[i%colors.length]};width:${size}px;height:${size}px;animation-duration:${1.4+Math.random()*1.8}s;animation-delay:${Math.random()*0.6}s;`;
+    document.body.appendChild(p);
+    p.addEventListener('animationend', () => p.remove(), { once: true });
+  }
+  document.getElementById('ct-subtitle').textContent = subtitle || '¡Planteamiento base aprobado!';
+  document.getElementById('correct-toast').classList.add('show');
+  clearTimeout(showCorrectEffect._timer);
+  showCorrectEffect._timer = setTimeout(hideCorrectToast, 6000);
+}
+
+function hideCorrectToast() {
+  document.getElementById('correct-toast').classList.remove('show');
+}
+
 function stripMarkersOnly(rawText) {
-  return String(rawText || '').split(/\r?\n/)
-    .filter(line => !line.trim().startsWith('@@'))
-    .join('\n').trim();
+  const lines = String(rawText || '').split(/\r?\n/);
+  const visible = [];
+  lines.forEach(line => {
+    const t = line.trim();
+    if(t === '@@GATE:pass') { showCorrectEffect('¡Planteamiento base aprobado!'); return; }
+    if(t.startsWith('@@')) return;
+    visible.push(line);
+  });
+  return visible.join('\n').trim();
 }
 
 function processTutorMarkers(rawText) {
@@ -2089,6 +2137,7 @@ function processTutorMarkers(rawText) {
     const trimmed = line.trim();
     if(trimmed === '@@GATE:pass') {
       SRS.unlockAccess(currentProbId, 'Acceso liberado: planteamiento base correcto.');
+      showCorrectEffect('¡Planteamiento base aprobado!');
       return;
     }
     const errMatch = trimmed.match(/^@@ERR:([^:]+):(.+)$/);
