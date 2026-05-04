@@ -530,6 +530,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
         <button class="action-btn danger" onclick="markError()">✕ Error</button>
         <button class="action-btn" onclick="clearProblemErrors()" title="Borrar errores incorrectos del log" style="border-color:#6b7280;color:#9ca3af">🗑 Errores</button>
         <button class="action-btn" onclick="resetChat()">🗑 Chat</button>
+        <button class="action-btn" onclick="rescueWithSolution()" style="border-color:#f59e0b;color:#fbbf24">🛟 Ruta solución</button>
       </div>
       <div id="prob-body">
         <div id="prob-statement">
@@ -1366,6 +1367,7 @@ MODO RESCATE:
 - Objetivo: destrabar rápido para que avance temas. No lo castigues repitiendo la misma pregunta.
 - Si el solucionario usa una ruta clara, cambia a esa ruta y di: "Tomemos la ruta del solucionario".
 - Prohibido inventar geometría, radios o datos no dados. Si el solucionario no usa radio, tú tampoco.
+- Si el estudiante corrige una lectura del diagrama, no lo contradigas con seguridad. Revisa contra solucionario y di "tienes razón" cuando aplique.
 
 USO DEL SOLUCIONARIO:
 - Siempre que exista, úsalo como rúbrica interna: datos, método de referencia, pasos esperados y resultado final.
@@ -1374,6 +1376,7 @@ USO DEL SOLUCIONARIO:
 - Ejemplo: si el solucionario usa seno/coseno y el estudiante usa cateto opuesto/adyacente/hipotenusa, es válido si las componentes salen iguales.
 - Si el solucionario falta o está incompleto, dilo internamente con prudencia: guía por principios y pide PDF/foto si necesitas verificar datos exactos.
 - Si tu ruta alternativa genera fricción, abandónala y vuelve a la ruta del solucionario.
+- Nunca uses una lectura visual del diagrama para imponer un dato si el solucionario ya da otra estructura de ecuaciones.
 
 ESTILO 5.0:
 - Frases cortas. Cero párrafos largos.
@@ -1413,6 +1416,7 @@ TEMAS CRÍTICOS EN EL EXAMEN:
 - 3 bolas: A choca con B y C → 2 ecuaciones (x, y) con 2 incógnitas (v_A, v_B si v_C es dado)
 - Impacto elástico: agrega conservación de energía como 3ra ecuación
 - En 14.53 NO uses radio de bolas ni línea de impacto por restitución si el estudiante está siguiendo el solucionario. La ruta esperada es momentum lineal global, momento angular sobre D y energía.
+- En 14.53: el 30 in se usa como brazo de momento angular respecto a D en la ecuación \(30(12)=-66(5.76)+72.5(5.76)+Cv_C\). No digas que es distancia entre centros A-B. No pidas radio. No pidas ángulo de línea de impacto.
 
 CUANDO EL ESTUDIANTE SUBE UNA FOTO O PIZARRA: analiza la imagen con cuidado. La pizarra original es oscura, pero la app la convierte a fondo blanco antes de enviarla; si algo no se lee, dilo y pide una zona mas clara en vez de inventar.
 
@@ -1435,7 +1439,7 @@ FORMATO:
     const rescueMode = shouldUseRescueMode(userMsg, state, history);
 
     const systemText = this.SYSTEM +
-      `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado en app: ${prob.text}\nRespuesta resumida en app: ${prob.answer || 'no disponible'}\nSolución concreta en app: ${hasConcreteAnswer ? 'sí' : 'no completa'}\nModo rescate activo: ${rescueMode ? 'sí; da el siguiente bloque trabajado y destraba' : 'no'}\n${solText}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`;
+      `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado en app: ${prob.text}\nRespuesta resumida en app: ${prob.answer || 'no disponible'}\nSolución concreta en app: ${hasConcreteAnswer ? 'sí' : 'no completa'}\nModo rescate activo: ${rescueMode ? 'sí; da el siguiente bloque trabajado y destraba' : 'no'}\n${problemOverridePrompt(probId)}\n${solText}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`;
 
     // Build OpenAI-compatible messages array
     const messages = [{role: 'system', content: systemText}];
@@ -1496,10 +1500,22 @@ async function getSolution(probId) {
 
 function shouldUseRescueMode(userMsg, state, history) {
   const text = String(userMsg || '').toLowerCase();
-  const frustration = /no entiendo|no se|no sé|carajo|mierda|frustr|demor|40 minuto|bloquead|atascad|no alcanzo|no sirve|suelta|afloja/.test(text);
+  const frustration = /no entiendo|no se|no sé|carajo|mierda|puta|putas|frustr|demor|40 minuto|bloquead|atascad|no alcanzo|no sirve|suelta|afloja|ruta soluci[oó]n|solucionario|perd[ií]/.test(text);
   const longLoop = (history || []).length >= 10;
   const repeatedErrors = (state.errors || []).length >= 3;
   return frustration || longLoop || repeatedErrors;
+}
+
+function problemOverridePrompt(probId) {
+  if(probId === '14.53') return [
+    'OVERRIDE 14.53:',
+    'El estudiante tiene razón si rechaza que 30 in sea distancia A-B o distancia entre centros.',
+    'Usa SOLO la ruta del solucionario: momentum lineal global final, momento angular sobre D, energía.',
+    'Ecuaciones clave: (vB)x + vC = 12; (vB)y = 5.76; 30(12) = -66(5.76) + 72.5(5.76) + C vC; 12^2 = 5.76^2 + (vB)^2 + vC^2.',
+    'No uses coeficiente de restitución, línea de impacto, radio ni ángulo entre centros.',
+    'Si el estudiante está frustrado, empieza disculpándote brevemente y escribe el siguiente bloque de ecuaciones ya simplificado.'
+  ].join('\n');
+  return '';
 }
 
 function formatSolutionForPrompt(sol) {
@@ -2007,6 +2023,7 @@ function boardFullContext(id) {
   const imageCtx = state.problemImage ? 'IMAGEN DEL ENUNCIADO/DIAGRAMA: cargada por el estudiante y disponible para comparar datos.' : 'IMAGEN DEL ENUNCIADO/DIAGRAMA: no cargada.';
   return [
     `ENUNCIADO: ${prob.text}`,
+    problemOverridePrompt(id),
     imageCtx,
     `DATOS DETECTADOS: ${extractGivenData(prob.text).join(', ') || 'no extraidos'}`,
     `INCOGNITA: ${inferUnknown(prob.text)}`,
@@ -2364,6 +2381,14 @@ function startProblem() {
   document.getElementById('chat-helper').classList.add('open');
   const input = document.getElementById('chat-input');
   input.value = 'Quiero empezar este problema. ¿Cómo lo enfrento?';
+  sendMessage();
+}
+
+function rescueWithSolution() {
+  if(!currentProbId) return;
+  document.getElementById('chat-helper').classList.add('open');
+  const input = document.getElementById('chat-input');
+  input.value = 'Modo rescate: dame la ruta del solucionario para este ejercicio, con el siguiente bloque trabajado. No me hagas otra pregunta socrática todavía.';
   sendMessage();
 }
 
