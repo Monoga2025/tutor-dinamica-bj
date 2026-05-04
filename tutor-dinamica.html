@@ -1360,12 +1360,20 @@ const AI = {
 
 REGLA ABSOLUTA: NO regales la respuesta final antes de que el estudiante plantee. Sí puedes dar micro-pistas, revisar una línea y decir el siguiente paso mínimo.
 
+MODO RESCATE:
+- Si el estudiante lleva muchos mensajes, expresa frustración, dice que no entiende, o está bloqueado más de 10 min: deja el estilo socrático duro.
+- En modo rescate sí puedes mostrar el siguiente bloque trabajado con ecuaciones y sustitución numérica parcial.
+- Objetivo: destrabar rápido para que avance temas. No lo castigues repitiendo la misma pregunta.
+- Si el solucionario usa una ruta clara, cambia a esa ruta y di: "Tomemos la ruta del solucionario".
+- Prohibido inventar geometría, radios o datos no dados. Si el solucionario no usa radio, tú tampoco.
+
 USO DEL SOLUCIONARIO:
 - Siempre que exista, úsalo como rúbrica interna: datos, método de referencia, pasos esperados y resultado final.
 - No lo copies al estudiante completo. Extrae solo la pista necesaria.
 - Si el estudiante usa otro método equivalente, acéptalo si respeta física, unidades, signos y llega a resultado compatible.
 - Ejemplo: si el solucionario usa seno/coseno y el estudiante usa cateto opuesto/adyacente/hipotenusa, es válido si las componentes salen iguales.
 - Si el solucionario falta o está incompleto, dilo internamente con prudencia: guía por principios y pide PDF/foto si necesitas verificar datos exactos.
+- Si tu ruta alternativa genera fricción, abandónala y vuelve a la ruta del solucionario.
 
 ESTILO 5.0:
 - Frases cortas. Cero párrafos largos.
@@ -1404,6 +1412,7 @@ TEMAS CRÍTICOS EN EL EXAMEN:
 - Problemas de billar (carambola): CONSERVACIÓN de momentum lineal en x e y + posiblemente energía
 - 3 bolas: A choca con B y C → 2 ecuaciones (x, y) con 2 incógnitas (v_A, v_B si v_C es dado)
 - Impacto elástico: agrega conservación de energía como 3ra ecuación
+- En 14.53 NO uses radio de bolas ni línea de impacto por restitución si el estudiante está siguiendo el solucionario. La ruta esperada es momentum lineal global, momento angular sobre D y energía.
 
 CUANDO EL ESTUDIANTE SUBE UNA FOTO O PIZARRA: analiza la imagen con cuidado. La pizarra original es oscura, pero la app la convierte a fondo blanco antes de enviarla; si algo no se lee, dilo y pide una zona mas clara en vez de inventar.
 
@@ -1423,9 +1432,10 @@ FORMATO:
     const hasConcreteAnswer = prob.answer && !/ver soluci[oó]n|ver solucionario/i.test(prob.answer);
     const sol = await getSolution(probId);
     const solText = formatSolutionForPrompt(sol);
+    const rescueMode = shouldUseRescueMode(userMsg, state, history);
 
     const systemText = this.SYSTEM +
-      `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado en app: ${prob.text}\nRespuesta resumida en app: ${prob.answer || 'no disponible'}\nSolución concreta en app: ${hasConcreteAnswer ? 'sí' : 'no completa'}\n${solText}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`;
+      `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado en app: ${prob.text}\nRespuesta resumida en app: ${prob.answer || 'no disponible'}\nSolución concreta en app: ${hasConcreteAnswer ? 'sí' : 'no completa'}\nModo rescate activo: ${rescueMode ? 'sí; da el siguiente bloque trabajado y destraba' : 'no'}\n${solText}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`;
 
     // Build OpenAI-compatible messages array
     const messages = [{role: 'system', content: systemText}];
@@ -1482,6 +1492,14 @@ async function getSolution(probId) {
     solutionCache[probId] = null;
   }
   return solutionCache[probId];
+}
+
+function shouldUseRescueMode(userMsg, state, history) {
+  const text = String(userMsg || '').toLowerCase();
+  const frustration = /no entiendo|no se|no sé|carajo|mierda|frustr|demor|40 minuto|bloquead|atascad|no alcanzo|no sirve|suelta|afloja/.test(text);
+  const longLoop = (history || []).length >= 10;
+  const repeatedErrors = (state.errors || []).length >= 3;
+  return frustration || longLoop || repeatedErrors;
 }
 
 function formatSolutionForPrompt(sol) {
