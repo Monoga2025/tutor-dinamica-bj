@@ -236,6 +236,39 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 #show-board-ai { position: absolute; right: 0; top: 50%; z-index: 5; display: none; writing-mode: vertical-rl; background: var(--accent); color: #fff; border: none; border-radius: 8px 0 0 8px; padding: 12px 5px; cursor: pointer; }
 #toggle-brief { position:absolute; left:12px; bottom:18px; z-index:521; }
 
+/* IMAGE CONTROLS OVERLAY */
+#img-controls { display:none; position:absolute; top:6px; left:50%; transform:translateX(-50%); z-index:20; background:rgba(13,17,27,0.92); border:1px solid #334155; border-radius:8px; padding:5px 10px; display:none; align-items:center; gap:8px; }
+#img-controls.visible { display:flex; }
+#img-lock-btn { font-size:13px; background:none; border:1px solid #475569; color:#94a3b8; border-radius:5px; padding:3px 7px; cursor:pointer; }
+#img-lock-btn.locked { border-color:#4ade80; color:#4ade80; }
+#img-opacity { width:80px; accent-color:var(--accent); cursor:pointer; }
+#img-remove-btn { font-size:11px; background:none; border:1px solid var(--danger); color:var(--danger); border-radius:5px; padding:3px 7px; cursor:pointer; }
+
+/* TABLET — Lenovo Tab M11 ~1333×800 CSS viewport */
+@media (max-height: 820px) {
+  #topbar { height: 40px; gap: 8px; padding: 0 10px; }
+  #topbar h1 { font-size: 12px; }
+  .exam-badge { font-size: 10px; padding: 2px 5px; }
+  #top-stats { gap: 8px; font-size: 10px; }
+  #btn-review, #btn-harvard, #btn-guide, #btn-pdf, #btn-config { padding: 3px 7px; font-size: 10px; }
+  #sidebar { width: 200px; }
+  .prob-num { min-width: 28px; font-size: 11px; }
+  .prob-title { font-size: 10px; }
+  #prob-statement { width: 300px; padding: 10px 12px; }
+  #prob-header { padding: 8px 12px; }
+  #prob-num-big { font-size: 16px; }
+  #prob-title-big { font-size: 12px; }
+  #prob-actions { padding: 4px 10px; gap: 4px; }
+  .action-btn { font-size: 10px; padding: 3px 7px; }
+  #gate-trainer { flex: none; max-height: 180px; overflow-y: auto; }
+  #chat-helper { min-height: 0; flex: 1; }
+  #chat-input { height: 36px; font-size: 12px; }
+  #chat-input-row { padding: 6px 10px; }
+  .gate-round { padding: 8px 10px; margin-bottom: 6px; }
+  .gate-round h3 { font-size: 11px; margin-bottom: 3px; }
+  .gate-round p { font-size: 11px; margin-bottom: 6px; }
+}
+
 /* WELCOME SCREEN */
 #welcome-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; }
 #welcome-screen h2 { font-size: 22px; font-weight: 700; margin-bottom: 12px; }
@@ -498,6 +531,12 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
           <div id="board-wrap">
             <canvas id="exercise-board"></canvas>
             <div id="board-cursor-preview"></div>
+            <div id="img-controls">
+              <button id="img-lock-btn" onclick="toggleImgLock()" title="Bloquear/mover imagen">🔓 Mover</button>
+              <span style="font-size:10px;color:#64748b">Opacidad</span>
+              <input type="range" id="img-opacity" min="10" max="100" value="82" oninput="setImgOpacity(+this.value)">
+              <button id="img-remove-btn" onclick="removeImg()">✕</button>
+            </div>
             <div id="board-prompt"></div>
             <div id="board-problem"></div>
             <div id="board-brief"></div>
@@ -1276,7 +1315,7 @@ let currentProbId = null;
 let currentFilter = 'all';
 let currentImage = null;
 let boardCtx = null;
-let boardBgImg = null;
+let boardImg = { el:null, wx:0, wy:0, ww:400, wh:300, opacity:0.82, locked:true, _dragOff:null, _resizing:false };
 let boardDrawing = false;
 let boardLast = null;
 let boardTool = 'pen';
@@ -1372,7 +1411,8 @@ function filterProblems() { renderProblemList(); }
 function loadProblem(id) {
   currentProbId = id;
   currentImage = null;
-  boardBgImg = null;
+  boardImg = { el:null, wx:0, wy:0, ww:400, wh:300, opacity:0.82, locked:true, _dragOff:null, _resizing:false };
+  syncImgControls();
   localStorage.setItem('lastProbId', id);
   updatePdfPage(id);
   const prob = PROB_MAP[id];
@@ -1601,6 +1641,7 @@ function showBoardLayer() {
   restoreBoard();
   updateBoardSize(boardSize);
   updateBoardZoomIndicator();
+  syncImgControls();
   requestSyncUpload();
 }
 
@@ -2023,6 +2064,38 @@ function startProblem() {
   sendMessage();
 }
 
+function syncImgControls() {
+  const el = document.getElementById('img-controls');
+  const btn = document.getElementById('img-lock-btn');
+  const slider = document.getElementById('img-opacity');
+  if(!el) return;
+  if(!boardImg.el) { el.classList.remove('visible'); return; }
+  el.classList.add('visible');
+  if(btn) { btn.textContent = boardImg.locked ? '🔒 Bloqueado' : '🔓 Mover'; btn.classList.toggle('locked', boardImg.locked); }
+  if(slider) slider.value = Math.round(boardImg.opacity * 100);
+}
+
+function toggleImgLock() {
+  boardImg.locked = !boardImg.locked;
+  syncImgControls();
+  renderBoard();
+}
+
+function setImgOpacity(val) {
+  boardImg.opacity = val / 100;
+  renderBoard();
+}
+
+function removeImg() {
+  boardImg = { el:null, wx:0, wy:0, ww:400, wh:300, opacity:0.82, locked:true, _dragOff:null, _resizing:false };
+  currentImage = null;
+  syncImgControls();
+  renderBoard();
+  document.getElementById('uploaded-photo').style.display = 'none';
+  document.getElementById('upload-label').textContent = '📷 Subir foto del diagrama (opcional)';
+  document.getElementById('btn-verify-data').style.display = 'none';
+}
+
 function verifyProblemData() {
   if(!currentProbId) return;
   if(!currentImage) { showToast('Primero sube la imagen del diagrama'); return; }
@@ -2141,9 +2214,19 @@ function setCurrentImage(dataUrl, label) {
   if(uploadLabel) uploadLabel.textContent = label || 'Imagen lista. Envía un mensaje para analizarla.';
   const btnVerify = document.getElementById('btn-verify-data');
   if(btnVerify) btnVerify.style.display = 'block';
-  // Load as board background
+  // Load as movable board image
   const bimg = new Image();
-  bimg.onload = () => { boardBgImg = bimg; renderBoard(); };
+  bimg.onload = () => {
+    const canvas = document.getElementById('exercise-board');
+    const cw = canvas ? canvas.offsetWidth : 600;
+    const ch = canvas ? canvas.offsetHeight : 400;
+    const center = boardScreenToWorld({x: cw/2, y: ch/2});
+    const aspect = bimg.naturalWidth / bimg.naturalHeight;
+    const ww = Math.min(bimg.naturalWidth, cw * 0.6 / boardViewScale);
+    boardImg = { el: bimg, wx: center.x - ww/2, wy: center.y - (ww/aspect)/2, ww, wh: ww/aspect, opacity: 0.82, locked: false, _dragOff: null, _resizing: false };
+    syncImgControls();
+    renderBoard();
+  };
   bimg.src = dataUrl;
 }
 
@@ -2246,6 +2329,24 @@ function initBoardEvents() {
       if(boardPenActive) return;
       boardTouchPtrs.set(e.pointerId, {x: e.clientX, y: e.clientY});
       boardDrawing = false;
+      if(boardTouchPtrs.size === 1 && boardImg.el && !boardImg.locked) {
+        // 1 finger on unlocked image = drag image
+        const sp = boardPoint(e);
+        const tl = boardWorldToScreen({x: boardImg.wx, y: boardImg.wy});
+        const br = boardWorldToScreen({x: boardImg.wx + boardImg.ww, y: boardImg.wy + boardImg.wh});
+        if(sp.x >= tl.x && sp.x <= br.x && sp.y >= tl.y && sp.y <= br.y) {
+          boardImg._dragOff = {x: sp.x - tl.x, y: sp.y - tl.y};
+          boardPanActive = false;
+          return;
+        }
+      }
+      if(boardTouchPtrs.size === 2 && boardImg.el && !boardImg.locked) {
+        // 2 fingers on unlocked image = resize
+        const pts = [...boardTouchPtrs.values()];
+        boardImg._resizing = { dist: Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y), ww: boardImg.ww, wh: boardImg.wh };
+        boardPinchState = null;
+        return;
+      }
       if(boardTouchPtrs.size === 1) {
         boardPanActive = true;
         boardPanStart = {x: e.clientX, y: e.clientY};
@@ -2268,6 +2369,20 @@ function initBoardEvents() {
       boardPenActive = true;
       clearTimeout(boardPenTimer);
     }
+    // Check image interaction (mouse only when not locked)
+    if(e.pointerType === 'mouse' && boardImg.el && !boardImg.locked) {
+      const sp = boardPoint(e);
+      const tl = boardWorldToScreen({x: boardImg.wx, y: boardImg.wy});
+      const br = boardWorldToScreen({x: boardImg.wx + boardImg.ww, y: boardImg.wy + boardImg.wh});
+      if(sp.x >= br.x-14 && sp.x <= br.x+2 && sp.y >= br.y-14 && sp.y <= br.y+2) {
+        boardImg._resizing = {ww: boardImg.ww, wh: boardImg.wh, sx: sp.x, sy: sp.y};
+        return;
+      }
+      if(sp.x >= tl.x && sp.x <= br.x && sp.y >= tl.y && sp.y <= br.y) {
+        boardImg._dragOff = {x: sp.x - tl.x, y: sp.y - tl.y};
+        return;
+      }
+    }
     boardDrawing = true;
     const screen = boardPoint(e);
     boardLast = boardScreenToWorld(screen);
@@ -2280,6 +2395,22 @@ function initBoardEvents() {
     if(e.pointerType === 'touch') {
       if(boardPenActive) return;
       boardTouchPtrs.set(e.pointerId, {x: e.clientX, y: e.clientY});
+      // Image drag (1 finger, unlocked)
+      if(boardImg.el && !boardImg.locked && boardImg._dragOff && boardTouchPtrs.size === 1) {
+        const sp = boardPoint(e);
+        const nw = boardScreenToWorld({x: sp.x - boardImg._dragOff.x, y: sp.y - boardImg._dragOff.y});
+        boardImg.wx = nw.x; boardImg.wy = nw.y;
+        renderBoard(); return;
+      }
+      // Image resize (2 fingers, unlocked)
+      if(boardImg.el && !boardImg.locked && boardImg._resizing && boardTouchPtrs.size === 2) {
+        const pts = [...boardTouchPtrs.values()];
+        const dist = Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y);
+        const ratio = dist / boardImg._resizing.dist;
+        boardImg.ww = Math.max(50/boardViewScale, boardImg._resizing.ww * ratio);
+        boardImg.wh = Math.max(50/boardViewScale, boardImg._resizing.wh * ratio);
+        renderBoard(); return;
+      }
       if(boardPinchState && boardTouchPtrs.size >= 2) {
         const pts = [...boardTouchPtrs.values()];
         const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
@@ -2303,6 +2434,23 @@ function initBoardEvents() {
       }
       return;
     }
+    // Mouse image drag/resize
+    if(boardImg.el && !boardImg.locked) {
+      if(boardImg._dragOff) {
+        const sp = boardPoint(e);
+        const nw = boardScreenToWorld({x: sp.x - boardImg._dragOff.x, y: sp.y - boardImg._dragOff.y});
+        boardImg.wx = nw.x; boardImg.wy = nw.y;
+        renderBoard(); return;
+      }
+      if(boardImg._resizing) {
+        const sp = boardPoint(e);
+        const aspect = boardImg._resizing.wh / boardImg._resizing.ww;
+        const dw = (sp.x - boardImg._resizing.sx) / boardViewScale;
+        boardImg.ww = Math.max(50/boardViewScale, boardImg._resizing.ww + dw);
+        boardImg.wh = boardImg.ww * aspect;
+        renderBoard(); return;
+      }
+    }
     if(!boardDrawing || !boardCtx || !boardLast || !currentBoardStroke) return;
     const p = boardScreenToWorld(boardPoint(e));
     currentBoardStroke.pts.push(p);
@@ -2313,10 +2461,11 @@ function initBoardEvents() {
   ['pointerup','pointercancel'].forEach(name => canvas.addEventListener(name, e => {
     if(e.pointerType === 'touch') {
       boardTouchPtrs.delete(e.pointerId);
-      if(boardTouchPtrs.size < 2) boardPinchState = null;
-      if(boardTouchPtrs.size === 0) boardPanActive = false;
+      if(boardTouchPtrs.size < 2) { boardPinchState = null; boardImg._resizing = null; }
+      if(boardTouchPtrs.size === 0) { boardPanActive = false; boardImg._dragOff = null; }
       return;
     }
+    boardImg._dragOff = null; boardImg._resizing = null;
     if(boardDrawing && currentBoardStroke && currentBoardStroke.pts.length > 1 && currentBoardStroke.tool !== 'eraser') {
       boardStrokes.push(currentBoardStroke);
       saveBoard();
@@ -2387,16 +2536,29 @@ function renderBoard() {
   if(!canvas || !boardCtx) return;
   const r = canvas.getBoundingClientRect();
   boardCtx.clearRect(0, 0, r.width, r.height);
-  if(boardBgImg) {
-    const scale = Math.min(r.width / boardBgImg.naturalWidth, r.height / boardBgImg.naturalHeight) * 0.92;
-    const dx = (r.width - boardBgImg.naturalWidth * scale) / 2;
-    const dy = (r.height - boardBgImg.naturalHeight * scale) / 2;
+  drawBoardDots(r.width, r.height);
+  if(boardImg.el) {
+    const tl = boardWorldToScreen({x: boardImg.wx, y: boardImg.wy});
+    const br = boardWorldToScreen({x: boardImg.wx + boardImg.ww, y: boardImg.wy + boardImg.wh});
+    const sw = br.x - tl.x, sh = br.y - tl.y;
     boardCtx.save();
-    boardCtx.globalAlpha = 0.82;
-    boardCtx.drawImage(boardBgImg, dx, dy, boardBgImg.naturalWidth * scale, boardBgImg.naturalHeight * scale);
+    boardCtx.globalAlpha = boardImg.opacity;
+    boardCtx.drawImage(boardImg.el, tl.x, tl.y, sw, sh);
+    if(!boardImg.locked) {
+      boardCtx.globalAlpha = 1;
+      boardCtx.strokeStyle = '#4f8ef7';
+      boardCtx.lineWidth = 2;
+      boardCtx.setLineDash([5, 4]);
+      boardCtx.strokeRect(tl.x, tl.y, sw, sh);
+      boardCtx.setLineDash([]);
+      boardCtx.fillStyle = '#4f8ef7';
+      boardCtx.fillRect(br.x - 12, br.y - 12, 12, 12);
+      boardCtx.fillStyle = '#ffffff';
+      boardCtx.font = '10px sans-serif';
+      boardCtx.fillText('↘', br.x - 11, br.y - 2);
+    }
     boardCtx.restore();
   }
-  drawBoardDots(r.width, r.height);
   boardStrokes.forEach(drawBoardStroke);
 }
 
