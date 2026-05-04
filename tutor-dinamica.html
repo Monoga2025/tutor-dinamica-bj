@@ -187,6 +187,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .msg-bubble pre { background: #0d1520; border: 1px solid var(--border); padding: 8px; border-radius: 4px; overflow-x: auto; font-size: 12px; margin: 4px 0; }
 .msg-bubble .katex { color: inherit; font-size: 1.02em; }
 .msg-bubble .katex-display { overflow-x: auto; overflow-y: hidden; margin: 6px 0; }
+.msg-img { display: block; max-width: min(260px, 100%); max-height: 180px; margin-top: 8px; border-radius: 8px; border: 1px solid var(--border); object-fit: contain; background: #020617; }
 #chat-thinking { align-self: flex-start; padding: 8px 12px; font-size: 12px; color: var(--muted); display: none; }
 #chat-input-row { flex-shrink: 0; padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: var(--panel); }
 #chat-input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 13px; resize: none; height: 42px; max-height: 120px; overflow-y: auto; font-family: inherit; }
@@ -247,6 +248,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .board-msg pre { background: #020617; border: 1px solid #334155; padding: 8px; border-radius: 5px; overflow-x: auto; margin: 5px 0; }
 .board-msg .katex { color: inherit; font-size: 1.02em; }
 .board-msg .katex-display { overflow-x: auto; overflow-y: hidden; margin: 6px 0; }
+.board-msg .msg-img { max-width: 100%; max-height: 160px; border-color: #334155; }
 #board-ai-input-row { display: flex; flex-wrap: wrap; gap: 7px; padding: 9px; border-top: 1px solid #334155; }
 #board-ai-input { flex: 1 1 160px; resize: none; min-height: 36px; max-height: 90px; background: #020617; color: #e2e8f0; border: 1px solid #334155; border-radius: 7px; padding: 7px; font-family: inherit; font-size: 12px; }
 .board-attach-preview { margin: 7px 9px 0; border-color: #334155; background: #020617; color: #94a3b8; }
@@ -530,6 +532,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
         <button class="action-btn danger" onclick="markError()">✕ Error</button>
         <button class="action-btn" onclick="clearProblemErrors()" title="Borrar errores incorrectos del log" style="border-color:#6b7280;color:#9ca3af">🗑 Errores</button>
         <button class="action-btn" onclick="resetChat()">🗑 Chat</button>
+        <button class="action-btn danger" onclick="resetExerciseWork()" title="Borra chat principal y chat de pizarra del ejercicio actual">🧹 Reiniciar ejercicio</button>
         <button class="action-btn" onclick="rescueWithSolution()" style="border-color:#f59e0b;color:#fbbf24">🛟 Ruta solución</button>
       </div>
       <div id="prob-body">
@@ -619,6 +622,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
               <div id="board-ai-head">
                 <b>Tutor flotante</b>
                 <button class="board-btn" onclick="analyzeBoard()">Revisar pizarra</button>
+                <button class="board-btn" onclick="rescueBoardWithSolution()" style="border-color:#f59e0b;color:#fbbf24">Ruta solución</button>
                 <button class="board-btn" onclick="toggleBoardAI()">Ocultar</button>
               </div>
               <div id="board-ai-msgs"></div>
@@ -1771,7 +1775,7 @@ function renderChatHistory(id) {
   scrollChat();
 }
 
-function appendMessage(type, text) {
+function appendMessage(type, text, imageUrl = null) {
   const msgs = document.getElementById('chat-messages');
   const shouldStick = type === 'user' || isNearBottom(msgs);
   const div = document.createElement('div');
@@ -1784,6 +1788,13 @@ function appendMessage(type, text) {
   const bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
   bubble.innerHTML = formatText(text);
+  if(imageUrl) {
+    const img = document.createElement('img');
+    img.className = 'msg-img';
+    img.src = imageUrl;
+    img.alt = 'Imagen enviada al tutor';
+    bubble.appendChild(img);
+  }
   renderMath(bubble);
 
   div.appendChild(avatar);
@@ -2392,6 +2403,15 @@ function rescueWithSolution() {
   sendMessage();
 }
 
+function rescueBoardWithSolution() {
+  if(!currentProbId) return;
+  if(boardAiMin) toggleBoardAI();
+  const input = document.getElementById('board-ai-input');
+  input.value = 'Modo rescate en pizarra: usa la ruta del solucionario y dame el siguiente bloque trabajado. No uses rutas alternativas ni datos inventados.';
+  attachBoardSnapshot();
+  sendBoardQuestion();
+}
+
 function syncImgControls() {
   const el = document.getElementById('img-controls');
   const btn = document.getElementById('img-lock-btn');
@@ -2461,6 +2481,21 @@ function resetChat() {
   SRS.addChat(currentProbId, 'assistant', 'Historial borrado. ¿Empezamos?');
 }
 
+function resetExerciseWork() {
+  if(!currentProbId) return;
+  if(!confirm(`¿Borrar chat principal y chat de pizarra del ${currentProbId}?`)) return;
+  SRS.clearChat(currentProbId);
+  SRS.clearBoardChat(currentProbId);
+  clearChatAttachment();
+  clearBoardAttachment();
+  document.getElementById('chat-messages').innerHTML = '';
+  document.getElementById('board-ai-msgs').innerHTML = '';
+  addSystemMessage(currentProbId);
+  renderBoardChatHistory(currentProbId);
+  requestSyncUpload();
+  showToast(`Chat del ${currentProbId} reiniciado`);
+}
+
 function setChatAttachment(dataUrl, label) {
   chatPendingImage = dataUrl;
   const box = document.getElementById('chat-attach-preview');
@@ -2513,7 +2548,7 @@ async function sendMessage() {
   if(!text && !imageToSend) return;
 
   const visibleText = text || '[Imagen enviada para revisión]';
-  appendMessage('user', imageToSend ? `${visibleText}\n\n[Imagen adjunta]` : visibleText);
+  appendMessage('user', imageToSend ? `${visibleText}\n\n[Imagen adjunta]` : visibleText, imageToSend);
   SRS.addChat(currentProbId, 'user', imageToSend ? `${visibleText}\n[Imagen adjunta]` : visibleText);
   input.value = '';
   clearChatAttachment(false);
@@ -3061,13 +3096,20 @@ function captureBoardDataUrl() {
   return out.toDataURL('image/jpeg', 0.86);
 }
 
-function addBoardMsg(role, text) {
+function addBoardMsg(role, text, imageUrl = null) {
   const box = document.getElementById('board-ai-msgs');
   if(!box) return;
   const shouldStick = role === 'user' || isNearBottom(box);
   const div = document.createElement('div');
   div.className = `board-msg ${role}`;
   div.innerHTML = formatText(text);
+  if(imageUrl) {
+    const img = document.createElement('img');
+    img.className = 'msg-img';
+    img.src = imageUrl;
+    img.alt = 'Imagen enviada al tutor de pizarra';
+    div.appendChild(img);
+  }
   box.appendChild(div);
   renderMath(div);
   if(shouldStick) requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; });
@@ -3149,11 +3191,11 @@ async function analyzeBoard() {
   if(boardAiMin) toggleBoardAI();
   const dataUrl = captureBoardDataUrl() || currentImage;
   if(!dataUrl) { showToast('Dibuja algo en la pizarra primero'); return; }
-  addBoardMsg('user', '[Imagen enviada para revisión]');
+  addBoardMsg('user', '[Imagen enviada para revisión]', dataUrl);
   SRS.addBoardChat(currentProbId, 'user', '[Imagen enviada para revisión]');
   addBoardMsg('ai', 'Revisando...');
   try {
-    const response = await AI.chat(currentProbId, `[REVISION]\n${boardFullContext(currentProbId)}\n\nUsa tambien el contexto del chat principal: si alli se corrigio un dato, enunciado, angulo o diagrama, toma esa correccion como verdad para revisar la pizarra. Mira mi desarrollo. Actua como corrector de parcial: revisa ruta, ecuacion, despeje, unidades y numero final. Dime el primer error exacto si existe; si voy bien, dime el siguiente paso minimo. No resuelvas por mi.`, dataUrl);
+    const response = await AI.chat(currentProbId, `[REVISION]\n${boardFullContext(currentProbId)}\n\nSi hay OVERRIDE del ejercicio, obedécelo por encima de cualquier lectura visual. Usa tambien el contexto del chat principal: si alli se corrigio un dato, enunciado, angulo o diagrama, toma esa correccion como verdad para revisar la pizarra. Mira mi desarrollo. Actua como corrector de parcial: revisa ruta, ecuacion, despeje, unidades y numero final. Si estoy bloqueado, suelta el siguiente bloque trabajado de la ruta del solucionario.`, dataUrl);
     const box = document.getElementById('board-ai-msgs');
     const last = box?.lastElementChild;
     if(last && last.textContent.includes('Revisando')) last.remove();
@@ -3181,13 +3223,13 @@ async function sendBoardQuestion() {
   if(!text && !attachedImage) return;
   input.value = '';
   const visibleText = text || '[Imagen enviada al tutor de pizarra]';
-  addBoardMsg('user', attachedImage ? `${visibleText}\n\n[Imagen adjunta]` : visibleText);
+  addBoardMsg('user', attachedImage ? `${visibleText}\n\n[Imagen adjunta]` : visibleText, attachedImage);
   SRS.addBoardChat(currentProbId, 'user', attachedImage ? `${visibleText}\n[Imagen adjunta]` : visibleText);
   clearBoardAttachment(false);
   addBoardMsg('ai', 'Pensando...');
   try {
     const imgForBoard = attachedImage || captureBoardDataUrl() || currentImage;
-    const response = await AI.chat(currentProbId, `[PREGUNTA SOBRE MI PIZARRA]\n${boardFullContext(currentProbId)}\n\nUsa tambien el contexto del chat principal: si alli se corrigio un dato, enunciado, angulo o diagrama, toma esa correccion como verdad para responder.\n\nPregunta: ${visibleText}`, imgForBoard);
+    const response = await AI.chat(currentProbId, `[PREGUNTA SOBRE MI PIZARRA]\n${boardFullContext(currentProbId)}\n\nSi hay OVERRIDE del ejercicio, obedécelo por encima de cualquier lectura visual. Usa tambien el contexto del chat principal: si alli se corrigio un dato, enunciado, angulo o diagrama, toma esa correccion como verdad para responder. Si estoy bloqueado, suelta el siguiente bloque trabajado de la ruta del solucionario.\n\nPregunta: ${visibleText}`, imgForBoard);
     const box = document.getElementById('board-ai-msgs');
     const last = box?.lastElementChild;
     if(last && last.textContent.includes('Pensando')) last.remove();
