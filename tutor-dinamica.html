@@ -251,6 +251,9 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 .board-msg .msg-img { max-width: 100%; max-height: 160px; border-color: #334155; }
 #board-ai-input-row { display: flex; flex-wrap: wrap; gap: 7px; padding: 9px; border-top: 1px solid #334155; }
 #board-ai-input { flex: 1 1 160px; resize: none; min-height: 36px; max-height: 90px; background: #020617; color: #e2e8f0; border: 1px solid #334155; border-radius: 7px; padding: 7px; font-family: inherit; font-size: 12px; }
+.board-btn.listening { border-color:#ef4444; color:#fecaca; background:#3b0d14; }
+#board-voice-status { flex-basis:100%; display:none; color:#94a3b8; font-size:11px; }
+#board-voice-status.active { display:block; }
 .board-attach-preview { margin: 7px 9px 0; border-color: #334155; background: #020617; color: #94a3b8; }
 .board-attach-preview img { border-color: #334155; }
 #show-board-ai { position: absolute; right: 0; top: 50%; z-index: 5; display: none; writing-mode: vertical-rl; background: var(--accent); color: #fff; border: none; border-radius: 8px 0 0 8px; padding: 12px 5px; cursor: pointer; }
@@ -601,6 +604,8 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
             <button class="board-btn" onclick="analyzeBoard()">🔍 Revisar</button>
             <button class="board-btn" onclick="toggleBoardAI()">Tutor</button>
             <button class="board-btn" style="border-color:#f59e0b;color:#fbbf24" onclick="boardVerifyData()">📋 Verificar datos</button>
+            <input type="file" id="board-canvas-image-input" accept="image/*" style="display:none" onchange="handleBoardCanvasImage(event)">
+            <button class="board-btn" onclick="triggerBoardCanvasImageUpload()" title="Agregar imagen movible a la pizarra">Imagen</button>
             <button class="board-btn danger" onclick="completeExercise()">Terminé</button>
             <button class="board-btn" onclick="backToBases()">Volver</button>
             <button class="board-btn danger" onclick="clearBoard()">Limpiar</button>
@@ -635,9 +640,11 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
                 <input type="file" id="board-image-input" accept="image/*" style="display:none" onchange="handleBoardChatImage(event)">
                 <button class="board-btn" onclick="attachBoardSnapshot()" title="Adjuntar captura actual de la pizarra">📷 Pizarra</button>
                 <button class="board-btn" onclick="triggerBoardImageUpload()" title="Subir imagen al tutor de pizarra">📎</button>
+                <button class="board-btn" id="board-voice-btn" onclick="toggleBoardVoice()" title="Hablar con el tutor de la pizarra">Mic</button>
                 <textarea id="board-ai-input" placeholder="Pregunta al tutor sobre tu pizarra..." onkeydown="handleBoardAIKey(event)"></textarea>
                 <button class="board-btn" onclick="quickSendBoardImage()" title="Enviar captura de pizarra sin texto">Rápida</button>
                 <button class="board-btn" onclick="sendBoardQuestion()">Enviar</button>
+                <div id="board-voice-status">Micrófono listo.</div>
               </div>
             </div>
             <button id="show-board-ai" onclick="toggleBoardAI()">Tutor</button>
@@ -1210,11 +1217,13 @@ const DB = {
   },
   get(probId) {
     const d = this.load();
-    if(!d[probId]) d[probId] = {score:0,attempts:0,correct:0,errors:[],chatHistory:[],boardChatHistory:[],boardStrokes:[],boardUpdatedAt:0,problemImage:null,problemImageUpdatedAt:0,lastStudied:null,lastResult:null,accessUnlocked:false,gatePasses:0,solved:false};
+    if(!d[probId]) d[probId] = {score:0,attempts:0,correct:0,errors:[],chatHistory:[],boardChatHistory:[],boardStrokes:[],boardImage:null,boardImageUpdatedAt:0,boardUpdatedAt:0,problemImage:null,problemImageUpdatedAt:0,lastStudied:null,lastResult:null,accessUnlocked:false,gatePasses:0,solved:false};
     if(!Array.isArray(d[probId].errors)) d[probId].errors = [];
     if(!Array.isArray(d[probId].chatHistory)) d[probId].chatHistory = [];
     if(!Array.isArray(d[probId].boardChatHistory)) d[probId].boardChatHistory = [];
     if(!Array.isArray(d[probId].boardStrokes)) d[probId].boardStrokes = [];
+    if(typeof d[probId].boardImage !== 'object') d[probId].boardImage = null;
+    if(typeof d[probId].boardImageUpdatedAt !== 'number') d[probId].boardImageUpdatedAt = d[probId].boardImage ? (d[probId].lastStudied || 0) : 0;
     if(typeof d[probId].boardUpdatedAt !== 'number') d[probId].boardUpdatedAt = d[probId].boardStrokes.length ? (d[probId].lastStudied || 0) : 0;
     if(typeof d[probId].problemImage !== 'string') d[probId].problemImage = null;
     if(typeof d[probId].problemImageUpdatedAt !== 'number') d[probId].problemImageUpdatedAt = d[probId].problemImage ? (d[probId].lastStudied || 0) : 0;
@@ -1315,6 +1324,12 @@ const SRS = {
     const s = DB.get(probId);
     s.boardStrokes = Array.isArray(strokes) ? strokes : [];
     s.boardUpdatedAt = Date.now();
+    DB.set(probId, s);
+  },
+  setBoardImage(probId, imgState) {
+    const s = DB.get(probId);
+    s.boardImage = imgState || null;
+    s.boardImageUpdatedAt = Date.now();
     DB.set(probId, s);
   },
   setProblemImage(probId, dataUrl) {
@@ -1542,7 +1557,7 @@ let currentProbId = null;
 let currentFilter = 'all';
 let currentImage = null;
 let boardCtx = null;
-let boardImg = { el:null, wx:0, wy:0, ww:400, wh:300, opacity:0.82, locked:true, _dragOff:null, _resizing:false };
+let boardImg = { el:null, src:null, wx:0, wy:0, ww:400, wh:300, opacity:0.82, locked:true, _dragOff:null, _resizing:false };
 let boardDrawing = false;
 let boardLast = null;
 let boardTool = 'pen';
@@ -1569,6 +1584,10 @@ let syncLastRemote = 0;
 const solutionCache = {};
 let chatPendingImage = null;
 let boardPendingImage = null;
+let boardRecognition = null;
+let boardVoiceListening = false;
+let boardVoiceBaseText = '';
+let boardVoiceSilenceTimer = null;
 
 // ─── SESSION / LOGIN ─────────────────────────────────────────────────────────
 const PROFILES = {
@@ -1685,7 +1704,7 @@ function filterProblems() { renderProblemList(); }
 function loadProblem(id) {
   currentProbId = id;
   currentImage = null;
-  boardImg = { el:null, wx:0, wy:0, ww:400, wh:300, opacity:0.82, locked:true, _dragOff:null, _resizing:false };
+  boardImg = { el:null, src:null, wx:0, wy:0, ww:400, wh:300, opacity:0.82, locked:true, _dragOff:null, _resizing:false };
   syncImgControls();
   localStorage.setItem('lastProbId', id);
   updatePdfPage(id);
@@ -2423,21 +2442,88 @@ function syncImgControls() {
   if(slider) slider.value = Math.round(boardImg.opacity * 100);
 }
 
+function boardImageState() {
+  if(!boardImg.el || !boardImg.src) return null;
+  return {
+    src: boardImg.src,
+    wx: boardImg.wx,
+    wy: boardImg.wy,
+    ww: boardImg.ww,
+    wh: boardImg.wh,
+    opacity: boardImg.opacity,
+    locked: boardImg.locked
+  };
+}
+
+function saveBoardImage() {
+  if(!currentProbId) return;
+  SRS.setBoardImage(currentProbId, boardImageState());
+  requestSyncUpload();
+}
+
+function loadBoardImage(dataUrl, options = {}) {
+  if(!dataUrl) return;
+  const bimg = new Image();
+  bimg.onload = () => {
+    const canvas = document.getElementById('exercise-board');
+    const cw = canvas && canvas.offsetWidth ? canvas.offsetWidth : 600;
+    const ch = canvas && canvas.offsetHeight ? canvas.offsetHeight : 400;
+    const center = boardScreenToWorld({x: cw/2, y: ch/2});
+    const aspect = bimg.naturalWidth / Math.max(1, bimg.naturalHeight);
+    const ww = Math.min(bimg.naturalWidth, cw * 0.6 / boardViewScale);
+    const base = {
+      el: bimg,
+      src: dataUrl,
+      wx: center.x - ww/2,
+      wy: center.y - (ww/aspect)/2,
+      ww,
+      wh: ww/aspect,
+      opacity: 0.82,
+      locked: false,
+      _dragOff: null,
+      _resizing: false
+    };
+    boardImg = {...base, ...options, el: bimg, src: dataUrl, _dragOff: null, _resizing: false};
+    syncImgControls();
+    renderBoard();
+    if(!options.noSave) saveBoardImage();
+  };
+  bimg.src = dataUrl;
+}
+
+function triggerBoardCanvasImageUpload() {
+  document.getElementById('board-canvas-image-input')?.click();
+}
+
+function handleBoardCanvasImage(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  compressImageFile(file)
+    .then(dataUrl => {
+      loadBoardImage(dataUrl, {locked:false});
+      showToast('Imagen agregada a la pizarra. Puedes moverla y bloquearla.');
+    })
+    .catch(() => showToast('No pude cargar la imagen'));
+}
+
 function toggleImgLock() {
   boardImg.locked = !boardImg.locked;
   syncImgControls();
   renderBoard();
+  saveBoardImage();
 }
 
 function setImgOpacity(val) {
   boardImg.opacity = val / 100;
   renderBoard();
+  saveBoardImage();
 }
 
 function removeImg() {
-  boardImg = { el:null, wx:0, wy:0, ww:400, wh:300, opacity:0.82, locked:true, _dragOff:null, _resizing:false };
+  boardImg = { el:null, src:null, wx:0, wy:0, ww:400, wh:300, opacity:0.82, locked:true, _dragOff:null, _resizing:false };
   currentImage = null;
   if(currentProbId) SRS.setProblemImage(currentProbId, null);
+  if(currentProbId) SRS.setBoardImage(currentProbId, null);
   syncImgControls();
   renderBoard();
   document.getElementById('uploaded-photo').style.display = 'none';
@@ -2630,20 +2716,7 @@ function setCurrentImage(dataUrl, label, persist = true) {
   if(uploadLabel) uploadLabel.textContent = label || 'Imagen lista. Envía un mensaje para analizarla.';
   const btnVerify = document.getElementById('btn-verify-data');
   if(btnVerify) btnVerify.style.display = 'block';
-  // Load as movable board image
-  const bimg = new Image();
-  bimg.onload = () => {
-    const canvas = document.getElementById('exercise-board');
-    const cw = canvas && canvas.offsetWidth ? canvas.offsetWidth : 600;
-    const ch = canvas && canvas.offsetHeight ? canvas.offsetHeight : 400;
-    const center = boardScreenToWorld({x: cw/2, y: ch/2});
-    const aspect = bimg.naturalWidth / bimg.naturalHeight;
-    const ww = Math.min(bimg.naturalWidth, cw * 0.6 / boardViewScale);
-    boardImg = { el: bimg, wx: center.x - ww/2, wy: center.y - (ww/aspect)/2, ww, wh: ww/aspect, opacity: 0.82, locked: false, _dragOff: null, _resizing: false };
-    syncImgControls();
-    renderBoard();
-  };
-  bimg.src = dataUrl;
+  loadBoardImage(dataUrl, {locked:false});
 }
 
 function handleKey(e) {
@@ -2878,10 +2951,11 @@ function initBoardEvents() {
     if(e.pointerType === 'touch') {
       boardTouchPtrs.delete(e.pointerId);
       if(boardTouchPtrs.size < 2) { boardPinchState = null; boardImg._resizing = null; }
-      if(boardTouchPtrs.size === 0) { boardPanActive = false; boardImg._dragOff = null; }
+      if(boardTouchPtrs.size === 0) { boardPanActive = false; boardImg._dragOff = null; saveBoardImage(); }
       return;
     }
     boardImg._dragOff = null; boardImg._resizing = null;
+    saveBoardImage();
     if(boardDrawing && currentBoardStroke && currentBoardStroke.pts.length > 1 && currentBoardStroke.tool !== 'eraser') {
       boardStrokes.push(currentBoardStroke);
       saveBoard();
@@ -2933,6 +3007,11 @@ function restoreBoard() {
       else boardStrokes = JSON.parse(data).strokes || [];
     } catch(_) { boardStrokes = []; }
     if(boardStrokes.length) SRS.setBoardStrokes(currentProbId, boardStrokes);
+  }
+  if(state.boardImage?.src) {
+    loadBoardImage(state.boardImage.src, {...state.boardImage, noSave:true});
+  } else {
+    syncImgControls();
   }
   renderBoard();
 }
@@ -3065,12 +3144,18 @@ function redoBoard() {
 }
 
 function captureBoardDataUrl() {
-  if(!boardStrokes.length) return null;
+  if(!boardStrokes.length && !boardImg.el) return null;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   boardStrokes.forEach(s => s.pts.forEach(p => {
     minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
     maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
   }));
+  if(boardImg.el) {
+    minX = Math.min(minX, boardImg.wx);
+    minY = Math.min(minY, boardImg.wy);
+    maxX = Math.max(maxX, boardImg.wx + boardImg.ww);
+    maxY = Math.max(maxY, boardImg.wy + boardImg.wh);
+  }
   const pad = 50;
   const w = Math.max(300, maxX - minX + pad * 2);
   const h = Math.max(220, maxY - minY + pad * 2);
@@ -3081,6 +3166,18 @@ function captureBoardDataUrl() {
   const octx = out.getContext('2d');
   octx.fillStyle = '#ffffff';
   octx.fillRect(0, 0, out.width, out.height);
+  if(boardImg.el) {
+    octx.save();
+    octx.globalAlpha = boardImg.opacity;
+    octx.drawImage(
+      boardImg.el,
+      (boardImg.wx - minX + pad) * scale,
+      (boardImg.wy - minY + pad) * scale,
+      boardImg.ww * scale,
+      boardImg.wh * scale
+    );
+    octx.restore();
+  }
   boardStrokes.forEach(s => {
     if(s.pts.length < 2) return;
     octx.globalCompositeOperation = s.tool === 'eraser' ? 'destination-out' : 'source-over';
@@ -3186,6 +3283,83 @@ function quickSendBoardImage() {
   sendBoardQuestion();
 }
 
+function updateBoardVoiceUi(status) {
+  const btn = document.getElementById('board-voice-btn');
+  const label = document.getElementById('board-voice-status');
+  if(btn) {
+    btn.classList.toggle('listening', boardVoiceListening);
+    btn.textContent = boardVoiceListening ? 'Grabando' : 'Mic';
+  }
+  if(label) {
+    label.textContent = status || (boardVoiceListening ? 'Escuchando...' : 'Micrófono listo.');
+    label.classList.toggle('active', boardVoiceListening || Boolean(status));
+  }
+}
+
+function ensureBoardRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition) return null;
+  if(boardRecognition) return boardRecognition;
+  const rec = new SpeechRecognition();
+  rec.lang = 'es-CO';
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.onresult = event => {
+    let finalText = '';
+    let interimText = '';
+    for(let i = event.resultIndex; i < event.results.length; i++) {
+      const part = event.results[i][0].transcript.trim();
+      if(event.results[i].isFinal) finalText += `${part} `;
+      else interimText += `${part} `;
+    }
+    const input = document.getElementById('board-ai-input');
+    if(input) {
+      if(finalText.trim()) {
+        boardVoiceBaseText = `${input.value.trim()} ${finalText.trim()}`.trim();
+        input.value = boardVoiceBaseText;
+        clearTimeout(boardVoiceSilenceTimer);
+        boardVoiceSilenceTimer = setTimeout(() => {
+          if(boardVoiceListening && input.value.trim()) sendBoardQuestion();
+        }, 1200);
+      } else {
+        input.value = [boardVoiceBaseText, interimText.trim()].filter(Boolean).join(' ');
+      }
+    }
+    updateBoardVoiceUi(interimText.trim() ? `Escuchando: ${interimText.trim()}` : 'Escuchando...');
+  };
+  rec.onerror = event => {
+    boardVoiceListening = false;
+    updateBoardVoiceUi(event.error === 'not-allowed' ? 'Permiso de micrófono denegado.' : `Micrófono: ${event.error}`);
+  };
+  rec.onend = () => {
+    if(boardVoiceListening) {
+      try { rec.start(); } catch(_) {}
+    } else {
+      updateBoardVoiceUi();
+    }
+  };
+  boardRecognition = rec;
+  return rec;
+}
+
+function toggleBoardVoice() {
+  if(!currentProbId) return;
+  const rec = ensureBoardRecognition();
+  if(!rec) { showToast('Este navegador no soporta dictado por voz. Usa Chrome o Edge.'); return; }
+  const input = document.getElementById('board-ai-input');
+  if(boardVoiceListening) {
+    boardVoiceListening = false;
+    clearTimeout(boardVoiceSilenceTimer);
+    try { rec.stop(); } catch(_) {}
+    updateBoardVoiceUi();
+    return;
+  }
+  boardVoiceBaseText = input ? input.value.trim() : '';
+  boardVoiceListening = true;
+  updateBoardVoiceUi('Escuchando... habla y el tutor enviará tu frase al pausar.');
+  try { rec.start(); } catch(_) {}
+}
+
 async function analyzeBoard() {
   if(!currentProbId) return;
   if(boardAiMin) toggleBoardAI();
@@ -3222,6 +3396,7 @@ async function sendBoardQuestion() {
   const attachedImage = boardPendingImage;
   if(!text && !attachedImage) return;
   input.value = '';
+  boardVoiceBaseText = '';
   const visibleText = text || '[Imagen enviada al tutor de pizarra]';
   addBoardMsg('user', attachedImage ? `${visibleText}\n\n[Imagen adjunta]` : visibleText, attachedImage);
   SRS.addBoardChat(currentProbId, 'user', attachedImage ? `${visibleText}\n[Imagen adjunta]` : visibleText);
@@ -3345,6 +3520,14 @@ function mergeProblemState(local = {}, remote = {}) {
   } else {
     merged.boardStrokes = (local.boardStrokes || []).length >= (remote.boardStrokes || []).length ? (local.boardStrokes || []) : (remote.boardStrokes || []);
     merged.boardUpdatedAt = merged.boardStrokes.length ? merged.lastStudied || 0 : 0;
+  }
+  if((local.boardImageUpdatedAt || 0) || (remote.boardImageUpdatedAt || 0)) {
+    const useLocalBoardImage = (local.boardImageUpdatedAt || 0) >= (remote.boardImageUpdatedAt || 0);
+    merged.boardImage = useLocalBoardImage ? (local.boardImage || null) : (remote.boardImage || null);
+    merged.boardImageUpdatedAt = Math.max(local.boardImageUpdatedAt || 0, remote.boardImageUpdatedAt || 0);
+  } else {
+    merged.boardImage = local.boardImage || remote.boardImage || null;
+    merged.boardImageUpdatedAt = merged.boardImage ? merged.lastStudied || 0 : 0;
   }
   if((local.problemImageUpdatedAt || 0) || (remote.problemImageUpdatedAt || 0)) {
     const useLocalImage = (local.problemImageUpdatedAt || 0) >= (remote.problemImageUpdatedAt || 0);
