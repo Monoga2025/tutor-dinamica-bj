@@ -219,7 +219,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 #size-preview-dot { border-radius: 50%; background: #e2e8f0; opacity: .9; width: 3px; height: 3px; }
 #board-cursor-preview { position: absolute; z-index: 4; pointer-events: none; border: 1.5px solid rgba(255,255,255,.85); border-radius: 50%; transform: translate(-50%,-50%); display: none; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
 #board-cursor-preview.eraser { border-color: #fb7185; background: rgba(251,113,133,.12); }
-#board-ai { position: absolute; right: 14px; top: 62px; width: min(380px, 34vw); max-height: calc(100vh - 90px); background: rgba(15,23,42,0.94); border: 1px solid #334155; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 16px 50px rgba(0,0,0,.45); }
+#board-ai { position: absolute; right: 8px; top: 52px; bottom: 8px; width: min(360px, calc(100% - 16px)); background: rgba(15,23,42,0.96); border: 1px solid #334155; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 16px 50px rgba(0,0,0,.55); z-index: 10; }
 #board-ai.min { transform: translateX(calc(100% + 18px)); }
 #board-ai-head { padding: 9px 11px; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 8px; }
 #board-ai-head b { color: #93c5fd; font-size: 12px; margin-right: auto; }
@@ -442,6 +442,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
             <span id="upload-label">📷 Subir foto del diagrama (opcional)</span>
           </div>
           <img id="uploaded-photo" alt="Diagrama subido">
+          <button id="btn-verify-data" onclick="verifyProblemData()" style="display:none;margin-top:8px;width:100%;font-size:11px;padding:6px 10px;border-radius:5px;border:1px solid #f59e0b;background:none;color:#fbbf24;cursor:pointer;">🔍 Verificar datos del diagrama con IA</button>
           <div id="answer-hint">
             <h4>Respuesta</h4>
             <button id="btn-show-answer" onclick="toggleAnswer()">Mostrar respuesta</button>
@@ -1394,6 +1395,7 @@ function loadProblem(id) {
   document.getElementById('btn-show-answer').textContent = 'Mostrar respuesta';
   document.getElementById('uploaded-photo').style.display = 'none';
   document.getElementById('upload-label').textContent = '📷 Subir foto del diagrama (opcional)';
+  document.getElementById('btn-verify-data').style.display = 'none';
 
   // Tags
   const tags = prob.topics.map(t => {
@@ -2021,6 +2023,17 @@ function startProblem() {
   sendMessage();
 }
 
+function verifyProblemData() {
+  if(!currentProbId) return;
+  if(!currentImage) { showToast('Primero sube la imagen del diagrama'); return; }
+  const prob = PROB_MAP[currentProbId];
+  document.getElementById('chat-helper').classList.add('open');
+  showBasesLayer();
+  const input = document.getElementById('chat-input');
+  input.value = `Tengo la imagen del diagrama del problema ${currentProbId}. Los datos que tenemos registrados son:\n\n${prob.text}\n\nRespuesta registrada: ${prob.answer}\n\nPor favor compara la imagen con estos datos. ¿Los ángulos, velocidades y configuración son correctos? Si hay errores, dime exactamente qué valores son incorrectos y cuáles deberían ser.`;
+  sendMessage();
+}
+
 function resetChat() {
   if(!currentProbId) return;
   if(!confirm('¿Borrar el historial de chat de este problema?')) return;
@@ -2126,6 +2139,8 @@ function setCurrentImage(dataUrl, label) {
   }
   const uploadLabel = document.getElementById('upload-label');
   if(uploadLabel) uploadLabel.textContent = label || 'Imagen lista. Envía un mensaje para analizarla.';
+  const btnVerify = document.getElementById('btn-verify-data');
+  if(btnVerify) btnVerify.style.display = 'block';
   // Load as board background
   const bimg = new Image();
   bimg.onload = () => { boardBgImg = bimg; renderBoard(); };
