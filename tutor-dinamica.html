@@ -177,9 +177,9 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 <div id="config-modal">
   <div id="config-inner">
     <h2>⚙️ Configuración</h2>
-    <label>API Key de Google (Gemini)</label>
-    <input type="password" id="api-key-input" placeholder="AIza...">
-    <p>Tu API key se guarda localmente en el navegador. Nunca se envía a ningún servidor excepto Google.</p>
+    <label>OpenRouter API Key</label>
+    <input type="password" id="api-key-input" placeholder="sk-or-v1-...">
+    <p>Tu API key se guarda localmente en el navegador. Consíguela en <b>openrouter.ai</b> → Keys.</p>
     <div id="config-btns">
       <button class="modal-btn" onclick="closeConfig()">Cancelar</button>
       <button class="modal-btn primary" onclick="saveConfig()">Guardar</button>
@@ -763,46 +763,49 @@ Responde en español. Sé directo, urgente pero sin estresarlo. Máximo 150 pala
     const systemText = this.SYSTEM +
       `\n\nCONTEXTO DEL PROBLEMA ACTUAL:\nID: ${probId}\nTítulo: ${prob.title}\nEnunciado: ${prob.text}\nTemas: ${prob.topics.join(', ')}\nPuntuación SRS actual: ${state.score}/20\nErrores previos: ${state.errors.length > 0 ? state.errors.map(e=>e.desc).slice(-3).join('; ') : 'ninguno'}${prob.examCritical ? '\n⚠️ ESTE PROBLEMA ES CRÍTICO PARA EL EXAMEN' : ''}`;
 
-    // Build Gemini contents array (role: user / model alternating)
-    const contents = [];
+    // Build OpenAI-compatible messages array
+    const messages = [{role: 'system', content: systemText}];
+
     const recentHistory = history.slice(-20);
     recentHistory.forEach(h => {
-      const geminiRole = h.role === 'user' ? 'user' : 'model';
-      contents.push({role: geminiRole, parts: [{text: h.content}]});
+      messages.push({role: h.role === 'user' ? 'user' : 'assistant', content: h.content});
     });
 
     // Current user message (with optional image)
-    const userParts = [];
-    userParts.push({text: `[Problema ${probId}: ${prob.title}]\n\n${userMsg}`});
     if(imageBase64) {
-      userParts.push({inline_data: {mime_type: 'image/jpeg', data: imageBase64}});
+      messages.push({role: 'user', content: [
+        {type: 'text', text: `[Problema ${probId}: ${prob.title}]\n\n${userMsg}`},
+        {type: 'image_url', image_url: {url: `data:image/jpeg;base64,${imageBase64}`}}
+      ]});
+    } else {
+      messages.push({role: 'user', content: `[Problema ${probId}: ${prob.title}]\n\n${userMsg}`});
     }
-    contents.push({role: 'user', parts: userParts});
-
-    // Gemini requires contents to start with 'user' and alternate properly
-    // Remove any leading 'model' entries
-    while(contents.length > 0 && contents[0].role !== 'user') contents.shift();
 
     const body = {
-      system_instruction: {parts: [{text: systemText}]},
-      contents,
-      generationConfig: {maxOutputTokens: 600, temperature: 0.7}
+      model: 'google/gemini-2.5-flash',
+      max_tokens: 600,
+      temperature: 0.7,
+      messages
     };
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${cfg.apiKey}`;
-    const resp = await fetch(url, {
+    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: {'content-type': 'application/json'},
+      headers: {
+        'Authorization': `Bearer ${cfg.apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://tutor-dinamica-bj.vercel.app',
+        'X-Title': 'Tutor Dinámica Beer & Johnston'
+      },
       body: JSON.stringify(body)
     });
 
     if(!resp.ok) {
       const err = await resp.text();
-      throw new Error(`Gemini API ${resp.status}: ${err}`);
+      throw new Error(`OpenRouter ${resp.status}: ${err}`);
     }
 
     const data = await resp.json();
-    return data.candidates[0].content.parts[0].text;
+    return data.choices[0].message.content;
   }
 };
 
@@ -1132,7 +1135,7 @@ async function sendMessage() {
     thinking.style.display = 'none';
     sendBtn.disabled = false;
     if(e.message === 'NO_API_KEY') {
-      appendMessage('ai', 'No hay API key de Google configurada. Haz clic en ⚙️ Config para añadirla.');
+      appendMessage('ai', 'No hay OpenRouter API key configurada. Haz clic en ⚙️ Config para añadirla.');
     } else {
       appendMessage('ai', `Error al conectar con el tutor: ${e.message}. Intenta de nuevo.`);
     }
@@ -1245,7 +1248,7 @@ function closeConfig() {
 
 function saveConfig() {
   const key = document.getElementById('api-key-input').value.trim();
-  if(!key) { alert('Ingresa tu API key de Google'); return; }
+  if(!key) { alert('Ingresa tu OpenRouter API key (sk-or-v1-...)'); return; }
   const cfg = DB.getConfig();
   cfg.apiKey = key;
   DB.saveConfig(cfg);
