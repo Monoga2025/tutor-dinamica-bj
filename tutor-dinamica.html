@@ -2199,12 +2199,17 @@ function loadEMFlashcardMode(prob) {
   
   renderMath(leftPanel);
   
-  // Iniciar timer
-  emFlashTimeLeft = 10;
+  // Iniciar timer (20 segundos para leer bien)
+  emFlashTimeLeft = 20;
   const timerEl = document.getElementById('em-flash-timer');
   emFlashTimer = setInterval(() => {
     emFlashTimeLeft--;
-    if(timerEl) timerEl.textContent = emFlashTimeLeft;
+    if(timerEl) {
+      timerEl.textContent = emFlashTimeLeft;
+      // Cambiar color cuando queda poco
+      if(emFlashTimeLeft <= 5) timerEl.style.color = '#ef4444';
+      else if(emFlashTimeLeft <= 10) timerEl.style.color = '#f59e0b';
+    }
     if(emFlashTimeLeft <= 0) {
       clearInterval(emFlashTimer);
       // Timeout - mostrar respuesta
