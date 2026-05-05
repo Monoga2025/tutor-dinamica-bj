@@ -2003,7 +2003,6 @@ function loadEMExercise() {
     <b>Ejercicio:</b> ${prob.id}<br>
     <b>Título:</b> ${prob.title}<br>
     <b>Dificultad:</b> ${'★'.repeat(prob.diff || 3)}${'☆'.repeat(5 - (prob.diff || 3))}<br>
-    <b>Temas:</b> ${prob.topics.join(', ')}<br>
     <b>Examen:</b> ${prob.examCritical ? 'SÍ 🔴' : 'No'}
   `;
   
