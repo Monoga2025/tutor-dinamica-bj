@@ -2237,24 +2237,31 @@ async function loadEMSolutionSteps() {
   try {
     const sol = await getSolution(prob.id);
     if(sol && sol.steps && sol.steps.length > 0) {
-      container.innerHTML = `
-        <div style="font-size:11px;color:#fbbf24;margin-bottom:8px;text-transform:uppercase;font-weight:800;">📐 Solución paso a paso (con números)</div>
-        ${sol.steps.slice(0, 8).map((step, i) => `
+      const stepsHtml = sol.steps.slice(0, 8).map((step, i) => {
+        const latexStep = convertPlainTextToLatex(step);
+        return `
           <div class="em-proc-step" style="border-left:3px solid #4f8ef7;padding-left:10px;margin:6px 0;">
             <div class="em-proc-num" style="background:#4f8ef7;">${i + 1}</div>
-            <div class="em-proc-text">${formatText(step)}</div>
+            <div class="em-proc-text">${latexStep}</div>
           </div>
-        `).join('')}
-        ${sol.final_answer ? `
-          <div style="margin-top:10px;padding:10px;background:#0d1a14;border:1px solid #22c55e;border-radius:8px;">
-            <b style="color:#22c55e;">Respuesta final:</b> ${formatText(sol.final_answer)}</div>
-        ` : ''}
+        `;
+      }).join('');
+      
+      const answerHtml = sol.final_answer ? `
+        <div style="margin-top:10px;padding:10px;background:#0d1a14;border:1px solid #22c55e;border-radius:8px;">
+          <b style="color:#22c55e;">Respuesta final:</b> ${convertPlainTextToLatex(sol.final_answer)}</div>
+      ` : '';
+      
+      container.innerHTML = `
+        <div style="font-size:11px;color:#fbbf24;margin-bottom:8px;text-transform:uppercase;font-weight:800;">📐 Solución paso a paso (con números)</div>
+        ${stepsHtml}
+        ${answerHtml}
       `;
     } else if(prob.answer) {
       container.innerHTML = `
         <div style="font-size:11px;color:#fbbf24;margin-bottom:8px;">📐 Respuesta disponible</div>
         <div style="padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;">
-          <b>Respuesta:</b> ${formatText(prob.answer)}</div>
+          <b>Respuesta:</b> ${convertPlainTextToLatex(prob.answer)}</div>
         <div style="margin-top:8px;font-size:11px;color:#94a3b8;">
           💡 Usa los hints del ejercicio como guía para llegar a este resultado.
         </div>
@@ -2267,14 +2274,78 @@ async function loadEMSolutionSteps() {
       container.innerHTML = `
         <div style="font-size:11px;color:#fbbf24;margin-bottom:8px;">📐 Respuesta disponible</div>
         <div style="padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;">
-          <b>Respuesta:</b> ${formatText(prob.answer)}</div>
+          <b>Respuesta:</b> ${convertPlainTextToLatex(prob.answer)}</div>
       `;
     } else {
       container.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:10px;">❌ Error cargando solución. Intenta más tarde.</div>';
     }
   }
   
+  // Renderizar KaTeX dos veces para asegurar
   renderMath(container);
+  setTimeout(() => renderMath(container), 200);
+}
+
+function convertPlainTextToLatex(text) {
+  if(!text) return '';
+  
+  // Escapar HTML primero
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  
+  // Convertir patrones matemáticos comunes a LaTeX
+  // v_A, v_B, v_C → \(v_A\), \(v_B\), \(v_C\)
+  html = html.replace(/\bv_([A-Za-z0-9]+)\b/g, '\\($v_$1\\)');
+  
+  // m_A, m_B → \(m_A\)
+  html = html.replace(/\bm_([A-Za-z0-9]+)\b/g, '\\($m_$1\\)');
+  
+  // r_A, r_B → \(r_A\)
+  html = html.replace(/\br_([A-Za-z0-9]+)\b/g, '\\($r_$1\\)');
+  
+  // H_O, H_G → \(H_O\), \(H_G\)
+  html = html.replace(/\bH_([A-Za-z0-9]+)\b/g, '\\($H_$1\\)');
+  
+  // v_0, v_1, v_2 → \(v_0\), etc.
+  html = html.replace(/\bv_([0-9]+)\b/g, '\\($v_$1\\)');
+  
+  // cos 30°, sin 45° → \(\cos 30^\circ\)
+  html = html.replace(/(cos|sin|tan)\s+(\d+)°/g, '\\($\\$1 $2^\\circ\\)');
+  
+  // (1/2) → \(\frac{1}{2}\)
+  html = html.replace(/\(1\/2\)/g, '\\(\\frac{1}{2}\\)');
+  html = html.replace(/\(3\/2\)/g, '\\(\\frac{3}{2}\\)');
+  html = html.replace(/\(sqrt\(3\)\/2\)/g, '\\(\\frac{\\sqrt{3}}{2}\\)');
+  
+  // sqrt(3) → \(\sqrt{3}\)
+  html = html.replace(/sqrt\(([^)]+)\)/g, '\\(\\sqrt{$1}\\)');
+  
+  // e=0.8, e=1 → \(e=0.8\), \(e=1\)
+  html = html.replace(/\be=([0-9.]+)\b/g, '\\($e=$1\\)');
+  
+  // (1/2)mv^2 → \(\frac{1}{2}mv^2\)
+  html = html.replace(/\(1\/2\)m([A-Za-z])\^2/g, '\\(\\frac{1}{2}m$1^2\\)');
+  
+  // T_1, T_2, V_1, V_2 → \(T_1\), etc.
+  html = html.replace(/\b([TV])_([0-9]+)\b/g, '\\($_$1$2\\)');
+  
+  // Σ → \(\\sum\)
+  html = html.replace(/Σ/g, '\\(\\sum\\)');
+  html = html.replace(/&Sigma;/g, '\\(\\sum\\)');
+  
+  // → ← ↑ ↓
+  html = html.replace(/→/g, '\\(\\rightarrow\\)');
+  html = html.replace(/←/g, '\\(\\leftarrow\\)');
+  
+  // ° → ^\circ
+  html = html.replace(/(\d+)°/g, '\\($1^\\circ\\)');
+  
+  // Párrafos
+  html = html.replace(/\n/g, '<br>');
+  
+  return html;
 }
 
 function showEMCascara() {
