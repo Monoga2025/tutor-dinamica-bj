@@ -404,9 +404,11 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 #em-header button.em-primary { background:linear-gradient(135deg,#f59e0b,#ef4444); border:none; color:#fff; font-weight:700; }
 #em-header button.em-primary:hover { opacity:0.85; }
 
-#em-body { flex:1; display:grid; grid-template-columns:1fr 380px; gap:0; overflow:hidden; }
-#em-left { padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
-#em-right { background:#0f1525; border-left:1px solid #1e293b; padding:16px; overflow-y:auto; }
+#em-body { flex:1; display:grid; grid-template-columns:1fr 380px; gap:0; overflow:hidden; height:100%; }
+#em-left { padding:16px; overflow-y:scroll; -webkit-overflow-scrolling:touch; height:100%; }
+#em-left .em-section { margin-bottom:14px; }
+#em-left .em-section:last-child { margin-bottom:0; }
+#em-right { background:#0f1525; border-left:1px solid #1e293b; padding:16px; overflow-y:scroll; -webkit-overflow-scrolling:touch; height:100%; }
 
 .em-section { background:#111827; border:1px solid #1e293b; border-radius:12px; padding:14px; }
 .em-section h3 { font-size:12px; font-weight:800; color:#93c5fd; text-transform:uppercase; letter-spacing:0.04em; margin:0 0 10px; }
@@ -2162,19 +2164,78 @@ function showEMProcedure() {
   if(!emCurrentLaw) return;
   const section = document.getElementById('em-procedure-section');
   const container = document.getElementById('em-procedure');
+  const prob = emQueue[emIndex];
+  
+  // Usar hints del ejercicio como pasos específicos
+  const specificSteps = (prob.hints && prob.hints.length > 0) 
+    ? prob.hints 
+    : emCurrentLaw.steps;
   
   container.innerHTML = `
-    <div style="margin-bottom:10px;font-size:12px;color:#93c5fd;"><b>Ley:</b> ${emCurrentLaw.formula}</div>
+    <div style="margin-bottom:10px;font-size:12px;color:#93c5fd;"><b>Ley seleccionada:</b> ${emCurrentLaw.formula}</div>
     <div style="margin-bottom:10px;font-size:11px;color:#94a3b8;">${emCurrentLaw.when}</div>
-    ${emCurrentLaw.steps.map((step, i) => `
+    <div style="margin-bottom:12px;font-size:11px;color:#fbbf24;background:#2a1e0a;border:1px solid #f59e0b;border-radius:6px;padding:8px;">
+      <b>📋 Procedimiento específico para ${prob.id}:</b>
+    </div>
+    ${specificSteps.map((step, i) => `
       <div class="em-proc-step">
         <div class="em-proc-num">${i + 1}</div>
         <div class="em-proc-text">${step}</div>
       </div>
     `).join('')}
+    <div style="margin-top:12px;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;">
+      <button onclick="loadEMSolutionSteps()" style="background:linear-gradient(135deg,#4f8ef7,#7c5cfc);color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">
+        📖 Ver solución completa con números
+      </button>
+      <span style="font-size:11px;color:#94a3b8;margin-left:8px;">Carga paso a paso del solucionario</span>
+    </div>
+    <div id="em-solution-steps" style="margin-top:10px;"></div>
   `;
   
   section.style.display = 'block';
+  renderMath(container);
+}
+
+async function loadEMSolutionSteps() {
+  const prob = emQueue[emIndex];
+  const container = document.getElementById('em-solution-steps');
+  
+  container.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:10px;">⏳ Cargando solución del solucionario...</div>';
+  
+  try {
+    const sol = await getSolution(prob.id);
+    if(sol && sol.steps && sol.steps.length > 0) {
+      container.innerHTML = `
+        <div style="font-size:11px;color:#fbbf24;margin-bottom:8px;text-transform:uppercase;font-weight:800;">📐 Solución paso a paso (con números)</div>
+        ${sol.steps.slice(0, 8).map((step, i) => `
+          <div class="em-proc-step" style="border-left:3px solid #4f8ef7;padding-left:10px;margin:6px 0;">
+            <div class="em-proc-num" style="background:#4f8ef7;">${i + 1}</div>
+            <div class="em-proc-text">${step}</div>
+          </div>
+        `).join('')}
+        ${sol.final_answer ? `
+          <div style="margin-top:10px;padding:10px;background:#0d1a14;border:1px solid #22c55e;border-radius:8px;">
+            <b style="color:#22c55e;">Respuesta final:</b> ${sol.final_answer}
+          </div>
+        ` : ''}
+      `;
+    } else if(prob.answer) {
+      container.innerHTML = `
+        <div style="font-size:11px;color:#fbbf24;margin-bottom:8px;">📐 Respuesta disponible</div>
+        <div style="padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;">
+          <b>Respuesta:</b> ${prob.answer}
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:#94a3b8;">
+          💡 Usa los hints del ejercicio como guía para llegar a este resultado.
+        </div>
+      `;
+    } else {
+      container.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:10px;">❌ Solución no disponible en el solucionario.</div>';
+    }
+  } catch(e) {
+    container.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:10px;">❌ Error cargando solución. Intenta más tarde.</div>';
+  }
+  
   renderMath(container);
 }
 
@@ -2253,8 +2314,11 @@ function showEMResult(success, message) {
   title.textContent = success ? '✅ Ejercicio Completado' : '⚠️ Ejercicio Incompleto';
   content.innerHTML = message;
   
-  // Scroll al resultado
-  section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Scroll suave al resultado (usando el contenedor padre)
+  const leftPanel = document.getElementById('em-left');
+  setTimeout(() => {
+    leftPanel.scrollTo({ top: leftPanel.scrollHeight, behavior: 'smooth' });
+  }, 100);
   
   // Si fue exitoso, cargar solución
   if(success) {
