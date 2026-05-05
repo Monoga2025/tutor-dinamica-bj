@@ -404,6 +404,34 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 #em-header button.em-primary { background:linear-gradient(135deg,#f59e0b,#ef4444); border:none; color:#fff; font-weight:700; }
 #em-header button.em-primary:hover { opacity:0.85; }
 
+/* Mode Selector */
+.em-mode-selector { display:flex; gap:4px; background:#0f172a; padding:3px; border-radius:8px; border:1px solid #1e293b; }
+.em-mode-btn { font-size:11px !important; padding:4px 10px !important; border-radius:6px !important; border:none !important; background:transparent !important; color:#94a3b8 !important; font-weight:600 !important; white-space:nowrap; }
+.em-mode-btn:hover { color:#e2e8f0 !important; background:rgba(79,142,247,0.1) !important; }
+.em-mode-btn.active { background:linear-gradient(135deg,#4f8ef7,#7c5cfc) !important; color:#fff !important; }
+
+/* Flashcard Mode */
+.em-flash-card { background:#111827; border:2px solid #334155; border-radius:16px; padding:24px; text-align:center; min-height:200px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:16px; }
+.em-flash-card .em-flash-enunciado { font-size:16px; line-height:1.6; color:#e2e8f0; max-width:600px; }
+.em-flash-card .em-flash-timer { font-size:48px; font-weight:800; color:#fbbf24; font-family:monospace; }
+.em-flash-card .em-flash-options { display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; max-width:500px; }
+.em-flash-btn { padding:12px 16px; border-radius:10px; border:2px solid #334155; background:#0f172a; color:#e2e8f0; font-size:13px; font-weight:700; cursor:pointer; transition:all 0.15s; }
+.em-flash-btn:hover { border-color:#4f8ef7; transform:translateY(-2px); }
+.em-flash-btn.correct { border-color:#22c55e; background:#0d1a14; color:#86efac; }
+.em-flash-btn.wrong { border-color:#ef4444; background:#1f1117; color:#fca5a5; }
+.em-flash-result { font-size:18px; font-weight:800; margin-top:8px; }
+.em-flash-result.ok { color:#22c55e; }
+.em-flash-result.bad { color:#ef4444; }
+
+/* Error Spotting Mode */
+.em-spotting-step { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:12px; margin:6px 0; cursor:pointer; transition:all 0.15s; display:flex; align-items:flex-start; gap:10px; }
+.em-spotting-step:hover { border-color:#f59e0b; }
+.em-spotting-step.selected { border-color:#f59e0b; background:#2a1e0a; }
+.em-spotting-step.correct-error { border-color:#22c55e; background:#0d1a14; }
+.em-spotting-num { width:28px; height:28px; border-radius:50%; background:#1e293b; color:#94a3b8; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; flex-shrink:0; }
+.em-spotting-text { font-size:13px; line-height:1.5; color:#cbd5e1; flex:1; }
+.em-spotting-instruction { background:#2a1e0a; border:1px solid #f59e0b; border-radius:10px; padding:14px; margin-bottom:14px; font-size:14px; color:#fbbf24; font-weight:700; text-align:center; }
+
 #em-body { flex:1; display:grid; grid-template-columns:1fr 380px; gap:0; overflow:hidden; height:100%; }
 #em-left { padding:16px; overflow-y:scroll; -webkit-overflow-scrolling:touch; height:100%; }
 #em-left .em-section { margin-bottom:14px; }
@@ -551,9 +579,15 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 <!-- EM MODE PANEL -->
 <div id="em-panel">
   <div id="em-header">
-    <h2>⚡ Modo EM — Estudio de Emergencia</h2>
+    <h2>⚡ Modo EM</h2>
+    <div class="em-mode-selector">
+      <button class="em-mode-btn active" data-mode="flashcard" onclick="setEMMode('flashcard')">⚡ Flash</button>
+      <button class="em-mode-btn" data-mode="quick" onclick="setEMMode('quick')">🎯 Rápido</button>
+      <button class="em-mode-btn" data-mode="spotting" onclick="setEMMode('spotting')">🔍 Errores</button>
+      <button class="em-mode-btn" data-mode="full" onclick="setEMMode('full')">📚 Completo</button>
+    </div>
     <div class="em-badge" id="em-exam-badge">EXAMEN</div>
-    <div class="em-progress" id="em-progress">Ejercicio 1 de 20</div>
+    <div class="em-progress" id="em-progress">1/25</div>
     <div id="em-timer">04:00:00</div>
     <div style="flex:1"></div>
     <button onclick="emSkip()">⏭ Saltar</button>
@@ -1953,6 +1987,10 @@ let emTimerInterval = null;
 let emCurrentLaw = null;
 let emCascaraAnswered = false;
 let emSelectedLaws = [];
+let emMode = 'flashcard'; // flashcard, quick, spotting, full
+let emFlashTimer = null;
+let emFlashTimeLeft = 10;
+let emSpottingSelected = -1;
 
 function buildEMQueue() {
   const all = DB.getAll();
@@ -2060,65 +2098,17 @@ function loadEMExercise() {
   
   const prob = emQueue[emIndex];
   const state = DB.get(prob.id);
-  const profile = gateProfile(prob);
   
-  // Resetear panel de resultado
-  document.getElementById('em-result-section').style.display = 'none';
-  document.getElementById('em-result-section').className = 'em-section';
-  document.getElementById('em-solution-section').style.display = 'none';
-  document.getElementById('em-feedback-section').style.display = 'block';
-  document.getElementById('em-next-actions').style.display = 'none';
-  
-  // Limpiar checkboxes
-  document.getElementById('em-fb-formula').checked = false;
-  document.getElementById('em-fb-procedure').checked = false;
-  document.getElementById('em-fb-cascara').checked = false;
-  document.getElementById('em-fb-weak').checked = false;
-  document.getElementById('em-fb-notes').value = '';
-  
-  // Actualizar header
-  document.getElementById('em-exam-badge').style.display = prob.examCritical ? 'inline-block' : 'none';
-  document.getElementById('em-progress').textContent = `Ejercicio ${emIndex + 1} de ${emQueue.length}`;
-  
-  // Enunciado (renderizar como HTML para permitir LaTeX)
-  const stmtEl = document.getElementById('em-statement');
-  stmtEl.innerHTML = formatText(prob.text);
-  renderMath(stmtEl);
-  
-  // Variables (envolver en \( \) para renderizado LaTeX)
-  const data = extractGivenData(prob.text);
-  const unknown = inferUnknown(prob.text);
-  const varsHtml = [
-    ...data.map(d => `<span class="em-var-chip given"><span class="em-var-label">\\(${d}\\)</span></span>`),
-    `<span class="em-var-chip unknown"><span class="em-var-label">\\(${unknown}\\)</span><span class="em-var-val">Incógnita</span></span>`
-  ].join('');
-  const varsEl = document.getElementById('em-variables');
-  varsEl.innerHTML = varsHtml;
-  renderMath(varsEl);
-  
-  // Leyes
-  const lawsHtml = EM_LAWS.map(law => {
-    const isCorrect = law.topics.some(t => prob.topics.includes(t));
-    return `<button class="em-law-card" data-law="${law.id}" data-correct="${isCorrect}" onclick="selectEMLaw('${law.id}')">
-      <h4>${law.name}</h4>
-      <p>${law.desc}</p>
-    </button>`;
-  }).join('');
-  document.getElementById('em-laws').innerHTML = lawsHtml;
-  document.getElementById('em-law-feedback').innerHTML = '';
-  
-  // Ocultar procedimiento y cascaritas
-  document.getElementById('em-procedure-section').style.display = 'none';
-  document.getElementById('em-cascara-section').style.display = 'none';
-  document.getElementById('em-law-feedback').innerHTML = `
-    <div style="margin-top:10px;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:12px;">
-      🧩 <b>Desafío:</b> Este ejercicio puede requerir <b>una o más</b> leyes. Selecciona todas las que apliquen.<br>
-      <span style="font-size:11px;margin-top:4px;display:block;">Pista: Lee el enunciado buscando palabras clave como "elástico", \\(e\\), "explota", "3D", etc.</span>
-    </div>
-  `;
+  // Resetear estado
   emCurrentLaw = null;
   emCascaraAnswered = false;
   emSelectedLaws = [];
+  emSpottingSelected = -1;
+  if(emFlashTimer) clearInterval(emFlashTimer);
+  
+  // Actualizar header
+  document.getElementById('em-exam-badge').style.display = prob.examCritical ? 'inline-block' : 'none';
+  document.getElementById('em-progress').textContent = `${emIndex + 1}/${emQueue.length}`;
   
   // Info lateral
   document.getElementById('em-info').innerHTML = `
@@ -2151,6 +2141,416 @@ function loadEMExercise() {
     document.getElementById('em-weakness-section').style.display = 'none';
   }
   
+  // Cargar según el modo
+  switch(emMode) {
+    case 'flashcard':
+      loadEMFlashcardMode(prob);
+      break;
+    case 'quick':
+      loadEMQuickMode(prob);
+      break;
+    case 'spotting':
+      loadEMSpottingMode(prob);
+      break;
+    case 'full':
+    default:
+      loadEMFullMode(prob);
+      break;
+  }
+}
+
+function setEMMode(mode) {
+  emMode = mode;
+  
+  // Actualizar botones
+  document.querySelectorAll('.em-mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  
+  // Recargar ejercicio actual
+  if(emQueue.length > 0 && emIndex < emQueue.length) {
+    loadEMExercise();
+  }
+}
+
+// ─── FLASHCARD MODE (10 segundos, solo ley) ─────────────────────────────────
+function loadEMFlashcardMode(prob) {
+  const leftPanel = document.getElementById('em-left');
+  const correctLaws = getEMCorrectLaws(prob);
+  const allLaws = EM_LAWS.slice(0, 4); // Mostrar solo 4 opciones
+  
+  // Barajar leyes
+  const shuffled = [...allLaws].sort(() => 0.5 - Math.random());
+  
+  leftPanel.innerHTML = `
+    <div class="em-flash-card">
+      <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;font-weight:800;margin-bottom:8px;">⚡ Modo Flashcard — ${emIndex + 1}/${emQueue.length}</div>
+      <div class="em-flash-enunciado">${formatText(prob.text.substring(0, 200))}${prob.text.length > 200 ? '...' : ''}</div>
+      <div class="em-flash-timer" id="em-flash-timer">10</div>
+      <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;">¿Qué ley o leyes aplican?</div>
+      <div class="em-flash-options">
+        ${shuffled.map(law => `
+          <button class="em-flash-btn" onclick="answerEMFlashcard('${law.id}', ${correctLaws.some(cl => cl.id === law.id)})">${law.name}</button>
+        `).join('')}
+      </div>
+      <div id="em-flash-result"></div>
+    </div>
+  `;
+  
+  renderMath(leftPanel);
+  
+  // Iniciar timer
+  emFlashTimeLeft = 10;
+  const timerEl = document.getElementById('em-flash-timer');
+  emFlashTimer = setInterval(() => {
+    emFlashTimeLeft--;
+    if(timerEl) timerEl.textContent = emFlashTimeLeft;
+    if(emFlashTimeLeft <= 0) {
+      clearInterval(emFlashTimer);
+      // Timeout - mostrar respuesta
+      const resultEl = document.getElementById('em-flash-result');
+      if(resultEl && !resultEl.innerHTML) {
+        const lawNames = correctLaws.map(l => l.name).join(', ');
+        resultEl.innerHTML = `
+          <div class="em-flash-result bad">⏰ ¡Tiempo! La respuesta era: <b>${lawNames}</b></div>
+          <button onclick="emNext()" class="em-primary" style="margin-top:10px;padding:8px 16px;border-radius:6px;border:none;font-size:13px;font-weight:700;cursor:pointer;">Siguiente →</button>
+        `;
+        SRS.markWrong(prob.id, 'timeout_flashcard', 'Tiempo agotado en flashcard');
+      }
+    }
+  }, 1000);
+}
+
+function answerEMFlashcard(lawId, isCorrect) {
+  clearInterval(emFlashTimer);
+  const prob = emQueue[emIndex];
+  const resultEl = document.getElementById('em-flash-result');
+  
+  // Deshabilitar botones
+  document.querySelectorAll('.em-flash-btn').forEach(btn => {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+  });
+  
+  if(isCorrect) {
+    resultEl.innerHTML = `
+      <div class="em-flash-result ok">✓ ¡Correcto! (${10 - emFlashTimeLeft}s)</div>
+      <button onclick="emNext()" class="em-primary" style="margin-top:10px;padding:8px 16px;border-radius:6px;border:none;font-size:13px;font-weight:700;cursor:pointer;">Siguiente →</button>
+    `;
+    SRS.markGateCorrect(prob.id, 'flashcard');
+    showToast('⚡ Flashcard correcto');
+  } else {
+    const correctLaws = getEMCorrectLaws(prob);
+    const lawNames = correctLaws.map(l => l.name).join(', ');
+    resultEl.innerHTML = `
+      <div class="em-flash-result bad">✗ Era: <b>${lawNames}</b></div>
+      <button onclick="emNext()" class="em-primary" style="margin-top:10px;padding:8px 16px;border-radius:6px;border:none;font-size:13px;font-weight:700;cursor:pointer;">Siguiente →</button>
+    `;
+    SRS.markWrong(prob.id, 'flashcard_wrong', 'Ley incorrecta en flashcard');
+    showToast('❌ Flashcard incorrecto');
+  }
+  
+  updateStats();
+  updateWeaknessPanel();
+  renderEMExerciseList();
+}
+
+// ─── QUICK MODE (Solo ley, sin procedimiento) ───────────────────────────────
+function loadEMQuickMode(prob) {
+  const leftPanel = document.getElementById('em-left');
+  const correctLaws = getEMCorrectLaws(prob);
+  
+  leftPanel.innerHTML = `
+    <div class="em-section">
+      <h3>🎯 Modo Rápido — Identifica la ley</h3>
+      <div id="em-statement" style="font-size:14px;line-height:1.7;color:#e2e8f0;white-space:pre-wrap;margin-bottom:16px;">${formatText(prob.text)}</div>
+      <div id="em-variables" class="em-vars-grid" style="margin-bottom:16px;"></div>
+      <h4 style="font-size:12px;color:#fbbf24;margin:0 0 10px;">Selecciona la ley correcta:</h4>
+      <div id="em-laws" class="em-laws-grid"></div>
+      <div id="em-law-feedback"></div>
+      <div id="em-quick-next" style="margin-top:16px;display:none;">
+        <button onclick="emNext()" class="em-primary" style="padding:10px 20px;border-radius:8px;border:none;font-size:14px;font-weight:800;cursor:pointer;">▶ Siguiente ejercicio</button>
+      </div>
+    </div>
+  `;
+  
+  // Variables
+  const data = extractGivenData(prob.text);
+  const unknown = inferUnknown(prob.text);
+  const varsHtml = [
+    ...data.map(d => `<span class="em-var-chip given"><span class="em-var-label">\\(${d}\\)</span></span>`),
+    `<span class="em-var-chip unknown"><span class="em-var-label">\\(${unknown}\\)</span><span class="em-var-val">Incógnita</span></span>`
+  ].join('');
+  document.getElementById('em-variables').innerHTML = varsHtml;
+  
+  // Leyes
+  const lawsHtml = EM_LAWS.map(law => {
+    const isCorrect = law.topics.some(t => prob.topics.includes(t));
+    return `<button class="em-law-card" data-law="${law.id}" data-correct="${isCorrect}" onclick="selectEMQuickLaw('${law.id}')">
+      <h4>${law.name}</h4>
+      <p>${law.desc}</p>
+    </button>`;
+  }).join('');
+  document.getElementById('em-laws').innerHTML = lawsHtml;
+  document.getElementById('em-law-feedback').innerHTML = `
+    <div style="margin-top:10px;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:12px;">
+      🎯 <b>Modo Rápido:</b> Solo identifica la ley. Sin procedimiento, sin cascarita. Rápido y directo.
+    </div>
+  `;
+  
+  renderMath(leftPanel);
+}
+
+function selectEMQuickLaw(lawId) {
+  const prob = emQueue[emIndex];
+  const correctLaws = getEMCorrectLaws(prob);
+  const correctIds = correctLaws.map(l => l.id);
+  const selectedCard = document.querySelector(`.em-law-card[data-law="${lawId}"]`);
+  const isCorrect = correctIds.includes(lawId);
+  const feedback = document.getElementById('em-law-feedback');
+  
+  document.querySelectorAll('.em-law-card').forEach(card => {
+    card.disabled = true;
+    card.style.opacity = '0.6';
+  });
+  
+  selectedCard.style.opacity = '1';
+  
+  if(isCorrect) {
+    selectedCard.classList.add('correct');
+    feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#0d1a14;border:1px solid #22c55e;border-radius:8px;color:#86efac;font-size:13px;">✓ ¡Ley correcta! Rápido y preciso.</div>`;
+    SRS.markGateCorrect(prob.id, 'quick');
+    showToast('✓ Correcto');
+  } else {
+    selectedCard.classList.add('wrong');
+    const correctNames = correctLaws.map(l => l.name).join(', ');
+    feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#1f1117;border:1px solid #ef4444;border-radius:8px;color:#fca5a5;font-size:13px;">✗ Era: <b>${correctNames}</b></div>`;
+    SRS.markWrong(prob.id, 'quick_wrong', 'Ley incorrecta en modo rápido');
+    showToast('❌ Incorrecto');
+  }
+  
+  document.getElementById('em-quick-next').style.display = 'block';
+  updateStats();
+  updateWeaknessPanel();
+  renderEMExerciseList();
+}
+
+// ─── ERROR SPOTTING MODE (Detectar errores) ─────────────────────────────────
+function loadEMSpottingMode(prob) {
+  const leftPanel = document.getElementById('em-left');
+  
+  // Generar un procedimiento con un error deliberado
+  const steps = [];
+  if(prob.hints && prob.hints.length > 0) {
+    steps.push(...prob.hints.slice(0, 3));
+  } else {
+    steps.push('Identificar el sistema y las fuerzas externas');
+    steps.push('Aplicar conservación de momentum lineal');
+    steps.push('Despejar la incógnita');
+  }
+  
+  // Agregar un paso con error común
+  const commonErrors = [
+    'Sumar todas las masas como si fueran un solo cuerpo',
+    'Olvidar que la velocidad es relativa al bote, no absoluta',
+    'No separar en componentes x e y cuando hay ángulos',
+    'Usar lb como masa sin dividir por g (32.2 ft/s²)',
+    'Aplicar momentum una sola vez en impactos sucesivos',
+    'Confundir velocidad relativa con velocidad absoluta'
+  ];
+  
+  const randomError = commonErrors[Math.floor(Math.random() * commonErrors.length)];
+  const errorIndex = Math.floor(Math.random() * (steps.length + 1));
+  steps.splice(errorIndex, 0, randomError);
+  
+  leftPanel.innerHTML = `
+    <div class="em-section">
+      <div class="em-spotting-instruction">
+        🔍 <b>Encuentra el error</b><br>
+        <span style="font-size:12px;font-weight:400;">Uno de estos pasos es INCORRECTO. ¿Cuál?</span>
+      </div>
+      <div style="font-size:13px;line-height:1.6;color:#e2e8f0;margin-bottom:16px;padding:12px;background:#0f172a;border-radius:8px;">
+        <b>Ejercicio ${prob.id}:</b> ${formatText(prob.text.substring(0, 150))}...
+      </div>
+      <div id="em-spotting-steps">
+        ${steps.map((step, i) => `
+          <div class="em-spotting-step" onclick="selectEMSpottingStep(${i}, ${i === errorIndex})" data-index="${i}">
+            <div class="em-spotting-num">${i + 1}</div>
+            <div class="em-spotting-text">${step}</div>
+          </div>
+        `).join('')}
+      </div>
+      <div id="em-spotting-feedback" style="margin-top:16px;"></div>
+      <div id="em-spotting-next" style="margin-top:16px;display:none;">
+        <button onclick="emNext()" class="em-primary" style="padding:10px 20px;border-radius:8px;border:none;font-size:14px;font-weight:800;cursor:pointer;">▶ Siguiente</button>
+      </div>
+    </div>
+  `;
+  
+  emSpottingSelected = -1;
+  renderMath(leftPanel);
+}
+
+function selectEMSpottingStep(index, isError) {
+  if(emSpottingSelected >= 0) return; // Ya seleccionó
+  emSpottingSelected = index;
+  
+  const prob = emQueue[emIndex];
+  const feedback = document.getElementById('em-spotting-feedback');
+  const selectedStep = document.querySelector(`.em-spotting-step[data-index="${index}"]`);
+  
+  selectedStep.classList.add('selected');
+  
+  // Deshabilitar clicks en otros pasos
+  document.querySelectorAll('.em-spotting-step').forEach(step => {
+    step.style.pointerEvents = 'none';
+  });
+  
+  if(isError) {
+    selectedStep.classList.add('correct-error');
+    feedback.innerHTML = `
+      <div style="padding:12px;background:#0d1a14;border:1px solid #22c55e;border-radius:8px;color:#86efac;font-size:13px;">
+        ✓ ¡Correcto! Ese paso tiene un error conceptual común.<br>
+        <span style="font-size:12px;margin-top:6px;display:block;">Aprender a detectar errores te ayuda a no cometerlos en el parcial.</span>
+      </div>
+    `;
+    SRS.markGateCorrect(prob.id, 'spotting');
+    showToast('✓ Error detectado');
+  } else {
+    // Marcar cuál era el error real
+    const steps = document.querySelectorAll('.em-spotting-step');
+    steps.forEach((step, i) => {
+      if(step.querySelector('.em-spotting-text').textContent.includes('Sumar') || 
+         step.querySelector('.em-spotting-text').textContent.includes('Olvidar') ||
+         step.querySelector('.em-spotting-text').textContent.includes('No separar') ||
+         step.querySelector('.em-spotting-text').textContent.includes('Usar lb') ||
+         step.querySelector('.em-spotting-text').textContent.includes('Aplicar momentum una') ||
+         step.querySelector('.em-spotting-text').textContent.includes('Confundir')) {
+        step.classList.add('correct-error');
+      }
+    });
+    
+    feedback.innerHTML = `
+      <div style="padding:12px;background:#1f1117;border:1px solid #ef4444;border-radius:8px;color:#fca5a5;font-size:13px;">
+        ✗ Ese paso está bien. El error está marcado en verde.<br>
+        <span style="font-size:12px;margin-top:6px;display:block;">Presta atención a esos errores comunes.</span>
+      </div>
+    `;
+    SRS.markWrong(prob.id, 'spotting_wrong', 'No detectó el error en spotting');
+    showToast('❌ No detectaste el error');
+  }
+  
+  document.getElementById('em-spotting-next').style.display = 'block';
+  updateStats();
+  updateWeaknessPanel();
+  renderEMExerciseList();
+}
+
+// ─── FULL MODE (Modo completo original) ─────────────────────────────────────
+function loadEMFullMode(prob) {
+  // Restaurar el left panel original
+  const leftPanel = document.getElementById('em-left');
+  leftPanel.innerHTML = `
+    <div class="em-section">
+      <h3>📋 Enunciado</h3>
+      <div id="em-statement" style="font-size:13px;line-height:1.7;color:#e2e8f0;white-space:pre-wrap;"></div>
+    </div>
+    <div class="em-section">
+      <h3>🔢 Variables</h3>
+      <div style="margin-bottom:8px;font-size:11px;color:#94a3b8;"><span style="color:#22c55e">●</span> Dado &nbsp; <span style="color:#f59e0b">●</span> Incógnita</div>
+      <div id="em-variables" class="em-vars-grid"></div>
+    </div>
+    <div class="em-section">
+      <h3>⚖️ Selecciona la ley que aplica</h3>
+      <div id="em-laws" class="em-laws-grid"></div>
+      <div id="em-law-feedback"></div>
+    </div>
+    <div class="em-section" id="em-procedure-section" style="display:none;">
+      <h3>📐 Procedimiento</h3>
+      <div id="em-procedure"></div>
+    </div>
+    <div class="em-section" id="em-cascara-section" style="display:none;">
+      <h3>🌰 Cascarita — Verificación rápida</h3>
+      <div id="em-cascara"></div>
+    </div>
+    <div class="em-section" id="em-result-section" style="display:none;">
+      <h3 id="em-result-title">✅ Ejercicio Completado</h3>
+      <div id="em-result-content"></div>
+      <div id="em-solution-section" style="margin-top:12px;display:none;">
+        <h4 style="font-size:11px;color:#93c5fd;text-transform:uppercase;margin:0 0 6px;">📖 Respuesta del solucionario</h4>
+        <div id="em-solution-text" style="font-size:12px;color:#e2e8f0;line-height:1.5;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;"></div>
+      </div>
+      <div id="em-feedback-section" style="margin-top:12px;">
+        <h4 style="font-size:11px;color:#fbbf24;text-transform:uppercase;margin:0 0 8px;">🧠 ¿Qué aprendiste? (ayuda a la IA)</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+          <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="em-fb-formula" style="accent-color:#22c55e;"> Identifiqué la ley</label>
+          <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="em-fb-procedure" style="accent-color:#22c55e;"> Entendí el procedimiento</label>
+          <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="em-fb-cascara" style="accent-color:#22c55e;"> Acerté la cascarita</label>
+          <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="em-fb-weak" style="accent-color:#f59e0b;"> Aún me cuesta este tipo</label>
+        </div>
+        <textarea id="em-fb-notes" placeholder="Nota opcional: ¿qué te costó? ¿qué regla aprendiste?" style="width:100%;min-height:50px;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:8px;color:#e2e8f0;font-size:11px;font-family:inherit;resize:vertical;"></textarea>
+        <button onclick="submitEMFeedback()" style="margin-top:8px;padding:8px 14px;border-radius:6px;border:none;background:linear-gradient(135deg,#4f8ef7,#7c5cfc);color:#fff;font-size:12px;font-weight:700;cursor:pointer;width:100%;">Guardar y continuar →</button>
+      </div>
+      <div id="em-next-actions" style="margin-top:12px;display:none;">
+        <button onclick="emNext()" class="em-primary" style="width:100%;padding:10px;border-radius:8px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">▶ Siguiente ejercicio recomendado</button>
+        <div id="em-next-rec" style="margin-top:8px;font-size:11px;color:#94a3b8;text-align:center;"></div>
+      </div>
+    </div>
+  `;
+  
+  const state = DB.get(prob.id);
+  const profile = gateProfile(prob);
+  
+  // Resetear panel de resultado
+  document.getElementById('em-result-section').style.display = 'none';
+  document.getElementById('em-result-section').className = 'em-section';
+  document.getElementById('em-solution-section').style.display = 'none';
+  document.getElementById('em-feedback-section').style.display = 'block';
+  document.getElementById('em-next-actions').style.display = 'none';
+  
+  // Limpiar checkboxes
+  document.getElementById('em-fb-formula').checked = false;
+  document.getElementById('em-fb-procedure').checked = false;
+  document.getElementById('em-fb-cascara').checked = false;
+  document.getElementById('em-fb-weak').checked = false;
+  document.getElementById('em-fb-notes').value = '';
+  
+  // Enunciado
+  const stmtEl = document.getElementById('em-statement');
+  stmtEl.innerHTML = formatText(prob.text);
+  renderMath(stmtEl);
+  
+  // Variables
+  const data = extractGivenData(prob.text);
+  const unknown = inferUnknown(prob.text);
+  const varsHtml = [
+    ...data.map(d => `<span class="em-var-chip given"><span class="em-var-label">\\(${d}\\)</span></span>`),
+    `<span class="em-var-chip unknown"><span class="em-var-label">\\(${unknown}\\)</span><span class="em-var-val">Incógnita</span></span>`
+  ].join('');
+  const varsEl = document.getElementById('em-variables');
+  varsEl.innerHTML = varsHtml;
+  renderMath(varsEl);
+  
+  // Leyes
+  const lawsHtml = EM_LAWS.map(law => {
+    const isCorrect = law.topics.some(t => prob.topics.includes(t));
+    return `<button class="em-law-card" data-law="${law.id}" data-correct="${isCorrect}" onclick="selectEMLaw('${law.id}')">
+      <h4>${law.name}</h4>
+      <p>${law.desc}</p>
+    </button>`;
+  }).join('');
+  document.getElementById('em-laws').innerHTML = lawsHtml;
+  document.getElementById('em-law-feedback').innerHTML = `
+    <div style="margin-top:10px;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:12px;">
+      🧩 <b>Desafío:</b> Este ejercicio puede requerir <b>una o más</b> leyes. Selecciona todas las que apliquen.<br>
+      <span style="font-size:11px;margin-top:4px;display:block;">Pista: Lee el enunciado buscando palabras clave como "elástico", \\(e\\), "explota", "3D", etc.</span>
+    </div>
+  `;
+  
+  // Ocultar procedimiento y cascaritas
+  document.getElementById('em-procedure-section').style.display = 'none';
+  document.getElementById('em-cascara-section').style.display = 'none';
+  
   // Tip
   document.getElementById('em-tip').innerHTML = `
     <b>Regla de oro:</b> Símbolos primero, números al final.<br><br>
@@ -2158,9 +2558,7 @@ function loadEMExercise() {
     <b>Pregunta clave:</b> ¿Qué se conserva y qué no se conserva?
   `;
   
-  // Renderizar math
-  renderMath(document.getElementById('em-left'));
-  renderMath(document.getElementById('em-right'));
+  renderMath(leftPanel);
 }
 
 function getEMCorrectLaws(prob) {
