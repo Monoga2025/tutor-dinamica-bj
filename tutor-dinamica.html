@@ -457,6 +457,17 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 /* Timer */
 #em-timer { font-size:14px; font-weight:700; color:#fbbf24; font-family:monospace; }
 
+/* EM Result Section */
+#em-result-section { transition: all 0.3s ease; }
+#em-result-section.ok { border-color: #22c55e; background: #0d1a14; }
+#em-result-section.bad { border-color: #ef4444; background: #1f1117; }
+#em-result-title { font-size: 14px; font-weight: 800; margin: 0 0 10px; }
+#em-result-section.ok #em-result-title { color: #22c55e; }
+#em-result-section.bad #em-result-title { color: #ef4444; }
+#em-result-content { font-size: 12px; line-height: 1.5; color: #cbd5e1; }
+#em-next-actions { animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
 /* Responsive */
 @media (max-width: 900px) {
   #em-body { grid-template-columns:1fr; }
@@ -558,6 +569,29 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
       <div class="em-section" id="em-cascara-section" style="display:none;">
         <h3>🌰 Cascarita — Verificación rápida</h3>
         <div id="em-cascara"></div>
+      </div>
+      <div class="em-section" id="em-result-section" style="display:none;">
+        <h3 id="em-result-title">✅ Ejercicio Completado</h3>
+        <div id="em-result-content"></div>
+        <div id="em-solution-section" style="margin-top:12px;display:none;">
+          <h4 style="font-size:11px;color:#93c5fd;text-transform:uppercase;margin:0 0 6px;">📖 Respuesta del solucionario</h4>
+          <div id="em-solution-text" style="font-size:12px;color:#e2e8f0;line-height:1.5;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;"></div>
+        </div>
+        <div id="em-feedback-section" style="margin-top:12px;">
+          <h4 style="font-size:11px;color:#fbbf24;text-transform:uppercase;margin:0 0 8px;">🧠 ¿Qué aprendiste? (ayuda a la IA)</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="em-fb-formula" style="accent-color:#22c55e;"> Identifiqué la ley</label>
+            <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="em-fb-procedure" style="accent-color:#22c55e;"> Entendí el procedimiento</label>
+            <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="em-fb-cascara" style="accent-color:#22c55e;"> Acerté la cascarita</label>
+            <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="em-fb-weak" style="accent-color:#f59e0b;"> Aún me cuesta este tipo</label>
+          </div>
+          <textarea id="em-fb-notes" placeholder="Nota opcional: ¿qué te costó? ¿qué regla aprendiste?" style="width:100%;min-height:50px;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:8px;color:#e2e8f0;font-size:11px;font-family:inherit;resize:vertical;"></textarea>
+          <button onclick="submitEMFeedback()" style="margin-top:8px;padding:8px 14px;border-radius:6px;border:none;background:linear-gradient(135deg,#4f8ef7,#7c5cfc);color:#fff;font-size:12px;font-weight:700;cursor:pointer;width:100%;">Guardar y continuar →</button>
+        </div>
+        <div id="em-next-actions" style="margin-top:12px;display:none;">
+          <button onclick="emNext()" class="em-primary" style="width:100%;padding:10px;border-radius:8px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">▶ Siguiente ejercicio recomendado</button>
+          <div id="em-next-rec" style="margin-top:8px;font-size:11px;color:#94a3b8;text-align:center;"></div>
+        </div>
       </div>
     </div>
     <div id="em-right">
@@ -1892,24 +1926,61 @@ let emCurrentLaw = null;
 let emCascaraAnswered = false;
 
 function buildEMQueue() {
-  // Prioridad: examCritical primero, luego por dificultad, luego no vistos
   const all = DB.getAll();
+  const hp = ErrorTracker.getHighPriority();
+  const weak = ErrorTracker.getWeakProblems();
+  
+  // Detectar tipos de errores frecuentes para ejercicios puentes
+  const weakTypes = new Set();
+  hp.forEach(h => weakTypes.add(h.type));
+  weak.forEach(w => {
+    const s = all[w.id] || {};
+    (s.errors || []).forEach(e => weakTypes.add(e.type));
+  });
+  
   const scored = PROBLEMS.map(p => {
     const s = all[p.id] || {};
     const score = s.score || 0;
     const attempts = s.attempts || 0;
     const errors = (s.errors || []).length;
+    const errorTypes = new Set((s.errors || []).map(e => e.type));
+    
     let priority = 0;
-    if(p.examCritical) priority += 1000;
-    priority += (5 - (p.diff || 3)) * 50; // Priorizar más fáciles
-    priority -= attempts * 10; // Penalizar ya vistos
-    priority -= score * 5; // Penalizar ya dominados
-    priority += errors * 20; // Priorizar con errores previos
-    return { ...p, priority };
+    
+    // Examen: máxima prioridad
+    if(p.examCritical) priority += 2000;
+    
+    // Debilidades activas: si este ejercicio tiene errores del mismo tipo que otras debilidades, es puente
+    const isBridge = [...weakTypes].some(wt => errorTypes.has(wt));
+    if(isBridge) priority += 800;
+    
+    // Errores propios
+    priority += errors * 50;
+    
+    // Priorizar más fáciles para avanzar rápido
+    priority += (5 - (p.diff || 3)) * 30;
+    
+    // Penalizar ya dominados
+    priority -= score * 8;
+    
+    // Penalizar ya vistos recientemente (pero no mucho)
+    priority -= attempts * 5;
+    
+    // Novedad: bonus para no vistos
+    if(attempts === 0) priority += 40;
+    
+    return { ...p, priority, isBridge };
   });
   
-  // Tomar top 25 ejercicios prioritarios
-  return scored.sort((a, b) => b.priority - a.priority).slice(0, 25);
+  // Separar: puentes primero, luego examen, luego el resto
+  const bridges = scored.filter(p => p.isBridge && !p.examCritical).sort((a, b) => b.priority - a.priority);
+  const exam = scored.filter(p => p.examCritical).sort((a, b) => b.priority - a.priority);
+  const rest = scored.filter(p => !p.isBridge && !p.examCritical).sort((a, b) => b.priority - a.priority);
+  
+  // Combinar: puentes → examen → resto, limitando a 25
+  const result = [...bridges, ...exam, ...rest].slice(0, 25);
+  
+  return result;
 }
 
 function openEM() {
@@ -1960,6 +2031,20 @@ function loadEMExercise() {
   const prob = emQueue[emIndex];
   const state = DB.get(prob.id);
   const profile = gateProfile(prob);
+  
+  // Resetear panel de resultado
+  document.getElementById('em-result-section').style.display = 'none';
+  document.getElementById('em-result-section').className = 'em-section';
+  document.getElementById('em-solution-section').style.display = 'none';
+  document.getElementById('em-feedback-section').style.display = 'block';
+  document.getElementById('em-next-actions').style.display = 'none';
+  
+  // Limpiar checkboxes
+  document.getElementById('em-fb-formula').checked = false;
+  document.getElementById('em-fb-procedure').checked = false;
+  document.getElementById('em-fb-cascara').checked = false;
+  document.getElementById('em-fb-weak').checked = false;
+  document.getElementById('em-fb-notes').value = '';
   
   // Actualizar header
   document.getElementById('em-exam-badge').style.display = prob.examCritical ? 'inline-block' : 'none';
@@ -2139,23 +2224,164 @@ function answerEMCascara(selected, correct, hint) {
   if(selected !== correct) buttons[correct].classList.add('correct');
   
   const feedback = document.getElementById('em-casca-feedback');
+  const prob = emQueue[emIndex];
+  const profile = gateProfile(prob);
+  
   if(selected === correct) {
     feedback.className = 'em-casca-feedback show ok';
-    feedback.textContent = '✓ Correcto. Continúa al siguiente ejercicio o ve a la pizarra a practicar.';
-    SRS.markGateCorrect(emQueue[emIndex].id, 'cascara');
+    feedback.textContent = '✓ Correcto. Ahora revisa tu resultado y registra qué aprendiste.';
+    SRS.markGateCorrect(prob.id, 'cascara');
+    showEMResult(true, '¡Excelente! Identificaste la ley correcta, entendiste el procedimiento y acertaste la cascarita.');
   } else {
     feedback.className = 'em-casca-feedback show bad';
     feedback.innerHTML = `✗ Incorrecto. <b>Pista:</b> ${hint}<br>Esta debilidad se ha registrado.`;
-    const prob = emQueue[emIndex];
-    const profile = gateProfile(prob);
-    SRS.markWrong(prob.id, profile.errorType, `Cascarita fallada: ${hint}`);
+    SRS.markWrong(prob.id, profile.errorType, `Cascarita fallada en EM: ${hint}`);
     updateWeaknessPanel();
+    showEMResult(false, 'La cascarita fue incorrecta. Revisa el procedimiento y la pista arriba. Puedes intentar la pizarra o pasar al siguiente.');
   }
   
   requestSyncUpload();
 }
 
+function showEMResult(success, message) {
+  const section = document.getElementById('em-result-section');
+  const title = document.getElementById('em-result-title');
+  const content = document.getElementById('em-result-content');
+  
+  section.style.display = 'block';
+  section.classList.add(success ? 'ok' : 'bad');
+  title.textContent = success ? '✅ Ejercicio Completado' : '⚠️ Ejercicio Incompleto';
+  content.innerHTML = message;
+  
+  // Scroll al resultado
+  section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  
+  // Si fue exitoso, cargar solución
+  if(success) {
+    showEMSolution();
+  }
+}
+
+async function showEMSolution() {
+  const prob = emQueue[emIndex];
+  const solutionSection = document.getElementById('em-solution-section');
+  const solutionText = document.getElementById('em-solution-text');
+  
+  solutionSection.style.display = 'block';
+  solutionText.innerHTML = '<span style="color:#94a3b8">Cargando solucionario...</span>';
+  
+  try {
+    const sol = await getSolution(prob.id);
+    if(sol && sol.final_answer) {
+      solutionText.innerHTML = `
+        <b>Respuesta:</b> ${formatText(sol.final_answer)}<br>
+        ${sol.method ? `<b>Método:</b> ${sol.method}<br>` : ''}
+        ${sol.page_num ? `<b>Página solucionario:</b> ${sol.page_num}` : ''}
+      `;
+      renderMath(solutionText);
+    } else if(prob.answer) {
+      solutionText.innerHTML = `<b>Respuesta:</b> ${formatText(prob.answer)}`;
+      renderMath(solutionText);
+    } else {
+      solutionText.innerHTML = '<span style="color:#94a3b8">Respuesta no disponible en el solucionario.</span>';
+    }
+  } catch(e) {
+    if(prob.answer) {
+      solutionText.innerHTML = `<b>Respuesta:</b> ${formatText(prob.answer)}`;
+      renderMath(solutionText);
+    } else {
+      solutionText.innerHTML = '<span style="color:#94a3b8">No se pudo cargar el solucionario.</span>';
+    }
+  }
+}
+
+function submitEMFeedback() {
+  const prob = emQueue[emIndex];
+  const formulaChecked = document.getElementById('em-fb-formula').checked;
+  const procedureChecked = document.getElementById('em-fb-procedure').checked;
+  const cascaraChecked = document.getElementById('em-fb-cascara').checked;
+  const weakChecked = document.getElementById('em-fb-weak').checked;
+  const notes = document.getElementById('em-fb-notes').value.trim();
+  
+  // Guardar feedback en el estado del problema
+  const state = DB.get(prob.id);
+  if(!Array.isArray(state.emFeedback)) state.emFeedback = [];
+  state.emFeedback.push({
+    t: Date.now(),
+    formula: formulaChecked,
+    procedure: procedureChecked,
+    cascara: cascaraChecked,
+    weak: weakChecked,
+    notes: notes
+  });
+  
+  // Actualizar score según feedback
+  if(formulaChecked && procedureChecked && cascaraChecked && !weakChecked) {
+    SRS.markCorrect(prob.id);
+    showToast(`✓ ${prob.id} dominado — score actualizado`);
+  } else if(weakChecked) {
+    const type = detectErrorType(notes || 'Aún me cuesta este tipo de ejercicio');
+    SRS.markWrong(prob.id, type, notes || 'Debilidad reportada en Modo EM');
+    showToast(`⚠️ Debilidad registrada en ${prob.id}`);
+  }
+  
+  // Ocultar feedback, mostrar siguiente acción
+  document.getElementById('em-feedback-section').style.display = 'none';
+  document.getElementById('em-next-actions').style.display = 'block';
+  
+  // Recomendar siguiente ejercicio
+  const nextRec = emGetRecommendedNext(prob.id);
+  document.getElementById('em-next-rec').innerHTML = nextRec;
+  
+  updateStats();
+  updateWeaknessPanel();
+  renderProblemList();
+  requestSyncUpload();
+}
+
+function emGetRecommendedNext(currentId) {
+  const hp = ErrorTracker.getHighPriority();
+  const weak = ErrorTracker.getWeakProblems();
+  
+  // Si hay errores de alta prioridad, sugerir ejercicio puente
+  if(hp.length > 0) {
+    const nextWeak = hp[0].problems[0];
+    if(nextWeak !== currentId) {
+      return `🔴 <b>Prioridad:</b> Debilidad detectada en "${hp[0].type}".<br>Practica <b>${nextWeak}</b> para reforzar.`;
+    }
+  }
+  
+  // Si hay problemas débiles, sugerir uno
+  if(weak.length > 0) {
+    const w = weak[0];
+    if(w.id !== currentId) {
+      return `⚠️ <b>Recomendado:</b> ${w.id} (score bajo — practica para subir).`;
+    }
+  }
+  
+  // Si no, sugerir siguiente en la cola
+  if(emIndex + 1 < emQueue.length) {
+    const next = emQueue[emIndex + 1];
+    return `▶ <b>Siguiente:</b> ${next.id} — ${next.examCritical ? '¡Examen!' : 'Continúa la ruta'}`;
+  }
+  
+  return '🎉 ¡Has completado todos los ejercicios prioritarios!';
+}
+
 function emNext() {
+  // Determinar si debemos saltar a un ejercicio específico por debilidad
+  const hp = ErrorTracker.getHighPriority();
+  if(hp.length > 0 && emIndex + 1 < emQueue.length) {
+    const weakId = hp[0].problems[0];
+    const weakIndex = emQueue.findIndex(p => p.id === weakId);
+    if(weakIndex > emIndex) {
+      emIndex = weakIndex;
+      showToast(`Saltando a ${weakId} — prioridad por debilidad`);
+      loadEMExercise();
+      return;
+    }
+  }
+  
   emIndex++;
   loadEMExercise();
 }
