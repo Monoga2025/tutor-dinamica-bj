@@ -1845,9 +1845,12 @@ const EM_LAWS = [
     formula: '\\(\\sum m\\mathbf{v}_{\\text{antes}} = \\sum m\\mathbf{v}_{\\text{después}}\\)',
     desc: 'Solo conservación de momentum. Dos cuerpos, un solo impacto.',
     when: 'Choque simple A→B, sin energía ni restitución. Solo masas y velocidades.',
+    recognitionWords: ['choque', 'impacto', 'colisión', 'antes', 'después', 'velocidad'],
+    recognitionTrick: 'Busca cuando hay UN SOLO impacto entre dos cuerpos y NO se menciona "elástico", "e=" ni energía.',
+    firstStep: 'Dibuja el estado ANTES (¿quién se mueve?) y el estado DESPUÉS (¿quién se mueve ahora?)',
     steps: [
-      'Dibujar ANTES: solo A se mueve, B en reposo (o ambos con velocidad conocida)',
-      'Dibujar DESPUÉS: A y B con velocidades finales',
+      'Dibuja ANTES: solo A se mueve, B en reposo (o ambos con velocidad conocida)',
+      'Dibuja DESPUÉS: A y B con velocidades finales',
       'Escribir: \\(m_A v_A + m_B v_B = m_A v\'_A + m_B v\'_B\\)',
       'Si es un solo eje: 1 ecuación, 1 incógnita. Despejar directo.',
       'Sustituir números al final'
@@ -1860,6 +1863,9 @@ const EM_LAWS = [
     formula: '\\(\\sum m\\mathbf{v}_{\\text{antes}} = \\sum m\\mathbf{v}_{\\text{después}}\\)  y  \\(T_1 = T_2\\)',
     desc: 'Impacto perfectamente elástico. Se conserva momentum Y energía cinética.',
     when: 'Choque elástico (\\(e=1\\)). Bolas de billar, esferas duras. Necesitas DOS ecuaciones.',
+    recognitionWords: ['elástico', 'billar', 'e=1', 'esfera', 'perfectamente', 'bola'],
+    recognitionTrick: 'Busca la palabra "elástico" o "e=1" o "billar/bola". Si hay ángulos (desviación), CASI SIEMPRE es este.',
+    firstStep: 'Identifica si es 2D (con ángulo) o 1D (en línea recta). Si hay ángulo → separar en x e y.',
     steps: [
       'Identificar: ¿el enunciado dice "elástico" o \\(e=1\\)?',
       'Ecuación 1 — Momentum: \\(\\sum m\\mathbf{v}_{\\text{antes}} = \\sum m\\mathbf{v}_{\\text{después}}\\)',
@@ -1876,6 +1882,9 @@ const EM_LAWS = [
     formula: '\\(\\sum m\\mathbf{v}_{\\text{antes}} = \\sum m\\mathbf{v}_{\\text{después}}\\)  y  \\(e = \\dfrac{v_{\\text{sep}}}{v_{\\text{acerc}}}\\)',
     desc: 'Choque con \\(e < 1\\). Se pierde energía. Se necesitan DOS ecuaciones.',
     when: 'El enunciado da \\(e\\) (ej: \\(e=0.8\\)). Choque parcialmente elástico.',
+    recognitionWords: ['e=', 'restitución', 'coeficiente', 'parcialmente', '0.5', '0.8'],
+    recognitionTrick: 'Busca un NÚMERO junto con "e" (ej: e=0.8, e=0.5). Ese número NO es 1.',
+    firstStep: 'Identifica el valor de e. Luego: componente NORMAL usa restitución, componente TANGENCIAL solo momentum.',
     steps: [
       'Identificar el valor de \\(e\\) en el enunciado',
       'Ecuación 1 — Momentum: \\(m_A v_A + m_B v_B = m_A v\'_A + m_B v\'_B\\)',
@@ -1891,6 +1900,9 @@ const EM_LAWS = [
     formula: 'Aplicar momentum DOS veces (o más)',
     desc: 'Un cuerpo golpea otro, luego ese golpea un tercero. Eventos separados.',
     when: 'Carruaje recibe maleta 1, luego maleta 2. Vagones que se acoplan uno por uno.',
+    recognitionWords: ['maleta', 'vagon', 'carro', 'tren', 'evento', 'después', 'luego', 'segundo'],
+    recognitionTrick: 'Busca cuando un cuerpo RECIBE algo y LUEGO golpea a otro. Cada "golpe" es un evento separado.',
+    firstStep: 'NÚMERO los eventos. Para cada evento, aplica momentum SOLO a los dos cuerpos que chocan EN ESE MOMENTO.',
     steps: [
       'Evento 1: A golpea B. Aplicar momentum solo a A+B.',
       'Resultado intermedio: \\(v\'_B\\) (B ahora se mueve)',
@@ -1906,6 +1918,9 @@ const EM_LAWS = [
     formula: '\\(\\mathbf{H}_O = \\sum(\\mathbf{r}_i \\times m_i\\mathbf{v}_i)\\)',
     desc: 'Sistemas de partículas en 3D. Usa producto cruz.',
     when: 'Se piden \\(\\mathbf{H}_O\\), \\(\\mathbf{H}_G\\), o "paralelo al eje z".',
+    recognitionWords: ['Ho', 'H_G', 'producto cruz', 'r × mv', 'paralelo', 'eje z', 'angular'],
+    recognitionTrick: 'Busca "Ho" o "Hg" o "producto cruz" o "paralelo al eje z" en la pregunta.',
+    firstStep: 'Calcula ri = (xi, yi, zi) y vi = (vxi, vyi, vzi) para CADA partícula. Luego producto cruz: ri × mvi.',
     steps: [
       'Listar \\(\\mathbf{r}_i = (x_i, y_i, z_i)\\) y \\(\\mathbf{v}_i = (v_{xi}, v_{yi}, v_{zi})\\) para cada partícula',
       'Calcular \\(\\mathbf{H}_i = \\mathbf{r}_i \\times m_i\\mathbf{v}_i\\) con determinante',
@@ -1920,6 +1935,9 @@ const EM_LAWS = [
     formula: '\\(M\\bar{\\mathbf{r}} = \\sum m_i \\mathbf{r}_i\\)  o  \\(\\bar{\\mathbf{r}}(t) = \\bar{\\mathbf{r}}_0 + \\bar{\\mathbf{v}}_0 t + \\frac{1}{2}\\mathbf{g}t^2\\)',
     desc: 'El CM sigue su trayectoria aunque el sistema se separe.',
     when: 'Explosiones, vehículos que se separan, proyectiles que fragmentan.',
+    recognitionWords: ['explota', 'separación', 'fragmenta', 'proyectil', 'centro de masa', 'CM', 'trayectoria'],
+    recognitionTrick: 'Busca cuando algo se ROMPE o SEPARA. El CM sigue su camino como si nada hubiera pasado.',
+    firstStep: '¿Hay gravedad? Si NO → CM en línea recta (MRU). Si SÍ → CM en parábola (tiro parabólico).',
     steps: [
       '¿Hay gravedad? El CM sigue parábola. ¿No hay? El CM sigue línea recta.',
       'Calcular posición del CM en el tiempo \\(t\\) como si no hubiera explosión',
@@ -2213,18 +2231,26 @@ function selectEMLaw(lawId) {
 }
 
 function showEMFormula(correctLaws) {
-  // Ocultar leyes, mostrar fórmula
   document.getElementById('em-step-law').style.display = 'none';
   document.getElementById('em-step-formula').style.display = 'block';
-  
-  // Mostrar la fórmula de la primera ley correcta
+
   const mainLaw = correctLaws[0];
-  document.getElementById('em-formula-text').innerHTML = mainLaw.formula;
-  document.getElementById('em-formula-hint').innerHTML = `
-    <b>¿Cuándo usar?</b> ${mainLaw.when}<br>
-    <b>Pasos:</b> ${mainLaw.steps.slice(0, 3).join(' → ')}
+
+  const words = mainLaw.recognitionWords ? mainLaw.recognitionWords.join(', ') : '';
+
+  document.getElementById('em-formula-text').innerHTML = `
+    <div style="font-size:15px;color:#86efac;font-weight:800;margin-bottom:8px;">${mainLaw.name}</div>
+    <div style="font-size:12px;color:#fde68a;margin-bottom:12px;">🎯 <b>¿Cómo reconocerlo?</b> ${mainLaw.recognitionTrick}</div>
+    <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">📝 <b>Palabras clave:</b> ${words}</div>
+    <div style="font-size:12px;color:#a5f3fc;margin-top:10px;padding:8px;background:rgba(16,185,129,0.1);border-radius:8px;border:1px solid rgba(16,185,129,0.3);">
+      ▶️ <b>Primero:</b> ${mainLaw.firstStep}
+    </div>
   `;
-  
+
+  document.getElementById('em-formula-hint').innerHTML = `
+    <b>Tu hoja de fórmulas tiene:</b> ${mainLaw.formula}
+  `;
+
   renderMath(document.getElementById('em-step-formula'));
 }
 
@@ -2235,11 +2261,15 @@ function emOpenBoard() {
   loadProblem(probId);
   setTimeout(() => {
     showBoardLayer();
-    // Mostrar la fórmula seleccionada en la pizarra
     if(emCurrentLaw) {
       const boardPrompt = document.getElementById('board-prompt');
       if(boardPrompt) {
-        boardPrompt.innerHTML = formatText(`**Fórmula a aplicar:** ${emCurrentLaw.formula}\n\n**Pasos:**\n${emCurrentLaw.steps.map((s, i) => `${i+1}. ${s}`).join('\n')}`);
+        const words = emCurrentLaw.recognitionWords ? emCurrentLaw.recognitionWords.join(', ') : '';
+        boardPrompt.innerHTML = formatText(`**${emCurrentLaw.name}**\n\n` +
+          `🎯 ${emCurrentLaw.recognitionTrick}\n\n` +
+          `📝 Palabras: ${words}\n\n` +
+          `▶️ Primero: ${emCurrentLaw.firstStep}\n\n` +
+          `📋 Tu hoja de fórmulas tiene: ${emCurrentLaw.formula}`);
         renderMath(boardPrompt);
       }
     }
