@@ -391,6 +391,77 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 
 /* UPLOAD HIGHLIGHT */
 .upload-highlight { border-color: var(--accent) !important; background: rgba(79,142,247,0.05); }
+
+/* ─── EM MODE (Estudio de Emergencia) ─────────────────────────────────────── */
+#em-panel { display:none; position:fixed; inset:0; z-index:300; background:#0b0f1a; color:#e2e8f0; overflow:hidden; }
+#em-panel.active { display:flex; flex-direction:column; }
+#em-header { flex-shrink:0; height:56px; display:flex; align-items:center; gap:12px; padding:0 16px; background:#111827; border-bottom:1px solid #1e293b; }
+#em-header h2 { font-size:16px; font-weight:800; color:#fbbf24; margin:0; }
+#em-header .em-badge { font-size:11px; padding:2px 8px; border-radius:4px; background:#2a0a14; color:#ef4444; border:1px solid #ef4444; font-weight:700; }
+#em-header .em-progress { margin-left:auto; font-size:12px; color:#94a3b8; }
+#em-header button { font-size:12px; padding:5px 12px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; cursor:pointer; }
+#em-header button:hover { border-color:#4f8ef7; color:#4f8ef7; }
+#em-header button.em-primary { background:linear-gradient(135deg,#f59e0b,#ef4444); border:none; color:#fff; font-weight:700; }
+#em-header button.em-primary:hover { opacity:0.85; }
+
+#em-body { flex:1; display:grid; grid-template-columns:1fr 380px; gap:0; overflow:hidden; }
+#em-left { padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
+#em-right { background:#0f1525; border-left:1px solid #1e293b; padding:16px; overflow-y:auto; }
+
+.em-section { background:#111827; border:1px solid #1e293b; border-radius:12px; padding:14px; }
+.em-section h3 { font-size:12px; font-weight:800; color:#93c5fd; text-transform:uppercase; letter-spacing:0.04em; margin:0 0 10px; }
+
+/* Variables */
+.em-vars-grid { display:flex; flex-wrap:wrap; gap:6px; }
+.em-var-chip { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:999px; font-size:12px; background:#0f172a; border:1px solid #334155; color:#dbeafe; }
+.em-var-chip.given { border-color:#22c55e; background:#0d1a14; color:#86efac; }
+.em-var-chip.unknown { border-color:#f59e0b; background:#2a1e0a; color:#fbbf24; }
+.em-var-chip .em-var-label { font-weight:700; }
+.em-var-chip .em-var-val { color:#94a3b8; font-size:11px; }
+
+/* Leyes Grid */
+.em-laws-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px; }
+.em-law-card { background:#0f172a; border:2px solid #334155; border-radius:10px; padding:12px; cursor:pointer; text-align:left; transition:all 0.15s; }
+.em-law-card:hover { border-color:#4f8ef7; transform:translateY(-2px); }
+.em-law-card.selected { border-color:#4f8ef7; background:#1e2540; }
+.em-law-card.correct { border-color:#22c55e; background:#0d1a14; }
+.em-law-card.wrong { border-color:#ef4444; background:#1f1117; }
+.em-law-card h4 { font-size:13px; font-weight:700; color:#e2e8f0; margin:0 0 6px; }
+.em-law-card p { font-size:11px; color:#94a3b8; margin:0; line-height:1.4; }
+
+/* Procedimiento */
+.em-proc-step { display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid #1e293b; }
+.em-proc-step:last-child { border-bottom:none; }
+.em-proc-num { width:24px; height:24px; border-radius:50%; background:#1e3a8a; color:#bfdbfe; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; flex-shrink:0; }
+.em-proc-text { font-size:12px; line-height:1.5; color:#cbd5e1; flex:1; }
+.em-proc-text b { color:#86efac; }
+
+/* Cascaritas */
+.em-casca { background:#0f172a; border:1px solid #334155; border-radius:10px; padding:12px; margin-top:10px; }
+.em-casca h4 { font-size:12px; color:#fbbf24; margin:0 0 8px; }
+.em-casca-options { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.em-casca-btn { padding:8px 10px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:12px; cursor:pointer; text-align:left; }
+.em-casca-btn:hover { border-color:#4f8ef7; }
+.em-casca-btn.correct { border-color:#22c55e; background:#0d1a14; color:#86efac; }
+.em-casca-btn.wrong { border-color:#ef4444; background:#1f1117; color:#fca5a5; }
+.em-casca-feedback { font-size:12px; margin-top:8px; padding:8px; border-radius:6px; display:none; }
+.em-casca-feedback.show { display:block; }
+.em-casca-feedback.ok { background:#0d1a14; color:#86efac; border:1px solid #22c55e; }
+.em-casca-feedback.bad { background:#1f1117; color:#fca5a5; border:1px solid #ef4444; }
+
+/* Weakness alert in EM */
+.em-weakness-alert { background:#2a0a14; border:1px solid #ef4444; border-radius:10px; padding:12px; margin-top:10px; }
+.em-weakness-alert h4 { color:#ef4444; font-size:12px; margin:0 0 6px; }
+.em-weakness-alert p { font-size:11px; color:#fca5a5; margin:0; line-height:1.4; }
+
+/* Timer */
+#em-timer { font-size:14px; font-weight:700; color:#fbbf24; font-family:monospace; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  #em-body { grid-template-columns:1fr; }
+  #em-right { border-left:none; border-top:1px solid #1e293b; max-height:40vh; }
+}
 </style>
 </head>
 <body>
@@ -451,6 +522,73 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   </div>
 </div>
 
+<!-- EM MODE PANEL -->
+<div id="em-panel">
+  <div id="em-header">
+    <h2>⚡ Modo EM — Estudio de Emergencia</h2>
+    <div class="em-badge" id="em-exam-badge">EXAMEN</div>
+    <div class="em-progress" id="em-progress">Ejercicio 1 de 20</div>
+    <div id="em-timer">04:00:00</div>
+    <div style="flex:1"></div>
+    <button onclick="emSkip()">⏭ Saltar</button>
+    <button onclick="emPrev()">◀ Anterior</button>
+    <button onclick="emNext()" class="em-primary">Siguiente ▶</button>
+    <button onclick="closeEM()" style="border-color:#ef4444;color:#ef4444;">✕ Cerrar EM</button>
+  </div>
+  <div id="em-body">
+    <div id="em-left">
+      <div class="em-section">
+        <h3>📋 Enunciado</h3>
+        <div id="em-statement" style="font-size:13px;line-height:1.7;color:#e2e8f0;white-space:pre-wrap;"></div>
+      </div>
+      <div class="em-section">
+        <h3>🔢 Variables</h3>
+        <div style="margin-bottom:8px;font-size:11px;color:#94a3b8;"><span style="color:#22c55e">●</span> Dado &nbsp; <span style="color:#f59e0b">●</span> Incógnita</div>
+        <div id="em-variables" class="em-vars-grid"></div>
+      </div>
+      <div class="em-section">
+        <h3>⚖️ Selecciona la ley que aplica</h3>
+        <div id="em-laws" class="em-laws-grid"></div>
+        <div id="em-law-feedback"></div>
+      </div>
+      <div class="em-section" id="em-procedure-section" style="display:none;">
+        <h3>📐 Procedimiento</h3>
+        <div id="em-procedure"></div>
+      </div>
+      <div class="em-section" id="em-cascara-section" style="display:none;">
+        <h3>🌰 Cascarita — Verificación rápida</h3>
+        <div id="em-cascara"></div>
+      </div>
+    </div>
+    <div id="em-right">
+      <div class="em-section">
+        <h3>🎯 Información del ejercicio</h3>
+        <div id="em-info" style="font-size:12px;line-height:1.6;color:#cbd5e1;"></div>
+      </div>
+      <div class="em-section">
+        <h3>📊 Tu progreso en este ejercicio</h3>
+        <div id="em-local-progress" style="font-size:12px;color:#94a3b8;"></div>
+      </div>
+      <div class="em-section" id="em-weakness-section" style="display:none;">
+        <h3>⚠️ Debilidad detectada</h3>
+        <div id="em-weakness-content"></div>
+      </div>
+      <div class="em-section">
+        <h3>💡 Consejo rápido</h3>
+        <div id="em-tip" style="font-size:12px;color:#cbd5e1;line-height:1.5;"></div>
+      </div>
+      <div class="em-section">
+        <h3>🚀 Acciones</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button onclick="emMarkCorrect()" style="padding:8px;border-radius:6px;border:1px solid #22c55e;background:#0d1a14;color:#22c55e;cursor:pointer;font-size:12px;font-weight:700;">✓ Lo entendí — Marcar correcto</button>
+          <button onclick="emMarkError()" style="padding:8px;border-radius:6px;border:1px solid #ef4444;background:#1f1117;color:#ef4444;cursor:pointer;font-size:12px;">✕ Me equivoqué — Registrar error</button>
+          <button onclick="emOpenBoard()" style="padding:8px;border-radius:6px;border:1px solid #4f8ef7;background:#0f172a;color:#4f8ef7;cursor:pointer;font-size:12px;">🎨 Ir a pizarra a resolver</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- CORRECT TOAST -->
 <div id="correct-toast">
   <span class="ct-icon">🎉</span>
@@ -486,6 +624,7 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
   </div>
   <button id="btn-review" onclick="openReview()">🔁 Repasar Débiles</button>
   <button id="btn-harvard" onclick="openHarvard()">Modo Harvard</button>
+  <button id="btn-em" onclick="openEM()" style="background:linear-gradient(135deg,#dc2626,#f59e0b);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">⚡ Modo EM</button>
   <button id="btn-guide" onclick="openGuide()">Cómo usar</button>
   <button id="btn-pdf" onclick="togglePdf()">📖 Libro</button>
   <button id="btn-config" onclick="openConfig()">⚙️ Config</button>
@@ -1623,6 +1762,443 @@ function loginAs(profileId) {
   document.getElementById('topbar').style.display = 'flex';
   document.getElementById('layout').style.display = 'flex';
   init();
+}
+
+// ─── EM MODE (Estudio de Emergencia) ─────────────────────────────────────────
+
+const EM_LAWS = [
+  {
+    id: 'momentum',
+    name: 'Momentum Lineal',
+    formula: '\\sum m\\mathbf v_{\\text{antes}} = \\sum m\\mathbf v_{\\text{después}}',
+    desc: 'Conservación de cantidad de movimiento cuando no hay fuerzas externas',
+    when: 'Colisiones, explosiones, separaciones sin fuerza externa neta',
+    steps: [
+      'Dibujar el sistema ANTES del evento con todas las velocidades',
+      'Dibujar el sistema DESPUÉS del evento con velocidades finales',
+      'Escribir: Σ(m·v)_antes = Σ(m·v)_después',
+      'Si hay ángulos: separar en componentes x e y',
+      'Componente x: Σ(m·v_x)_antes = Σ(m·v_x)_después',
+      'Componente y: Σ(m·v_y)_antes = Σ(m·v_y)_después',
+      'Despejar la incógnita simbólicamente',
+      'Sustituir valores numéricos al final'
+    ],
+    topics: ['linear_momentum', 'multiple_impact', 'billiard']
+  },
+  {
+    id: 'angular',
+    name: 'Momento Angular',
+    formula: '\\mathbf H_O = \\sum(\\mathbf r_i \\times m_i\\mathbf v_i)',
+    desc: 'Momento angular de un sistema de partículas respecto a un punto',
+    when: 'Se piden H_O, H_G, o condiciones de paralelismo con ejes',
+    steps: [
+      'Identificar posición r_i y velocidad v_i de cada partícula',
+      'Calcular el producto vectorial r_i × (m_i·v_i) para cada partícula',
+      'Para producto vectorial 3D: usar determinante |i j k / rx ry rz / px py pz|',
+      'Sumar todos los productos vectoriales: H_O = Σ(r_i × m_i·v_i)',
+      'Si pide H_G: primero hallar centro de masa r̄, luego H_G = Σ(r\'_i × m_i·v_i) donde r\'_i = r_i - r̄',
+      'Verificar: H_O = r̄ × m·v̄ + H_G'
+    ],
+    topics: ['angular_momentum', 'cross_product']
+  },
+  {
+    id: 'cm',
+    name: 'Centro de Masa',
+    formula: 'M\\mathbf r_G = \\sum m_i\\mathbf r_i',
+    desc: 'Posición del centro de masa de un sistema',
+    when: 'Explosiones, separaciones, o cuando se pide posición de fragmentos',
+    steps: [
+      'Identificar si hay fuerzas externas (gravedad) o no',
+      'Sin fuerzas externas: el CM sigue moviéndose con velocidad constante v₀',
+      'Con gravedad: el CM sigue trayectoria parabólica como si no hubiera explosión',
+      'Calcular posición del CM en tiempo t: r̄ = r₀ + v₀·t (sin gravedad) o r̄ = r₀ + v₀·t + ½gt² (con gravedad)',
+      'Aplicar: M·r̄ = m_A·r_A + m_B·r_B + m_C·r_C',
+      'Despejar la posición del fragmento desconocido',
+      'Sustituir valores numéricos'
+    ],
+    topics: ['center_of_mass']
+  },
+  {
+    id: 'energy',
+    name: 'Conservación de Energía',
+    formula: 'T_1 + V_1 = T_2 + V_2',
+    desc: 'Conservación de energía cinética y potencial',
+    when: 'Impactos perfectamente elásticos o cuando no hay pérdidas de energía',
+    steps: [
+      'Identificar estado 1 (antes) y estado 2 (después)',
+      'Calcular energía cinética T = ½mv² en cada estado',
+      'Calcular energía potencial V en cada estado (si aplica)',
+      'Escribir: T₁ + V₁ = T₂ + V₂',
+      'Simplificar términos que sean cero',
+      'Despejar la incógnita',
+      'Sustituir valores numéricos'
+    ],
+    topics: ['energy']
+  },
+  {
+    id: 'restitution',
+    name: 'Momentum + Restitución',
+    formula: 'e = \\frac{v_{\\text{separación}}}{v_{\\text{acercamiento}}}',
+    desc: 'Colisión con coeficiente de restitución e',
+    when: 'Dos cuerpos chocan y se conoce o se pide e',
+    steps: [
+      'Dibujar cuerpos antes del impacto con velocidades',
+      'Dibujar cuerpos después del impacto con velocidades finales',
+      'Aplicar conservación de momentum: m_A·v_A + m_B·v_B = m_A·v\'_A + m_B·v\'_B',
+      'Aplicar restitución: e = (v\'_B - v\'_A)/(v_A - v_B) para impacto directo',
+      'Si es oblicuo: separar en componentes normal y tangencial a la superficie de contacto',
+      'Tangencial: conservación de momentum (sin fricción en tangencial)',
+      'Normal: momentum + restitución en dirección normal',
+      'Resolver sistema de ecuaciones'
+    ],
+    topics: ['coeff_restitution', 'oblique_impact']
+  }
+];
+
+const EM_CASCARITAS = {
+  momentum: [
+    { q: '¿Cuántas ecuaciones de momentum necesitas para este problema?', options: ['1 ecuación', '2 ecuaciones (x e y)', '3 ecuaciones'], correct: 1, hint: 'Si hay ángulos, siempre separa en x e y' },
+    { q: '¿El momentum se conserva si hay fuerza externa?', options: ['Sí, siempre', 'No, solo sin fuerza externa neta', 'Depende de la masa'], correct: 1, hint: 'Conservación solo sin fuerzas externas' },
+    { q: '¿Qué haces primero: despejar simbólico o meter números?', options: ['Meter números', 'Despejar simbólico primero', 'Da igual'], correct: 1, hint: 'Siempre símbolo primero, números al final' }
+  ],
+  angular: [
+    { q: '¿En qué orden va el producto vectorial?', options: ['r × mv', 'mv × r', 'Da igual'], correct: 0, hint: 'Siempre r × mv, nunca al revés' },
+    { q: '¿H_O es paralelo a z si H_x = H_y = 0?', options: ['Sí', 'No', 'Depende'], correct: 0, hint: 'Paralelo a z significa solo componente z' },
+    { q: '¿Qué necesitas calcular antes de H_G?', options: ['Centro de masa r̄', 'La energía', 'El momentum lineal'], correct: 0, hint: 'H_G usa posiciones relativas al CM' }
+  ],
+  cm: [
+    { q: '¿El CM sigue qué trayectoria después de una explosión sin gravedad?', options: ['Rectilínea uniforme', 'Parabólica', 'Circular'], correct: 0, hint: 'Sin fuerzas externas: MRU' },
+    { q: '¿Con gravedad, qué trayectoria sigue el CM?', options: ['MRU', 'Parabólica (caída libre)', 'Circular'], correct: 1, hint: 'El CM cae como el objeto completo hubiera caído' },
+    { q: '¿Qué ecuación relaciona CM con las posiciones de los fragmentos?', options: ['M·r̄ = Σ m_i·r_i', 'F = ma', 'E = mc²'], correct: 0, hint: 'Suma ponderada de posiciones' }
+  ],
+  energy: [
+    { q: '¿En impacto elástico, qué se conserva?', options: ['Solo momentum', 'Momentum y energía', 'Solo energía'], correct: 1, hint: 'Elástico = conserva momentum Y energía' },
+    { q: '¿Qué energía cinética tiene una partícula en reposo?', options: ['T = ½mv²', 'T = 0', 'T = mv'], correct: 1, hint: 'v = 0 → T = 0' },
+    { q: '¿Cuántas incógnitas puedes resolver con momentum + energía?', options: ['1', '2', 'Depende del problema'], correct: 1, hint: 'Dos ecuaciones = dos incógnitas' }
+  ],
+  restitution: [
+    { q: 'En impacto oblicuo, ¿qué componente conserva momentum sin fricción?', options: ['Normal', 'Tangencial', 'Ambas'], correct: 1, hint: 'Tangencial: sin impulso → conserva momentum' },
+    { q: '¿Qué componente usa la ecuación de restitución?', options: ['Normal', 'Tangencial', 'Ambas'], correct: 0, hint: 'Restitución actúa en dirección normal al contacto' },
+    { q: 'Si e = 1, el impacto es:', options: ['Perfectamente elástico', 'Plástico', 'Parcialmente elástico'], correct: 0, hint: 'e = 1 conserva toda la energía cinética' }
+  ]
+};
+
+let emActive = false;
+let emQueue = [];
+let emIndex = 0;
+let emStartTime = null;
+let emTimerInterval = null;
+let emCurrentLaw = null;
+let emCascaraAnswered = false;
+
+function buildEMQueue() {
+  // Prioridad: examCritical primero, luego por dificultad, luego no vistos
+  const all = DB.getAll();
+  const scored = PROBLEMS.map(p => {
+    const s = all[p.id] || {};
+    const score = s.score || 0;
+    const attempts = s.attempts || 0;
+    const errors = (s.errors || []).length;
+    let priority = 0;
+    if(p.examCritical) priority += 1000;
+    priority += (5 - (p.diff || 3)) * 50; // Priorizar más fáciles
+    priority -= attempts * 10; // Penalizar ya vistos
+    priority -= score * 5; // Penalizar ya dominados
+    priority += errors * 20; // Priorizar con errores previos
+    return { ...p, priority };
+  });
+  
+  // Tomar top 25 ejercicios prioritarios
+  return scored.sort((a, b) => b.priority - a.priority).slice(0, 25);
+}
+
+function openEM() {
+  emQueue = buildEMQueue();
+  if(emQueue.length === 0) {
+    showToast('No hay ejercicios prioritarios. Modo Harvard sugiere: ' + nextHarvardExercise());
+    return;
+  }
+  emIndex = 0;
+  emActive = true;
+  emStartTime = Date.now();
+  document.getElementById('em-panel').classList.add('active');
+  startEMTimer();
+  loadEMExercise();
+}
+
+function closeEM() {
+  emActive = false;
+  document.getElementById('em-panel').classList.remove('active');
+  if(emTimerInterval) clearInterval(emTimerInterval);
+}
+
+function startEMTimer() {
+  const endTime = emStartTime + 4 * 60 * 60 * 1000; // 4 horas
+  if(emTimerInterval) clearInterval(emTimerInterval);
+  emTimerInterval = setInterval(() => {
+    const remaining = Math.max(0, endTime - Date.now());
+    const h = Math.floor(remaining / 3600000);
+    const m = Math.floor((remaining % 3600000) / 60000);
+    const s = Math.floor((remaining % 60000) / 1000);
+    const el = document.getElementById('em-timer');
+    if(el) el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if(remaining <= 0) {
+      clearInterval(emTimerInterval);
+      alert('¡Se acabó el tiempo! 4 horas completadas.');
+      closeEM();
+    }
+  }, 1000);
+}
+
+function loadEMExercise() {
+  if(emIndex >= emQueue.length) {
+    showToast('¡Completaste todos los ejercicios prioritarios!');
+    closeEM();
+    return;
+  }
+  
+  const prob = emQueue[emIndex];
+  const state = DB.get(prob.id);
+  const profile = gateProfile(prob);
+  
+  // Actualizar header
+  document.getElementById('em-exam-badge').style.display = prob.examCritical ? 'inline-block' : 'none';
+  document.getElementById('em-progress').textContent = `Ejercicio ${emIndex + 1} de ${emQueue.length}`;
+  
+  // Enunciado
+  document.getElementById('em-statement').textContent = prob.text;
+  
+  // Variables
+  const data = extractGivenData(prob.text);
+  const unknown = inferUnknown(prob.text);
+  const varsHtml = [
+    ...data.map(d => `<span class="em-var-chip given"><span class="em-var-label">${d}</span></span>`),
+    `<span class="em-var-chip unknown"><span class="em-var-label">${unknown}</span><span class="em-var-val">Incógnita</span></span>`
+  ].join('');
+  document.getElementById('em-variables').innerHTML = varsHtml;
+  
+  // Leyes
+  const lawsHtml = EM_LAWS.map(law => {
+    const isCorrect = law.topics.some(t => prob.topics.includes(t));
+    return `<button class="em-law-card" data-law="${law.id}" data-correct="${isCorrect}" onclick="selectEMLaw('${law.id}')">
+      <h4>${law.name}</h4>
+      <p>${law.desc}</p>
+    </button>`;
+  }).join('');
+  document.getElementById('em-laws').innerHTML = lawsHtml;
+  document.getElementById('em-law-feedback').innerHTML = '';
+  
+  // Ocultar procedimiento y cascaritas
+  document.getElementById('em-procedure-section').style.display = 'none';
+  document.getElementById('em-cascara-section').style.display = 'none';
+  emCurrentLaw = null;
+  emCascaraAnswered = false;
+  
+  // Info lateral
+  document.getElementById('em-info').innerHTML = `
+    <b>Ejercicio:</b> ${prob.id}<br>
+    <b>Título:</b> ${prob.title}<br>
+    <b>Dificultad:</b> ${'★'.repeat(prob.diff || 3)}${'☆'.repeat(5 - (prob.diff || 3))}<br>
+    <b>Temas:</b> ${prob.topics.join(', ')}<br>
+    <b>Examen:</b> ${prob.examCritical ? 'SÍ 🔴' : 'No'}
+  `;
+  
+  // Progreso local
+  document.getElementById('em-local-progress').innerHTML = `
+    Score actual: ${state.score || 0}<br>
+    Intentos previos: ${state.attempts || 0}<br>
+    Errores: ${(state.errors || []).length}
+  `;
+  
+  // Weakness alert
+  const hp = ErrorTracker.getHighPriority();
+  const myErrors = (state.errors || []).map(e => e.type);
+  const hasWeakness = hp.some(h => h.problems.includes(prob.id));
+  if(hasWeakness || myErrors.length > 0) {
+    document.getElementById('em-weakness-section').style.display = 'block';
+    document.getElementById('em-weakness-content').innerHTML = `
+      <div class="em-weakness-alert">
+        <h4>⚠️ ¡Cuidado aquí!</h4>
+        <p>Este ejercicio tiene errores previos registrados. Presta especial atención a: ${myErrors.join(', ') || 'revisar procedimiento'}</p>
+      </div>
+    `;
+  } else {
+    document.getElementById('em-weakness-section').style.display = 'none';
+  }
+  
+  // Tip
+  document.getElementById('em-tip').innerHTML = `
+    <b>Regla de oro:</b> Símbolos primero, números al final.<br><br>
+    <b>Para este tipo:</b> ${profile.formulaLabel}<br><br>
+    <b>Pregunta clave:</b> ¿Qué se conserva y qué no se conserva?
+  `;
+  
+  // Renderizar math
+  renderMath(document.getElementById('em-left'));
+  renderMath(document.getElementById('em-right'));
+}
+
+function selectEMLaw(lawId) {
+  // Resetear selecciones previas
+  document.querySelectorAll('.em-law-card').forEach(card => {
+    card.classList.remove('selected', 'correct', 'wrong');
+  });
+  
+  const selectedCard = document.querySelector(`.em-law-card[data-law="${lawId}"]`);
+  const isCorrect = selectedCard.dataset.correct === 'true';
+  
+  selectedCard.classList.add('selected');
+  
+  const feedback = document.getElementById('em-law-feedback');
+  
+  if(isCorrect) {
+    selectedCard.classList.add('correct');
+    emCurrentLaw = EM_LAWS.find(l => l.id === lawId);
+    feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#0d1a14;border:1px solid #22c55e;border-radius:8px;color:#86efac;font-size:13px;">✓ ¡Ley correcta! Ahora revisa el procedimiento y responde la cascarita.</div>`;
+    showEMProcedure();
+    showEMCascara();
+    SRS.markGateCorrect(emQueue[emIndex].id, 'formula');
+  } else {
+    selectedCard.classList.add('wrong');
+    feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#1f1117;border:1px solid #ef4444;border-radius:8px;color:#fca5a5;font-size:13px;">✗ Ley incorrecta para este enunciado. Piensa: ¿qué se conserva aquí?</div>`;
+    const prob = emQueue[emIndex];
+    const profile = gateProfile(prob);
+    SRS.markWrong(prob.id, profile.errorType, 'Ley incorrecta seleccionada en Modo EM');
+    updateWeaknessPanel();
+  }
+  
+  requestSyncUpload();
+}
+
+function showEMProcedure() {
+  if(!emCurrentLaw) return;
+  const section = document.getElementById('em-procedure-section');
+  const container = document.getElementById('em-procedure');
+  
+  container.innerHTML = `
+    <div style="margin-bottom:10px;font-size:12px;color:#93c5fd;"><b>Ley:</b> ${emCurrentLaw.formula}</div>
+    <div style="margin-bottom:10px;font-size:11px;color:#94a3b8;">${emCurrentLaw.when}</div>
+    ${emCurrentLaw.steps.map((step, i) => `
+      <div class="em-proc-step">
+        <div class="em-proc-num">${i + 1}</div>
+        <div class="em-proc-text">${step}</div>
+      </div>
+    `).join('')}
+  `;
+  
+  section.style.display = 'block';
+  renderMath(container);
+}
+
+function showEMCascara() {
+  const prob = emQueue[emIndex];
+  const profile = gateProfile(prob);
+  const lawKey = profile.formula;
+  
+  // Encontrar cascaritas para esta ley
+  let cascaras = [];
+  for(const [key, questions] of Object.entries(EM_CASCARITAS)) {
+    if(lawKey.includes(key) || (key === 'momentum' && lawKey === 'momentum')) {
+      cascaras = questions;
+      break;
+    }
+  }
+  
+  // Fallback a momentum si no encontramos
+  if(cascaras.length === 0) cascaras = EM_CASCARITAS.momentum;
+  
+  // Seleccionar una cascarita aleatoria
+  const cascara = cascaras[Math.floor(Math.random() * cascaras.length)];
+  
+  const section = document.getElementById('em-cascara-section');
+  const container = document.getElementById('em-cascara');
+  
+  container.innerHTML = `
+    <h4>${cascara.q}</h4>
+    <div class="em-casca-options">
+      ${cascara.options.map((opt, i) => `
+        <button class="em-casca-btn" onclick="answerEMCascara(${i}, ${cascara.correct}, '${cascara.hint.replace(/'/g, "\\'")}')">${opt}</button>
+      `).join('')}
+    </div>
+    <div id="em-casca-feedback" class="em-casca-feedback"></div>
+  `;
+  
+  section.style.display = 'block';
+}
+
+function answerEMCascara(selected, correct, hint) {
+  if(emCascaraAnswered) return;
+  emCascaraAnswered = true;
+  
+  const buttons = document.querySelectorAll('.em-casca-btn');
+  buttons[selected].classList.add(selected === correct ? 'correct' : 'wrong');
+  if(selected !== correct) buttons[correct].classList.add('correct');
+  
+  const feedback = document.getElementById('em-casca-feedback');
+  if(selected === correct) {
+    feedback.className = 'em-casca-feedback show ok';
+    feedback.textContent = '✓ Correcto. Continúa al siguiente ejercicio o ve a la pizarra a practicar.';
+    SRS.markGateCorrect(emQueue[emIndex].id, 'cascara');
+  } else {
+    feedback.className = 'em-casca-feedback show bad';
+    feedback.innerHTML = `✗ Incorrecto. <b>Pista:</b> ${hint}<br>Esta debilidad se ha registrado.`;
+    const prob = emQueue[emIndex];
+    const profile = gateProfile(prob);
+    SRS.markWrong(prob.id, profile.errorType, `Cascarita fallada: ${hint}`);
+    updateWeaknessPanel();
+  }
+  
+  requestSyncUpload();
+}
+
+function emNext() {
+  emIndex++;
+  loadEMExercise();
+}
+
+function emPrev() {
+  if(emIndex > 0) {
+    emIndex--;
+    loadEMExercise();
+  }
+}
+
+function emSkip() {
+  showToast('Ejercicio saltado');
+  emNext();
+}
+
+function emMarkCorrect() {
+  if(!emQueue[emIndex]) return;
+  const prob = emQueue[emIndex];
+  SRS.markCorrect(prob.id);
+  showToast(`✓ ${prob.id} marcado correcto`);
+  updateStats();
+  updateWeaknessPanel();
+  renderProblemList();
+  requestSyncUpload();
+}
+
+function emMarkError() {
+  if(!emQueue[emIndex]) return;
+  const prob = emQueue[emIndex];
+  const desc = prompt('¿Qué error cometiste en este ejercicio? (breve)');
+  if(!desc) return;
+  const type = detectErrorType(desc);
+  SRS.markWrong(prob.id, type, desc);
+  showToast(`❌ Error registrado en ${prob.id}`);
+  updateStats();
+  updateWeaknessPanel();
+  renderProblemList();
+  requestSyncUpload();
+}
+
+function emOpenBoard() {
+  if(!emQueue[emIndex]) return;
+  const probId = emQueue[emIndex].id;
+  closeEM();
+  loadProblem(probId);
+  setTimeout(() => showBoardLayer(), 100);
 }
 
 function checkLogin() {
