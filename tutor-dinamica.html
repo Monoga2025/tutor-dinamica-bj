@@ -1770,16 +1770,16 @@ const EM_LAWS = [
   {
     id: 'momentum',
     name: 'Momentum Lineal',
-    formula: '\\sum m\\mathbf v_{\\text{antes}} = \\sum m\\mathbf v_{\\text{después}}',
+    formula: '\\(\\sum m\\mathbf{v}_{\\text{antes}} = \\sum m\\mathbf{v}_{\\text{después}}\\)',
     desc: 'Conservación de cantidad de movimiento cuando no hay fuerzas externas',
     when: 'Colisiones, explosiones, separaciones sin fuerza externa neta',
     steps: [
-      'Dibujar el sistema ANTES del evento con todas las velocidades',
-      'Dibujar el sistema DESPUÉS del evento con velocidades finales',
-      'Escribir: Σ(m·v)_antes = Σ(m·v)_después',
-      'Si hay ángulos: separar en componentes x e y',
-      'Componente x: Σ(m·v_x)_antes = Σ(m·v_x)_después',
-      'Componente y: Σ(m·v_y)_antes = Σ(m·v_y)_después',
+      'Dibujar el sistema \\(\\text{ANTES}\\) del evento con todas las velocidades',
+      'Dibujar el sistema \\(\\text{DESPUÉS}\\) del evento con velocidades finales',
+      'Escribir: \\(\\sum (m\\mathbf{v})_{\\text{antes}} = \\sum (m\\mathbf{v})_{\\text{después}}\\)',
+      'Si hay ángulos: separar en componentes \\(x\\) e \\(y\\)',
+      'Componente \\(x\\): \\(\\sum (m v_x)_{\\text{antes}} = \\sum (m v_x)_{\\text{después}}\\)',
+      'Componente \\(y\\): \\(\\sum (m v_y)_{\\text{antes}} = \\sum (m v_y)_{\\text{después}}\\)',
       'Despejar la incógnita simbólicamente',
       'Sustituir valores numéricos al final'
     ],
@@ -1788,31 +1788,31 @@ const EM_LAWS = [
   {
     id: 'angular',
     name: 'Momento Angular',
-    formula: '\\mathbf H_O = \\sum(\\mathbf r_i \\times m_i\\mathbf v_i)',
+    formula: '\\(\\mathbf{H}_O = \\sum(\\mathbf{r}_i \\times m_i\\mathbf{v}_i)\\)',
     desc: 'Momento angular de un sistema de partículas respecto a un punto',
-    when: 'Se piden H_O, H_G, o condiciones de paralelismo con ejes',
+    when: 'Se piden \\(\\mathbf{H}_O\\), \\(\\mathbf{H}_G\\), o condiciones de paralelismo con ejes',
     steps: [
-      'Identificar posición r_i y velocidad v_i de cada partícula',
-      'Calcular el producto vectorial r_i × (m_i·v_i) para cada partícula',
-      'Para producto vectorial 3D: usar determinante |i j k / rx ry rz / px py pz|',
-      'Sumar todos los productos vectoriales: H_O = Σ(r_i × m_i·v_i)',
-      'Si pide H_G: primero hallar centro de masa r̄, luego H_G = Σ(r\'_i × m_i·v_i) donde r\'_i = r_i - r̄',
-      'Verificar: H_O = r̄ × m·v̄ + H_G'
+      'Identificar posición \\(\\mathbf{r}_i\\) y velocidad \\(\\mathbf{v}_i\\) de cada partícula',
+      'Calcular el producto vectorial \\(\\mathbf{r}_i \\times (m_i \\mathbf{v}_i)\\) para cada partícula',
+      'Para producto vectorial 3D: usar determinante \\(\\begin{vmatrix} \\mathbf{i} & \\mathbf{j} & \\mathbf{k} \\\\ r_x & r_y & r_z \\\\ p_x & p_y & p_z \\end{vmatrix}\\)',
+      'Sumar todos los productos vectoriales: \\(\\mathbf{H}_O = \\sum(\\mathbf{r}_i \\times m_i \\mathbf{v}_i)\\)',
+      'Si pide \\(\\mathbf{H}_G\\): primero hallar centro de masa \\(\\bar{\\mathbf{r}}\\), luego \\(\\mathbf{H}_G = \\sum(\\mathbf{r}\'_i \\times m_i \\mathbf{v}_i)\\) donde \\(\\mathbf{r}\'_i = \\mathbf{r}_i - \\bar{\\mathbf{r}}\\)',
+      'Verificar: \\(\\mathbf{H}_O = \\bar{\\mathbf{r}} \\times m\\bar{\\mathbf{v}} + \\mathbf{H}_G\\)'
     ],
     topics: ['angular_momentum', 'cross_product']
   },
   {
     id: 'cm',
     name: 'Centro de Masa',
-    formula: 'M\\mathbf r_G = \\sum m_i\\mathbf r_i',
+    formula: '\\(M\\bar{\\mathbf{r}} = \\sum m_i \\mathbf{r}_i\\)',
     desc: 'Posición del centro de masa de un sistema',
     when: 'Explosiones, separaciones, o cuando se pide posición de fragmentos',
     steps: [
       'Identificar si hay fuerzas externas (gravedad) o no',
-      'Sin fuerzas externas: el CM sigue moviéndose con velocidad constante v₀',
+      'Sin fuerzas externas: el CM sigue moviéndose con velocidad constante \\(\\mathbf{v}_0\\)',
       'Con gravedad: el CM sigue trayectoria parabólica como si no hubiera explosión',
-      'Calcular posición del CM en tiempo t: r̄ = r₀ + v₀·t (sin gravedad) o r̄ = r₀ + v₀·t + ½gt² (con gravedad)',
-      'Aplicar: M·r̄ = m_A·r_A + m_B·r_B + m_C·r_C',
+      'Calcular posición del CM en tiempo \\(t\\): \\(\\bar{\\mathbf{r}} = \\mathbf{r}_0 + \\mathbf{v}_0 t\\) (sin gravedad) o \\(\\bar{\\mathbf{r}} = \\mathbf{r}_0 + \\mathbf{v}_0 t + \\frac{1}{2}\\mathbf{g}t^2\\) (con gravedad)',
+      'Aplicar: \\(M\\bar{\\mathbf{r}} = m_A \\mathbf{r}_A + m_B \\mathbf{r}_B + m_C \\mathbf{r}_C\\)',
       'Despejar la posición del fragmento desconocido',
       'Sustituir valores numéricos'
     ],
@@ -1821,14 +1821,14 @@ const EM_LAWS = [
   {
     id: 'energy',
     name: 'Conservación de Energía',
-    formula: 'T_1 + V_1 = T_2 + V_2',
+    formula: '\\(T_1 + V_1 = T_2 + V_2\\)',
     desc: 'Conservación de energía cinética y potencial',
     when: 'Impactos perfectamente elásticos o cuando no hay pérdidas de energía',
     steps: [
       'Identificar estado 1 (antes) y estado 2 (después)',
-      'Calcular energía cinética T = ½mv² en cada estado',
-      'Calcular energía potencial V en cada estado (si aplica)',
-      'Escribir: T₁ + V₁ = T₂ + V₂',
+      'Calcular energía cinética \\(T = \\frac{1}{2}mv^2\\) en cada estado',
+      'Calcular energía potencial \\(V\\) en cada estado (si aplica)',
+      'Escribir: \\(T_1 + V_1 = T_2 + V_2\\)',
       'Simplificar términos que sean cero',
       'Despejar la incógnita',
       'Sustituir valores numéricos'
@@ -1838,14 +1838,14 @@ const EM_LAWS = [
   {
     id: 'restitution',
     name: 'Momentum + Restitución',
-    formula: 'e = \\frac{v_{\\text{separación}}}{v_{\\text{acercamiento}}}',
-    desc: 'Colisión con coeficiente de restitución e',
-    when: 'Dos cuerpos chocan y se conoce o se pide e',
+    formula: '\\(e = \\dfrac{v_{\\text{separación}}}{v_{\\text{acercamiento}}}\\)',
+    desc: 'Colisión con coeficiente de restitución \\(e\\)',
+    when: 'Dos cuerpos chocan y se conoce o se pide \\(e\\)',
     steps: [
       'Dibujar cuerpos antes del impacto con velocidades',
       'Dibujar cuerpos después del impacto con velocidades finales',
-      'Aplicar conservación de momentum: m_A·v_A + m_B·v_B = m_A·v\'_A + m_B·v\'_B',
-      'Aplicar restitución: e = (v\'_B - v\'_A)/(v_A - v_B) para impacto directo',
+      'Aplicar conservación de momentum: \\(m_A \\mathbf{v}_A + m_B \\mathbf{v}_B = m_A \\mathbf{v}\'_A + m_B \\mathbf{v}\'_B\\)',
+      'Aplicar restitución: \\(e = \\dfrac{v\'_B - v\'_A}{v_A - v_B}\\) para impacto directo',
       'Si es oblicuo: separar en componentes normal y tangencial a la superficie de contacto',
       'Tangencial: conservación de momentum (sin fricción en tangencial)',
       'Normal: momentum + restitución en dirección normal',
@@ -1857,29 +1857,29 @@ const EM_LAWS = [
 
 const EM_CASCARITAS = {
   momentum: [
-    { q: '¿Cuántas ecuaciones de momentum necesitas para este problema?', options: ['1 ecuación', '2 ecuaciones (x e y)', '3 ecuaciones'], correct: 1, hint: 'Si hay ángulos, siempre separa en x e y' },
+    { q: '¿Cuántas ecuaciones de momentum necesitas para este problema?', options: ['\\(1\\) ecuación', '\\(2\\) ecuaciones (\\(x\\) e \\(y\\))', '\\(3\\) ecuaciones'], correct: 1, hint: 'Si hay ángulos, siempre separa en \\(x\\) e \\(y\\)' },
     { q: '¿El momentum se conserva si hay fuerza externa?', options: ['Sí, siempre', 'No, solo sin fuerza externa neta', 'Depende de la masa'], correct: 1, hint: 'Conservación solo sin fuerzas externas' },
     { q: '¿Qué haces primero: despejar simbólico o meter números?', options: ['Meter números', 'Despejar simbólico primero', 'Da igual'], correct: 1, hint: 'Siempre símbolo primero, números al final' }
   ],
   angular: [
-    { q: '¿En qué orden va el producto vectorial?', options: ['r × mv', 'mv × r', 'Da igual'], correct: 0, hint: 'Siempre r × mv, nunca al revés' },
-    { q: '¿H_O es paralelo a z si H_x = H_y = 0?', options: ['Sí', 'No', 'Depende'], correct: 0, hint: 'Paralelo a z significa solo componente z' },
-    { q: '¿Qué necesitas calcular antes de H_G?', options: ['Centro de masa r̄', 'La energía', 'El momentum lineal'], correct: 0, hint: 'H_G usa posiciones relativas al CM' }
+    { q: '¿En qué orden va el producto vectorial?', options: ['\\(\\mathbf{r} \\times m\\mathbf{v}\\)', '\\(m\\mathbf{v} \\times \\mathbf{r}\\)', 'Da igual'], correct: 0, hint: 'Siempre \\(\\mathbf{r} \\times m\\mathbf{v}\\), nunca al revés' },
+    { q: '¿\\(\\mathbf{H}_O\\) es paralelo a \\(z\\) si \\(H_x = H_y = 0\\)?', options: ['Sí', 'No', 'Depende'], correct: 0, hint: 'Paralelo a \\(z\\) significa solo componente \\(z\\)' },
+    { q: '¿Qué necesitas calcular antes de \\(\\mathbf{H}_G\\)?', options: ['Centro de masa \\(\\bar{\\mathbf{r}}\\)', 'La energía', 'El momentum lineal'], correct: 0, hint: '\\(\\mathbf{H}_G\\) usa posiciones relativas al CM' }
   ],
   cm: [
     { q: '¿El CM sigue qué trayectoria después de una explosión sin gravedad?', options: ['Rectilínea uniforme', 'Parabólica', 'Circular'], correct: 0, hint: 'Sin fuerzas externas: MRU' },
     { q: '¿Con gravedad, qué trayectoria sigue el CM?', options: ['MRU', 'Parabólica (caída libre)', 'Circular'], correct: 1, hint: 'El CM cae como el objeto completo hubiera caído' },
-    { q: '¿Qué ecuación relaciona CM con las posiciones de los fragmentos?', options: ['M·r̄ = Σ m_i·r_i', 'F = ma', 'E = mc²'], correct: 0, hint: 'Suma ponderada de posiciones' }
+    { q: '¿Qué ecuación relaciona CM con las posiciones de los fragmentos?', options: ['\\(M \\bar{\\mathbf{r}} = \\sum m_i \\mathbf{r}_i\\)', '\\(F = ma\\)', '\\(E = mc^2\\)'], correct: 0, hint: 'Suma ponderada de posiciones' }
   ],
   energy: [
     { q: '¿En impacto elástico, qué se conserva?', options: ['Solo momentum', 'Momentum y energía', 'Solo energía'], correct: 1, hint: 'Elástico = conserva momentum Y energía' },
-    { q: '¿Qué energía cinética tiene una partícula en reposo?', options: ['T = ½mv²', 'T = 0', 'T = mv'], correct: 1, hint: 'v = 0 → T = 0' },
-    { q: '¿Cuántas incógnitas puedes resolver con momentum + energía?', options: ['1', '2', 'Depende del problema'], correct: 1, hint: 'Dos ecuaciones = dos incógnitas' }
+    { q: '¿Qué energía cinética tiene una partícula en reposo?', options: ['\\(T = \\frac{1}{2}mv^2\\)', '\\(T = 0\\)', '\\(T = mv\\)'], correct: 1, hint: '\\(v = 0 \\Rightarrow T = 0\\)' },
+    { q: '¿Cuántas incógnitas puedes resolver con momentum + energía?', options: ['\\(1\\)', '\\(2\\)', 'Depende del problema'], correct: 1, hint: 'Dos ecuaciones = dos incógnitas' }
   ],
   restitution: [
-    { q: 'En impacto oblicuo, ¿qué componente conserva momentum sin fricción?', options: ['Normal', 'Tangencial', 'Ambas'], correct: 1, hint: 'Tangencial: sin impulso → conserva momentum' },
+    { q: 'En impacto oblicuo, ¿qué componente conserva momentum sin fricción?', options: ['Normal', 'Tangencial', 'Ambas'], correct: 1, hint: 'Tangencial: sin impulso \\Rightarrow conserva momentum' },
     { q: '¿Qué componente usa la ecuación de restitución?', options: ['Normal', 'Tangencial', 'Ambas'], correct: 0, hint: 'Restitución actúa en dirección normal al contacto' },
-    { q: 'Si e = 1, el impacto es:', options: ['Perfectamente elástico', 'Plástico', 'Parcialmente elástico'], correct: 0, hint: 'e = 1 conserva toda la energía cinética' }
+    { q: 'Si \\(e = 1\\), el impacto es:', options: ['Perfectamente elástico', 'Plástico', 'Parcialmente elástico'], correct: 0, hint: '\\(e = 1\\) conserva toda la energía cinética' }
   ]
 };
 
@@ -1965,17 +1965,21 @@ function loadEMExercise() {
   document.getElementById('em-exam-badge').style.display = prob.examCritical ? 'inline-block' : 'none';
   document.getElementById('em-progress').textContent = `Ejercicio ${emIndex + 1} de ${emQueue.length}`;
   
-  // Enunciado
-  document.getElementById('em-statement').textContent = prob.text;
+  // Enunciado (renderizar como HTML para permitir LaTeX)
+  const stmtEl = document.getElementById('em-statement');
+  stmtEl.innerHTML = formatText(prob.text);
+  renderMath(stmtEl);
   
-  // Variables
+  // Variables (envolver en \( \) para renderizado LaTeX)
   const data = extractGivenData(prob.text);
   const unknown = inferUnknown(prob.text);
   const varsHtml = [
-    ...data.map(d => `<span class="em-var-chip given"><span class="em-var-label">${d}</span></span>`),
-    `<span class="em-var-chip unknown"><span class="em-var-label">${unknown}</span><span class="em-var-val">Incógnita</span></span>`
+    ...data.map(d => `<span class="em-var-chip given"><span class="em-var-label">\\(${d}\\)</span></span>`),
+    `<span class="em-var-chip unknown"><span class="em-var-label">\\(${unknown}\\)</span><span class="em-var-val">Incógnita</span></span>`
   ].join('');
-  document.getElementById('em-variables').innerHTML = varsHtml;
+  const varsEl = document.getElementById('em-variables');
+  varsEl.innerHTML = varsHtml;
+  renderMath(varsEl);
   
   // Leyes
   const lawsHtml = EM_LAWS.map(law => {
@@ -2124,6 +2128,7 @@ function showEMCascara() {
   `;
   
   section.style.display = 'block';
+  renderMath(container);
 }
 
 function answerEMCascara(selected, correct, hint) {
