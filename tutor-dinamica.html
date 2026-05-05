@@ -459,6 +459,19 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 /* Timer */
 #em-timer { font-size:14px; font-weight:700; color:#fbbf24; font-family:monospace; }
 
+/* EM Exercise List */
+.em-ex-item { display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:11px;transition:background 0.15s;margin-bottom:3px; }
+.em-ex-item:hover { background:rgba(79,142,247,0.1); }
+.em-ex-item.current { background:rgba(79,142,247,0.15);border:1px solid var(--accent); }
+.em-ex-item.completed { opacity:0.6; }
+.em-ex-item.completed .em-ex-num { background:#22c55e;color:#fff; }
+.em-ex-num { width:20px;height:20px;border-radius:50%;background:#1e293b;color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0; }
+.em-ex-title { flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#cbd5e1; }
+.em-ex-status { font-size:10px; }
+.em-ex-status.done { color:#22c55e; }
+.em-ex-status.pending { color:#94a3b8; }
+.em-ex-status.current { color:#4f8ef7; }
+
 /* EM Result Section */
 #em-result-section { transition: all 0.3s ease; }
 #em-result-section.ok { border-color: #22c55e; background: #0d1a14; }
@@ -612,6 +625,16 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
       <div class="em-section">
         <h3>💡 Consejo rápido</h3>
         <div id="em-tip" style="font-size:12px;color:#cbd5e1;line-height:1.5;"></div>
+      </div>
+      <div class="em-section">
+        <h3>📋 Lista de ejercicios</h3>
+        <div id="em-exercise-list" style="max-height:300px;overflow-y:auto;"></div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid #1e293b;">
+          <div style="font-size:11px;color:#94a3b8;display:flex;justify-content:space-between;">
+            <span>✅ <span id="em-completed-count">0</span> completados</span>
+            <span>⏳ <span id="em-remaining-count">25</span> restantes</span>
+          </div>
+        </div>
       </div>
       <div class="em-section">
         <h3>🚀 Acciones</h3>
@@ -2001,6 +2024,7 @@ function openEM() {
   document.getElementById('em-panel').classList.add('active');
   startEMTimer();
   loadEMExercise();
+  renderEMExerciseList();
 }
 
 function closeEM() {
@@ -2509,7 +2533,58 @@ function submitEMFeedback() {
   updateStats();
   updateWeaknessPanel();
   renderProblemList();
+  renderEMExerciseList();
   requestSyncUpload();
+}
+
+function renderEMExerciseList() {
+  const listEl = document.getElementById('em-exercise-list');
+  if(!listEl) return;
+  
+  const all = DB.getAll();
+  let completed = 0;
+  
+  const items = emQueue.map((prob, idx) => {
+    const state = all[prob.id] || {};
+    const isCompleted = (state.score || 0) >= SRS.MASTERED || (state.emFeedback && state.emFeedback.length > 0);
+    const isCurrent = idx === emIndex;
+    
+    if(isCompleted) completed++;
+    
+    let statusIcon = '⏳';
+    let statusClass = 'pending';
+    if(isCompleted) { statusIcon = '✅'; statusClass = 'done'; }
+    else if(isCurrent) { statusIcon = '🎯'; statusClass = 'current'; }
+    
+    return `
+      <div class="em-ex-item ${isCurrent ? 'current' : ''} ${isCompleted ? 'completed' : ''}" onclick="emJumpTo(${idx})">
+        <div class="em-ex-num">${idx + 1}</div>
+        <div class="em-ex-title">${prob.id} — ${prob.title.substring(0, 25)}${prob.title.length > 25 ? '...' : ''}</div>
+        <div class="em-ex-status ${statusClass}">${statusIcon}</div>
+      </div>
+    `;
+  }).join('');
+  
+  listEl.innerHTML = items;
+  
+  // Update counters
+  const completedEl = document.getElementById('em-completed-count');
+  const remainingEl = document.getElementById('em-remaining-count');
+  if(completedEl) completedEl.textContent = completed;
+  if(remainingEl) remainingEl.textContent = emQueue.length - completed;
+  
+  // Scroll current into view
+  setTimeout(() => {
+    const currentEl = listEl.querySelector('.em-ex-item.current');
+    if(currentEl) currentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
+}
+
+function emJumpTo(idx) {
+  if(idx < 0 || idx >= emQueue.length) return;
+  emIndex = idx;
+  loadEMExercise();
+  renderEMExerciseList();
 }
 
 function emGetRecommendedNext(currentId) {
@@ -2551,18 +2626,21 @@ function emNext() {
       emIndex = weakIndex;
       showToast(`Saltando a ${weakId} — prioridad por debilidad`);
       loadEMExercise();
+      renderEMExerciseList();
       return;
     }
   }
   
   emIndex++;
   loadEMExercise();
+  renderEMExerciseList();
 }
 
 function emPrev() {
   if(emIndex > 0) {
     emIndex--;
     loadEMExercise();
+    renderEMExerciseList();
   }
 }
 
