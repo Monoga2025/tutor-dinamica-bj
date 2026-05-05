@@ -1804,90 +1804,93 @@ function loginAs(profileId) {
 
 const EM_LAWS = [
   {
-    id: 'momentum',
-    name: 'Momentum Lineal',
+    id: 'momentum_pure',
+    name: 'Momentum lineal puro',
     formula: '\\(\\sum m\\mathbf{v}_{\\text{antes}} = \\sum m\\mathbf{v}_{\\text{después}}\\)',
-    desc: 'Conservación de cantidad de movimiento cuando no hay fuerzas externas',
-    when: 'Colisiones, explosiones, separaciones sin fuerza externa neta',
+    desc: 'Solo conservación de momentum. Dos cuerpos, un solo impacto.',
+    when: 'Choque simple A→B, sin energía ni restitución. Solo masas y velocidades.',
     steps: [
-      'Dibujar el sistema \\(\\text{ANTES}\\) del evento con todas las velocidades',
-      'Dibujar el sistema \\(\\text{DESPUÉS}\\) del evento con velocidades finales',
-      'Escribir: \\(\\sum (m\\mathbf{v})_{\\text{antes}} = \\sum (m\\mathbf{v})_{\\text{después}}\\)',
-      'Si hay ángulos: separar en componentes \\(x\\) e \\(y\\)',
-      'Componente \\(x\\): \\(\\sum (m v_x)_{\\text{antes}} = \\sum (m v_x)_{\\text{después}}\\)',
-      'Componente \\(y\\): \\(\\sum (m v_y)_{\\text{antes}} = \\sum (m v_y)_{\\text{después}}\\)',
-      'Despejar la incógnita simbólicamente',
-      'Sustituir valores numéricos al final'
+      'Dibujar ANTES: solo A se mueve, B en reposo (o ambos con velocidad conocida)',
+      'Dibujar DESPUÉS: A y B con velocidades finales',
+      'Escribir: \\(m_A v_A + m_B v_B = m_A v\'_A + m_B v\'_B\\)',
+      'Si es un solo eje: 1 ecuación, 1 incógnita. Despejar directo.',
+      'Sustituir números al final'
     ],
-    topics: ['linear_momentum', 'multiple_impact', 'billiard']
+    topics: ['linear_momentum']
+  },
+  {
+    id: 'momentum_energy',
+    name: 'Momentum + Energía cinética',
+    formula: '\\(\\sum m\\mathbf{v}_{\\text{antes}} = \\sum m\\mathbf{v}_{\\text{después}}\\)  y  \\(T_1 = T_2\\)',
+    desc: 'Impacto perfectamente elástico. Se conserva momentum Y energía cinética.',
+    when: 'Choque elástico (\\(e=1\\)). Bolas de billar, esferas duras. Necesitas DOS ecuaciones.',
+    steps: [
+      'Identificar: ¿el enunciado dice "elástico" o \\(e=1\\)?',
+      'Ecuación 1 — Momentum: \\(\\sum m\\mathbf{v}_{\\text{antes}} = \\sum m\\mathbf{v}_{\\text{después}}\\)',
+      'Ecuación 2 — Energía: \\(\\frac{1}{2}\\sum mv^2_{\\text{antes}} = \\frac{1}{2}\\sum mv^2_{\\text{después}}\\)',
+      'Si hay ángulos: separar momentum en \\(x\\) e \\(y\\). Energía es escalar (no se separa).',
+      'Sistema 2×2 o 3×3. Resolver simultáneamente.',
+      'Truco: con masas iguales, las \\(m\\) se cancelan en momentum.'
+    ],
+    topics: ['energy', 'billiard']
+  },
+  {
+    id: 'momentum_restitution',
+    name: 'Momentum + Coef. de restitución',
+    formula: '\\(\\sum m\\mathbf{v}_{\\text{antes}} = \\sum m\\mathbf{v}_{\\text{después}}\\)  y  \\(e = \\dfrac{v_{\\text{sep}}}{v_{\\text{acerc}}}\\)',
+    desc: 'Choque con \\(e < 1\\). Se pierde energía. Se necesitan DOS ecuaciones.',
+    when: 'El enunciado da \\(e\\) (ej: \\(e=0.8\\)). Choque parcialmente elástico.',
+    steps: [
+      'Identificar el valor de \\(e\\) en el enunciado',
+      'Ecuación 1 — Momentum: \\(m_A v_A + m_B v_B = m_A v\'_A + m_B v\'_B\\)',
+      'Ecuación 2 — Restitución: \\(e = \\dfrac{v\'_B - v\'_A}{v_A - v_B}\\)',
+      'Impacto oblicuo: separar en componente normal (usa \\(e\\)) y tangencial (sin \\(e\\), solo momentum)',
+      'Resolver sistema 2×2 para las incógnitas'
+    ],
+    topics: ['coeff_restitution', 'oblique_impact']
+  },
+  {
+    id: 'multiple_impact',
+    name: 'Momentum en eventos múltiples',
+    formula: 'Aplicar momentum DOS veces (o más)',
+    desc: 'Un cuerpo golpea otro, luego ese golpea un tercero. Eventos separados.',
+    when: 'Carruaje recibe maleta 1, luego maleta 2. Vagones que se acoplan uno por uno.',
+    steps: [
+      'Evento 1: A golpea B. Aplicar momentum solo a A+B.',
+      'Resultado intermedio: \\(v\'_B\\) (B ahora se mueve)',
+      'Evento 2: B (con su nueva velocidad) golpea C',
+      'Aplicar momentum a B+C con la velocidad que B adquirió en el evento 1',
+      '¡Nunca combines todos los cuerpos en una sola ecuación!'
+    ],
+    topics: ['multiple_impact']
   },
   {
     id: 'angular',
-    name: 'Momento Angular',
+    name: 'Momento angular + Producto vectorial',
     formula: '\\(\\mathbf{H}_O = \\sum(\\mathbf{r}_i \\times m_i\\mathbf{v}_i)\\)',
-    desc: 'Momento angular de un sistema de partículas respecto a un punto',
-    when: 'Se piden \\(\\mathbf{H}_O\\), \\(\\mathbf{H}_G\\), o condiciones de paralelismo con ejes',
+    desc: 'Sistemas de partículas en 3D. Usa producto cruz.',
+    when: 'Se piden \\(\\mathbf{H}_O\\), \\(\\mathbf{H}_G\\), o "paralelo al eje z".',
     steps: [
-      'Identificar posición \\(\\mathbf{r}_i\\) y velocidad \\(\\mathbf{v}_i\\) de cada partícula',
-      'Calcular el producto vectorial \\(\\mathbf{r}_i \\times (m_i \\mathbf{v}_i)\\) para cada partícula',
-      'Para producto vectorial 3D: usar determinante \\(\\begin{vmatrix} \\mathbf{i} & \\mathbf{j} & \\mathbf{k} \\\\ r_x & r_y & r_z \\\\ p_x & p_y & p_z \\end{vmatrix}\\)',
-      'Sumar todos los productos vectoriales: \\(\\mathbf{H}_O = \\sum(\\mathbf{r}_i \\times m_i \\mathbf{v}_i)\\)',
-      'Si pide \\(\\mathbf{H}_G\\): primero hallar centro de masa \\(\\bar{\\mathbf{r}}\\), luego \\(\\mathbf{H}_G = \\sum(\\mathbf{r}\'_i \\times m_i \\mathbf{v}_i)\\) donde \\(\\mathbf{r}\'_i = \\mathbf{r}_i - \\bar{\\mathbf{r}}\\)',
-      'Verificar: \\(\\mathbf{H}_O = \\bar{\\mathbf{r}} \\times m\\bar{\\mathbf{v}} + \\mathbf{H}_G\\)'
+      'Listar \\(\\mathbf{r}_i = (x_i, y_i, z_i)\\) y \\(\\mathbf{v}_i = (v_{xi}, v_{yi}, v_{zi})\\) para cada partícula',
+      'Calcular \\(\\mathbf{H}_i = \\mathbf{r}_i \\times m_i\\mathbf{v}_i\\) con determinante',
+      'Sumar: \\(\\mathbf{H}_O = \\sum \\mathbf{H}_i\\)',
+      'Para \\(\\mathbf{H}_G\\): hallar \\(\\bar{\\mathbf{r}}\\) primero, luego posiciones relativas'
     ],
     topics: ['angular_momentum', 'cross_product']
   },
   {
     id: 'cm',
-    name: 'Centro de Masa',
-    formula: '\\(M\\bar{\\mathbf{r}} = \\sum m_i \\mathbf{r}_i\\)',
-    desc: 'Posición del centro de masa de un sistema',
-    when: 'Explosiones, separaciones, o cuando se pide posición de fragmentos',
+    name: 'Centro de masa + Trayectoria',
+    formula: '\\(M\\bar{\\mathbf{r}} = \\sum m_i \\mathbf{r}_i\\)  o  \\(\\bar{\\mathbf{r}}(t) = \\bar{\\mathbf{r}}_0 + \\bar{\\mathbf{v}}_0 t + \\frac{1}{2}\\mathbf{g}t^2\\)',
+    desc: 'El CM sigue su trayectoria aunque el sistema se separe.',
+    when: 'Explosiones, vehículos que se separan, proyectiles que fragmentan.',
     steps: [
-      'Identificar si hay fuerzas externas (gravedad) o no',
-      'Sin fuerzas externas: el CM sigue moviéndose con velocidad constante \\(\\mathbf{v}_0\\)',
-      'Con gravedad: el CM sigue trayectoria parabólica como si no hubiera explosión',
-      'Calcular posición del CM en tiempo \\(t\\): \\(\\bar{\\mathbf{r}} = \\mathbf{r}_0 + \\mathbf{v}_0 t\\) (sin gravedad) o \\(\\bar{\\mathbf{r}} = \\mathbf{r}_0 + \\mathbf{v}_0 t + \\frac{1}{2}\\mathbf{g}t^2\\) (con gravedad)',
-      'Aplicar: \\(M\\bar{\\mathbf{r}} = m_A \\mathbf{r}_A + m_B \\mathbf{r}_B + m_C \\mathbf{r}_C\\)',
-      'Despejar la posición del fragmento desconocido',
-      'Sustituir valores numéricos'
+      '¿Hay gravedad? El CM sigue parábola. ¿No hay? El CM sigue línea recta.',
+      'Calcular posición del CM en el tiempo \\(t\\) como si no hubiera explosión',
+      'Igualar: \\(M\\bar{\\mathbf{r}} = m_A\\mathbf{r}_A + m_B\\mathbf{r}_B + \\dots\\)',
+      'Despejar la posición o velocidad del fragmento desconocido'
     ],
     topics: ['center_of_mass']
-  },
-  {
-    id: 'energy',
-    name: 'Conservación de Energía',
-    formula: '\\(T_1 + V_1 = T_2 + V_2\\)',
-    desc: 'Conservación de energía cinética y potencial',
-    when: 'Impactos perfectamente elásticos o cuando no hay pérdidas de energía',
-    steps: [
-      'Identificar estado 1 (antes) y estado 2 (después)',
-      'Calcular energía cinética \\(T = \\frac{1}{2}mv^2\\) en cada estado',
-      'Calcular energía potencial \\(V\\) en cada estado (si aplica)',
-      'Escribir: \\(T_1 + V_1 = T_2 + V_2\\)',
-      'Simplificar términos que sean cero',
-      'Despejar la incógnita',
-      'Sustituir valores numéricos'
-    ],
-    topics: ['energy']
-  },
-  {
-    id: 'restitution',
-    name: 'Momentum + Restitución',
-    formula: '\\(e = \\dfrac{v_{\\text{separación}}}{v_{\\text{acercamiento}}}\\)',
-    desc: 'Colisión con coeficiente de restitución \\(e\\)',
-    when: 'Dos cuerpos chocan y se conoce o se pide \\(e\\)',
-    steps: [
-      'Dibujar cuerpos antes del impacto con velocidades',
-      'Dibujar cuerpos después del impacto con velocidades finales',
-      'Aplicar conservación de momentum: \\(m_A \\mathbf{v}_A + m_B \\mathbf{v}_B = m_A \\mathbf{v}\'_A + m_B \\mathbf{v}\'_B\\)',
-      'Aplicar restitución: \\(e = \\dfrac{v\'_B - v\'_A}{v_A - v_B}\\) para impacto directo',
-      'Si es oblicuo: separar en componentes normal y tangencial a la superficie de contacto',
-      'Tangencial: conservación de momentum (sin fricción en tangencial)',
-      'Normal: momentum + restitución en dirección normal',
-      'Resolver sistema de ecuaciones'
-    ],
-    topics: ['coeff_restitution', 'oblique_impact']
   }
 ];
 
@@ -1926,6 +1929,7 @@ let emStartTime = null;
 let emTimerInterval = null;
 let emCurrentLaw = null;
 let emCascaraAnswered = false;
+let emSelectedLaws = [];
 
 function buildEMQueue() {
   const all = DB.getAll();
@@ -2082,8 +2086,15 @@ function loadEMExercise() {
   // Ocultar procedimiento y cascaritas
   document.getElementById('em-procedure-section').style.display = 'none';
   document.getElementById('em-cascara-section').style.display = 'none';
+  document.getElementById('em-law-feedback').innerHTML = `
+    <div style="margin-top:10px;padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:12px;">
+      🧩 <b>Desafío:</b> Este ejercicio puede requerir <b>una o más</b> leyes. Selecciona todas las que apliquen.<br>
+      <span style="font-size:11px;margin-top:4px;display:block;">Pista: Lee el enunciado buscando palabras clave como "elástico", \\(e\\), "explota", "3D", etc.</span>
+    </div>
+  `;
   emCurrentLaw = null;
   emCascaraAnswered = false;
+  emSelectedLaws = [];
   
   // Info lateral
   document.getElementById('em-info').innerHTML = `
@@ -2128,30 +2139,51 @@ function loadEMExercise() {
   renderMath(document.getElementById('em-right'));
 }
 
+function getEMCorrectLaws(prob) {
+  return EM_LAWS.filter(law => law.topics.some(t => prob.topics.includes(t)));
+}
+
 function selectEMLaw(lawId) {
-  // Resetear selecciones previas
-  document.querySelectorAll('.em-law-card').forEach(card => {
-    card.classList.remove('selected', 'correct', 'wrong');
-  });
-  
+  const prob = emQueue[emIndex];
+  const correctLaws = getEMCorrectLaws(prob);
+  const correctIds = correctLaws.map(l => l.id);
   const selectedCard = document.querySelector(`.em-law-card[data-law="${lawId}"]`);
-  const isCorrect = selectedCard.dataset.correct === 'true';
-  
-  selectedCard.classList.add('selected');
-  
+  const isCorrect = correctIds.includes(lawId);
   const feedback = document.getElementById('em-law-feedback');
+  
+  // Si ya estaba seleccionada, deseleccionar
+  if(emSelectedLaws.includes(lawId)) {
+    emSelectedLaws = emSelectedLaws.filter(id => id !== lawId);
+    selectedCard.classList.remove('selected', 'correct');
+    
+    const remaining = correctIds.filter(id => !emSelectedLaws.includes(id));
+    feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#0f172a;border:1px solid #f59e0b;border-radius:8px;color:#fbbf24;font-size:13px;">⚠️ Deseleccionada. Te faltan ${remaining.length} ley(es) correcta(s).</div>`;
+    return;
+  }
+  
+  // Marcar como seleccionada
+  emSelectedLaws.push(lawId);
+  selectedCard.classList.add('selected');
   
   if(isCorrect) {
     selectedCard.classList.add('correct');
-    emCurrentLaw = EM_LAWS.find(l => l.id === lawId);
-    feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#0d1a14;border:1px solid #22c55e;border-radius:8px;color:#86efac;font-size:13px;">✓ ¡Ley correcta! Ahora revisa el procedimiento y responde la cascarita.</div>`;
-    showEMProcedure();
-    showEMCascara();
-    SRS.markGateCorrect(emQueue[emIndex].id, 'formula');
+    
+    const remaining = correctIds.filter(id => !emSelectedLaws.includes(id));
+    
+    if(remaining.length === 0) {
+      // ¡Todas las leyes correctas seleccionadas!
+      emCurrentLaw = EM_LAWS.find(l => l.id === lawId); // Usar la última seleccionada
+      feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#0d1a14;border:1px solid #22c55e;border-radius:8px;color:#86efac;font-size:13px;">✓ ¡Perfecto! Identificaste ${correctLaws.length === 1 ? 'la ley' : 'todas las leyes (' + correctLaws.length + ')'} correcta(s). Ahora revisa el procedimiento.</div>`;
+      showEMProcedure();
+      showEMCascara();
+      SRS.markGateCorrect(prob.id, 'formula');
+    } else {
+      // Falta una o más leyes
+      feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#0f172a;border:1px solid #f59e0b;border-radius:8px;color:#fbbf24;font-size:13px;">✓ Ley correcta, pero te falta ${remaining.length} ley(es) más para este ejercicio. ¿Qué más se conserva?</div>`;
+    }
   } else {
     selectedCard.classList.add('wrong');
-    feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#1f1117;border:1px solid #ef4444;border-radius:8px;color:#fca5a5;font-size:13px;">✗ Ley incorrecta para este enunciado. Piensa: ¿qué se conserva aquí?</div>`;
-    const prob = emQueue[emIndex];
+    feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#1f1117;border:1px solid #ef4444;border-radius:8px;color:#fca5a5;font-size:13px;">✗ Ley incorrecta para este enunciado. Piensa: ¿hay conservación de energía? ¿Hay restitución? ¿Es solo momentum?</div>`;
     const profile = gateProfile(prob);
     SRS.markWrong(prob.id, profile.errorType, 'Ley incorrecta seleccionada en Modo EM');
     updateWeaknessPanel();
@@ -2210,21 +2242,19 @@ async function loadEMSolutionSteps() {
         ${sol.steps.slice(0, 8).map((step, i) => `
           <div class="em-proc-step" style="border-left:3px solid #4f8ef7;padding-left:10px;margin:6px 0;">
             <div class="em-proc-num" style="background:#4f8ef7;">${i + 1}</div>
-            <div class="em-proc-text">${step}</div>
+            <div class="em-proc-text">${formatText(step)}</div>
           </div>
         `).join('')}
         ${sol.final_answer ? `
           <div style="margin-top:10px;padding:10px;background:#0d1a14;border:1px solid #22c55e;border-radius:8px;">
-            <b style="color:#22c55e;">Respuesta final:</b> ${sol.final_answer}
-          </div>
+            <b style="color:#22c55e;">Respuesta final:</b> ${formatText(sol.final_answer)}</div>
         ` : ''}
       `;
     } else if(prob.answer) {
       container.innerHTML = `
         <div style="font-size:11px;color:#fbbf24;margin-bottom:8px;">📐 Respuesta disponible</div>
         <div style="padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;">
-          <b>Respuesta:</b> ${prob.answer}
-        </div>
+          <b>Respuesta:</b> ${formatText(prob.answer)}</div>
         <div style="margin-top:8px;font-size:11px;color:#94a3b8;">
           💡 Usa los hints del ejercicio como guía para llegar a este resultado.
         </div>
@@ -2233,7 +2263,15 @@ async function loadEMSolutionSteps() {
       container.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:10px;">❌ Solución no disponible en el solucionario.</div>';
     }
   } catch(e) {
-    container.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:10px;">❌ Error cargando solución. Intenta más tarde.</div>';
+    if(prob.answer) {
+      container.innerHTML = `
+        <div style="font-size:11px;color:#fbbf24;margin-bottom:8px;">📐 Respuesta disponible</div>
+        <div style="padding:10px;background:#0f172a;border:1px solid #334155;border-radius:8px;">
+          <b>Respuesta:</b> ${formatText(prob.answer)}</div>
+      `;
+    } else {
+      container.innerHTML = '<div style="font-size:12px;color:#94a3b8;padding:10px;">❌ Error cargando solución. Intenta más tarde.</div>';
+    }
   }
   
   renderMath(container);
