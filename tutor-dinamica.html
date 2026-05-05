@@ -579,77 +579,64 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
 <!-- EM MODE PANEL -->
 <div id="em-panel">
   <div id="em-header">
-    <h2>⚡ Modo EM</h2>
-    <div class="em-mode-selector">
-      <button class="em-mode-btn active" data-mode="flashcard" onclick="setEMMode('flashcard')">⚡ Flash</button>
-      <button class="em-mode-btn" data-mode="quick" onclick="setEMMode('quick')">🎯 Rápido</button>
-      <button class="em-mode-btn" data-mode="spotting" onclick="setEMMode('spotting')">🔍 Errores</button>
-      <button class="em-mode-btn" data-mode="full" onclick="setEMMode('full')">📚 Completo</button>
-    </div>
+    <h2>⚡ Modo EM — Paso a Paso</h2>
     <div class="em-badge" id="em-exam-badge">EXAMEN</div>
     <div class="em-progress" id="em-progress">1/25</div>
-    <div id="em-timer">04:00:00</div>
     <div style="flex:1"></div>
-    <button onclick="emSkip()">⏭ Saltar</button>
     <button onclick="emPrev()">◀ Anterior</button>
     <button onclick="emNext()" class="em-primary">Siguiente ▶</button>
-    <button onclick="closeEM()" style="border-color:#ef4444;color:#ef4444;">✕ Cerrar EM</button>
+    <button onclick="closeEM()" style="border-color:#ef4444;color:#ef4444;">✕ Cerrar</button>
   </div>
   <div id="em-body">
     <div id="em-left">
+      <!-- PASO 1: Enunciado y Variables -->
       <div class="em-section">
         <h3>📋 Enunciado</h3>
         <div id="em-statement" style="font-size:13px;line-height:1.7;color:#e2e8f0;white-space:pre-wrap;"></div>
       </div>
       <div class="em-section">
-        <h3>🔢 Variables</h3>
-        <div style="margin-bottom:8px;font-size:11px;color:#94a3b8;"><span style="color:#22c55e">●</span> Dado &nbsp; <span style="color:#f59e0b">●</span> Incógnita</div>
+        <h3>🔢 Datos del problema</h3>
+        <div style="margin-bottom:8px;font-size:11px;color:#94a3b8;"><span style="color:#22c55e">●</span> Conocidos &nbsp; <span style="color:#f59e0b">●</span> Incógnitas</div>
         <div id="em-variables" class="em-vars-grid"></div>
       </div>
-      <div class="em-section">
-        <h3>⚖️ Selecciona la ley que aplica</h3>
+      
+      <!-- PASO 2: Seleccionar Ley -->
+      <div class="em-section" id="em-step-law">
+        <h3>⚖️ Paso 1: ¿Qué ley o leyes aplican?</h3>
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">Lee el enunciado y selecciona <b>todas</b> las leyes que necesitas para resolverlo.</div>
         <div id="em-laws" class="em-laws-grid"></div>
         <div id="em-law-feedback"></div>
       </div>
-      <div class="em-section" id="em-procedure-section" style="display:none;">
-        <h3>📐 Procedimiento</h3>
-        <div id="em-procedure"></div>
+      
+      <!-- PASO 3: Ver Fórmula -->
+      <div class="em-section" id="em-step-formula" style="display:none;">
+        <h3>📐 Paso 2: Fórmula seleccionada</h3>
+        <div id="em-formula-display" style="background:#0f172a;border:2px solid #22c55e;border-radius:12px;padding:16px;text-align:center;margin-bottom:12px;">
+          <div style="font-size:18px;color:#86efac;font-weight:800;" id="em-formula-text"></div>
+        </div>
+        <div id="em-formula-hint" style="font-size:12px;color:#94a3b8;margin-bottom:12px;"></div>
+        <div style="display:flex;gap:10px;">
+          <button onclick="emOpenBoard()" style="flex:1;padding:12px;border-radius:8px;border:none;background:linear-gradient(135deg,#4f8ef7,#7c5cfc);color:#fff;font-size:14px;font-weight:800;cursor:pointer;">🎨 Abrir en pizarra y resolver</button>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:#94a3b8;text-align:center;">
+          La fórmula aparecerá arriba en la pizarra como referencia. Escribe tu solución paso a paso.
+        </div>
       </div>
-      <div class="em-section" id="em-cascara-section" style="display:none;">
-        <h3>🌰 Cascarita — Verificación rápida</h3>
-        <div id="em-cascara"></div>
-      </div>
-      <div class="em-section" id="em-result-section" style="display:none;">
-        <h3 id="em-result-title">✅ Ejercicio Completado</h3>
-        <div id="em-result-content"></div>
-        <div id="em-solution-section" style="margin-top:12px;display:none;">
-          <h4 style="font-size:11px;color:#93c5fd;text-transform:uppercase;margin:0 0 6px;">📖 Respuesta del solucionario</h4>
-          <div id="em-solution-text" style="font-size:12px;color:#e2e8f0;line-height:1.5;background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;"></div>
-        </div>
-        <div id="em-feedback-section" style="margin-top:12px;">
-          <h4 style="font-size:11px;color:#fbbf24;text-transform:uppercase;margin:0 0 8px;">🧠 ¿Qué aprendiste? (ayuda a la IA)</h4>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-            <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="em-fb-formula" style="accent-color:#22c55e;"> Identifiqué la ley</label>
-            <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="em-fb-procedure" style="accent-color:#22c55e;"> Entendí el procedimiento</label>
-            <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="em-fb-cascara" style="accent-color:#22c55e;"> Acerté la cascarita</label>
-            <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="em-fb-weak" style="accent-color:#f59e0b;"> Aún me cuesta este tipo</label>
-          </div>
-          <textarea id="em-fb-notes" placeholder="Nota opcional: ¿qué te costó? ¿qué regla aprendiste?" style="width:100%;min-height:50px;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:8px;color:#e2e8f0;font-size:11px;font-family:inherit;resize:vertical;"></textarea>
-          <button onclick="submitEMFeedback()" style="margin-top:8px;padding:8px 14px;border-radius:6px;border:none;background:linear-gradient(135deg,#4f8ef7,#7c5cfc);color:#fff;font-size:12px;font-weight:700;cursor:pointer;width:100%;">Guardar y continuar →</button>
-        </div>
-        <div id="em-next-actions" style="margin-top:12px;display:none;">
-          <button onclick="emNext()" class="em-primary" style="width:100%;padding:10px;border-radius:8px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-size:13px;font-weight:800;cursor:pointer;">▶ Siguiente ejercicio recomendado</button>
-          <div id="em-next-rec" style="margin-top:8px;font-size:11px;color:#94a3b8;text-align:center;"></div>
-        </div>
+      
+      <!-- PASO 4: Resultado de la pizarra -->
+      <div class="em-section" id="em-step-result" style="display:none;">
+        <h3>✅ Resultado</h3>
+        <div id="em-result-message"></div>
+        <div id="em-next-step" style="margin-top:12px;"></div>
       </div>
     </div>
     <div id="em-right">
       <div class="em-section">
-        <h3>🎯 Información del ejercicio</h3>
+        <h3>🎯 Información</h3>
         <div id="em-info" style="font-size:12px;line-height:1.6;color:#cbd5e1;"></div>
       </div>
       <div class="em-section">
-        <h3>📊 Tu progreso en este ejercicio</h3>
+        <h3>📊 Tu progreso</h3>
         <div id="em-local-progress" style="font-size:12px;color:#94a3b8;"></div>
       </div>
       <div class="em-section" id="em-weakness-section" style="display:none;">
@@ -657,25 +644,17 @@ body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); co
         <div id="em-weakness-content"></div>
       </div>
       <div class="em-section">
-        <h3>💡 Consejo rápido</h3>
+        <h3>💡 Consejo</h3>
         <div id="em-tip" style="font-size:12px;color:#cbd5e1;line-height:1.5;"></div>
       </div>
       <div class="em-section">
-        <h3>📋 Lista de ejercicios</h3>
-        <div id="em-exercise-list" style="max-height:300px;overflow-y:auto;"></div>
+        <h3>📋 Lista</h3>
+        <div id="em-exercise-list" style="max-height:250px;overflow-y:auto;"></div>
         <div style="margin-top:8px;padding-top:8px;border-top:1px solid #1e293b;">
           <div style="font-size:11px;color:#94a3b8;display:flex;justify-content:space-between;">
-            <span>✅ <span id="em-completed-count">0</span> completados</span>
-            <span>⏳ <span id="em-remaining-count">25</span> restantes</span>
+            <span>✅ <span id="em-completed-count">0</span></span>
+            <span>⏳ <span id="em-remaining-count">25</span></span>
           </div>
-        </div>
-      </div>
-      <div class="em-section">
-        <h3>🚀 Acciones</h3>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <button onclick="emMarkCorrect()" style="padding:8px;border-radius:6px;border:1px solid #22c55e;background:#0d1a14;color:#22c55e;cursor:pointer;font-size:12px;font-weight:700;">✓ Lo entendí — Marcar correcto</button>
-          <button onclick="emMarkError()" style="padding:8px;border-radius:6px;border:1px solid #ef4444;background:#1f1117;color:#ef4444;cursor:pointer;font-size:12px;">✕ Me equivoqué — Registrar error</button>
-          <button onclick="emOpenBoard()" style="padding:8px;border-radius:6px;border:1px solid #4f8ef7;background:#0f172a;color:#4f8ef7;cursor:pointer;font-size:12px;">🎨 Ir a pizarra a resolver</button>
         </div>
       </div>
     </div>
@@ -2101,10 +2080,7 @@ function loadEMExercise() {
   
   // Resetear estado
   emCurrentLaw = null;
-  emCascaraAnswered = false;
   emSelectedLaws = [];
-  emSpottingSelected = -1;
-  if(emFlashTimer) clearInterval(emFlashTimer);
   
   // Actualizar header
   document.getElementById('em-exam-badge').style.display = prob.examCritical ? 'inline-block' : 'none';
@@ -2141,36 +2117,133 @@ function loadEMExercise() {
     document.getElementById('em-weakness-section').style.display = 'none';
   }
   
-  // Cargar según el modo
-  switch(emMode) {
-    case 'flashcard':
-      loadEMFlashcardMode(prob);
-      break;
-    case 'quick':
-      loadEMQuickMode(prob);
-      break;
-    case 'spotting':
-      loadEMSpottingMode(prob);
-      break;
-    case 'full':
-    default:
-      loadEMFullMode(prob);
-      break;
-  }
+  // Resetear vistas
+  document.getElementById('em-step-law').style.display = 'block';
+  document.getElementById('em-step-formula').style.display = 'none';
+  document.getElementById('em-step-result').style.display = 'none';
+  
+  // Enunciado
+  const stmtEl = document.getElementById('em-statement');
+  stmtEl.innerHTML = formatText(prob.text);
+  renderMath(stmtEl);
+  
+  // Variables
+  const data = extractGivenData(prob.text);
+  const unknown = inferUnknown(prob.text);
+  const varsHtml = [
+    ...data.map(d => `<span class="em-var-chip given"><span class="em-var-label">\\(${d}\\)</span></span>`),
+    `<span class="em-var-chip unknown"><span class="em-var-label">\\(${unknown}\\)</span><span class="em-var-val">Incógnita</span></span>`
+  ].join('');
+  const varsEl = document.getElementById('em-variables');
+  varsEl.innerHTML = varsHtml;
+  renderMath(varsEl);
+  
+  // Leyes
+  const lawsHtml = EM_LAWS.map(law => {
+    const isCorrect = law.topics.some(t => prob.topics.includes(t));
+    return `<button class="em-law-card" data-law="${law.id}" data-correct="${isCorrect}" onclick="selectEMLaw('${law.id}')">
+      <h4>${law.name}</h4>
+      <p>${law.desc}</p>
+    </button>`;
+  }).join('');
+  document.getElementById('em-laws').innerHTML = lawsHtml;
+  document.getElementById('em-law-feedback').innerHTML = '';
+  
+  // Tip
+  document.getElementById('em-tip').innerHTML = `
+    <b>Pregunta clave:</b> ¿Qué se conserva y qué no se conserva?<br><br>
+    <b>Tip:</b> Busca palabras como "elástico", "restitución", "explota", "choque", etc.
+  `;
+  
+  renderMath(document.getElementById('em-left'));
 }
 
-function setEMMode(mode) {
-  emMode = mode;
+function getEMCorrectLaws(prob) {
+  return EM_LAWS.filter(law => law.topics.some(t => prob.topics.includes(t)));
+}
+
+function selectEMLaw(lawId) {
+  const prob = emQueue[emIndex];
+  const correctLaws = getEMCorrectLaws(prob);
+  const correctIds = correctLaws.map(l => l.id);
+  const selectedCard = document.querySelector(`.em-law-card[data-law="${lawId}"]`);
+  const isCorrect = correctIds.includes(lawId);
+  const feedback = document.getElementById('em-law-feedback');
   
-  // Actualizar botones
-  document.querySelectorAll('.em-mode-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.mode === mode);
-  });
-  
-  // Recargar ejercicio actual
-  if(emQueue.length > 0 && emIndex < emQueue.length) {
-    loadEMExercise();
+  // Si ya estaba seleccionada, deseleccionar
+  if(emSelectedLaws.includes(lawId)) {
+    emSelectedLaws = emSelectedLaws.filter(id => id !== lawId);
+    selectedCard.classList.remove('selected', 'correct');
+    
+    const remaining = correctIds.filter(id => !emSelectedLaws.includes(id));
+    feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#0f172a;border:1px solid #f59e0b;border-radius:8px;color:#fbbf24;font-size:13px;">⚠️ Deseleccionada. Te faltan ${remaining.length} ley(es) correcta(s).</div>`;
+    return;
   }
+  
+  // Marcar como seleccionada
+  emSelectedLaws.push(lawId);
+  selectedCard.classList.add('selected');
+  
+  if(isCorrect) {
+    selectedCard.classList.add('correct');
+    
+    const remaining = correctIds.filter(id => !emSelectedLaws.includes(id));
+    
+    if(remaining.length === 0) {
+      // ¡Todas las leyes correctas seleccionadas!
+      emCurrentLaw = EM_LAWS.find(l => l.id === lawId);
+      feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#0d1a14;border:1px solid #22c55e;border-radius:8px;color:#86efac;font-size:13px;">✓ ¡Perfecto! Identificaste ${correctLaws.length === 1 ? 'la ley' : 'todas las leyes (' + correctLaws.length + ')'} correcta(s).</div>`;
+      
+      // Mostrar la fórmula
+      showEMFormula(correctLaws);
+      SRS.markGateCorrect(prob.id, 'formula');
+    } else {
+      // Falta una o más leyes
+      feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#0f172a;border:1px solid #f59e0b;border-radius:8px;color:#fbbf24;font-size:13px;">✓ Ley correcta, pero te falta ${remaining.length} ley(es) más. ¿Qué más se conserva?</div>`;
+    }
+  } else {
+    selectedCard.classList.add('wrong');
+    feedback.innerHTML = `<div style="margin-top:10px;padding:10px;background:#1f1117;border:1px solid #ef4444;border-radius:8px;color:#fca5a5;font-size:13px;">✗ Ley incorrecta. Piensa: ¿hay conservación de energía? ¿Hay restitución? ¿Es solo momentum?</div>`;
+    const profile = gateProfile(prob);
+    SRS.markWrong(prob.id, profile.errorType, 'Ley incorrecta seleccionada en Modo EM');
+    updateWeaknessPanel();
+  }
+  
+  requestSyncUpload();
+}
+
+function showEMFormula(correctLaws) {
+  // Ocultar leyes, mostrar fórmula
+  document.getElementById('em-step-law').style.display = 'none';
+  document.getElementById('em-step-formula').style.display = 'block';
+  
+  // Mostrar la fórmula de la primera ley correcta
+  const mainLaw = correctLaws[0];
+  document.getElementById('em-formula-text').innerHTML = mainLaw.formula;
+  document.getElementById('em-formula-hint').innerHTML = `
+    <b>¿Cuándo usar?</b> ${mainLaw.when}<br>
+    <b>Pasos:</b> ${mainLaw.steps.slice(0, 3).join(' → ')}
+  `;
+  
+  renderMath(document.getElementById('em-step-formula'));
+}
+
+function emOpenBoard() {
+  if(!emQueue[emIndex]) return;
+  const probId = emQueue[emIndex].id;
+  closeEM();
+  loadProblem(probId);
+  setTimeout(() => {
+    showBoardLayer();
+    // Mostrar la fórmula seleccionada en la pizarra
+    if(emCurrentLaw) {
+      const boardPrompt = document.getElementById('board-prompt');
+      if(boardPrompt) {
+        boardPrompt.innerHTML = formatText(`**Fórmula a aplicar:** ${emCurrentLaw.formula}\n\n**Pasos:**\n${emCurrentLaw.steps.map((s, i) => `${i+1}. ${s}`).join('\n')}`);
+        renderMath(boardPrompt);
+      }
+    }
+  }, 100);
 }
 
 // ─── FLASHCARD MODE (10 segundos, solo ley) ─────────────────────────────────
