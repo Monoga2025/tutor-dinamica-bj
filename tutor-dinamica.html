@@ -2246,14 +2246,6 @@ function emOpenBoard() {
   }, 100);
 }
 
-function emOpenBoard() {
-  if(!emQueue[emIndex]) return;
-  const probId = emQueue[emIndex].id;
-  closeEM();
-  loadProblem(probId);
-  setTimeout(() => showBoardLayer(), 100);
-}
-
 function checkLogin() {
   const profile = getActiveProfile();
   if(profile) {
